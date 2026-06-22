@@ -2,24 +2,43 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ExplorerScreen, type ExplorerFilter } from "@/components/screens/explorer-screen";
 import { Chip } from "@/components/ui";
 import { receipts } from "@/lib/fixtures";
 import { buildReceiptDetail, receiptById } from "@/lib/receipt-detail";
+import type { ReceiptDetail } from "@/lib/types";
 
 export function PublicExplorerApp() {
   const searchParams = useSearchParams();
   const [selectedReceiptOverride, setSelectedReceiptOverride] = useState<string | null>(null);
   const [explorerFilter, setExplorerFilter] = useState<ExplorerFilter>("all");
+  const [receiptDetails, setReceiptDetails] = useState<ReceiptDetail[]>(
+    receipts.map((receipt) => buildReceiptDetail(receipt)),
+  );
 
-  const selectedReceiptId = selectedReceiptOverride ?? searchParams.get("receipt") ?? receipts[0].id;
-  const selectedReceipt = receiptById(selectedReceiptId);
-  const receiptDetail = buildReceiptDetail(selectedReceipt);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/receipts")
+      .then((response) => (response.ok ? response.json() : undefined))
+      .then((body) => {
+        if (active && Array.isArray(body?.receipts)) setReceiptDetails(body.receipts);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const receiptRows = receiptDetails.map((detail) => detail.receipt);
+  const selectedReceiptId = selectedReceiptOverride ?? searchParams.get("receipt") ?? receiptRows[0]?.id ?? receipts[0].id;
+  const receiptDetail =
+    receiptDetails.find((detail) => detail.receipt.id === selectedReceiptId) ?? buildReceiptDetail(receiptById(selectedReceiptId));
+  const selectedReceipt = receiptDetail.receipt;
   const filteredReceipts = useMemo(() => {
-    if (explorerFilter === "all") return receipts;
-    return receipts.filter((receipt) => receipt.status === explorerFilter);
-  }, [explorerFilter]);
+    if (explorerFilter === "all") return receiptRows;
+    return receiptRows.filter((receipt) => receipt.status === explorerFilter);
+  }, [explorerFilter, receiptRows]);
 
   return (
     <main className="app">

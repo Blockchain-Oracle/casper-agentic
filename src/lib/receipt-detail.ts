@@ -8,9 +8,8 @@ export function receiptById(id: string): Receipt {
 export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
   const isAuth = receipt.status === "auth_failed";
   const isBlocked = receipt.status === "blocked";
-  const isSettled = receipt.status === "settled";
   const isProofUnavailable = receipt.status === "raw_proof_unavailable";
-  const hasRealProof = isSettled && Boolean(receipt.hash);
+  const hasRealProof = Boolean(receipt.hash);
   const endpointSlug = receipt.provider === "Make Software Labs" ? "make-software" : "weather-risk";
   const endpoint = `https://gw.casper-gateway.io/mcp/${endpointSlug}`;
   const verifyTone: KeyValueRow["tone"] =
@@ -18,7 +17,7 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
   const settleTone: KeyValueRow["tone"] =
     receipt.status === "settle_failed"
       ? "danger"
-      : isProofUnavailable || receipt.status === "upstream_failed"
+      : isProofUnavailable || (receipt.status === "upstream_failed" && !hasRealProof)
         ? "warn"
         : "signal";
 
@@ -35,8 +34,8 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
         : [
             { key: "decision", value: "ALLOWED", tone: "signal" as const },
             { key: "matched rules", value: "provider ok - tool ok - network ok - asset ok - limit ok" },
-            { key: "max-per-call", value: `${receipt.amount} <= 0.08 TUSDC` },
-            { key: "daily remaining", value: "1.78 / 2.00 TUSDC" },
+            { key: "max-per-call", value: `${receipt.amount} <= 0.08 WCSPR` },
+            { key: "daily remaining", value: "1.78 / 2.00 WCSPR" },
           ];
 
   const x402 =
@@ -50,7 +49,7 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
       : [
           { key: "network", value: "casper:casper-test", mono: true },
           { key: "scheme", value: "exact", mono: true },
-          { key: "asset", value: "CEP-18 TUSDC", mono: true },
+          { key: "asset", value: "CEP-18 WCSPR", mono: true },
           { key: "amount", value: receipt.amount, mono: true },
           { key: "payee", value: "0x4d2f...a017", mono: true },
           {
@@ -65,7 +64,7 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
                 ? "FAILED"
                 : isProofUnavailable
                   ? "proof pending - no deploy hash claimed"
-                : receipt.status === "upstream_failed"
+                : receipt.status === "upstream_failed" && !hasRealProof
                   ? "withheld"
                   : "settled",
             tone: settleTone,
@@ -80,7 +79,7 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
           { key: "network", value: "casper:casper-test", mono: true },
           { key: "payer", value: "0x9f3a...b2c1", mono: true },
           { key: "payee", value: "0x4d2f...a017", mono: true },
-          { key: "amount", value: `${receipt.amount} TUSDC`, mono: true },
+          { key: "amount", value: `${receipt.amount} WCSPR`, mono: true },
           {
             key: "proof status",
             value: "verified Testnet deploy",
@@ -95,7 +94,7 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
             { key: "network", value: "casper:casper-test", mono: true },
             { key: "payer", value: "0x9f3a...b2c1", mono: true },
             { key: "payee", value: "0x4d2f...a017", mono: true },
-            { key: "amount", value: `${receipt.amount} TUSDC`, mono: true },
+            { key: "amount", value: `${receipt.amount} WCSPR`, mono: true },
             { key: "proof status", value: "design fixture - no live claim", tone: "warn" as const, mono: true },
           ]
       : [];

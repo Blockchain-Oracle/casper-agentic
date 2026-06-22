@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { Panel, Segmented } from "@/components/screen-primitives";
-import { Chip, Field, KeyValueList, StatusChip } from "@/components/ui";
+import { Chip, Field, KeyValueList } from "@/components/ui";
+import { TestConsoleTimeline } from "./test-console-timeline";
+import { usePaidCallConsole } from "./use-paid-call-console";
 import type { ConsolePhase, Receipt, Tool, WalletProfile } from "@/lib/types";
 
 type ConsoleTarget = "hosted" | "custom";
@@ -22,14 +24,25 @@ export function TestConsoleScreen({
 }) {
   const [target, setTarget] = useState<ConsoleTarget>("hosted");
   const [phase, setPhase] = useState<ConsolePhase>("idle");
+  const [endpointInput, setEndpointInput] = useState(endpointUrl);
   const [selectedToolId, setSelectedToolId] = useState(tools[0]?.id ?? "");
   const [selectedWalletId, setSelectedWalletId] = useState(wallets[0]?.id ?? "");
+  const { apiMessage, apiReceiptId, apiTools, busy, discover, run } = usePaidCallConsole();
 
   const selectedTool = tools.find((tool) => tool.id === selectedToolId) ?? tools[0];
   const selectedWallet = wallets.find((wallet) => wallet.id === selectedWalletId) ?? wallets[0];
   const discovered = phase !== "idle";
   const completed = phase === "complete";
   const toolNeedsInput = selectedTool?.id !== "list_pairs";
+  const discoveredTools = apiTools.length ? apiTools : tools.map((tool) => ({ description: tool.description, name: tool.id }));
+
+  async function discoverEndpointTools() {
+    if (await discover(endpointInput, setSelectedToolId)) setPhase("discovered");
+  }
+
+  async function runPaidCall() {
+    if (await run(selectedToolId)) setPhase("complete");
+  }
 
   return (
     <div className="grid two">
@@ -48,16 +61,18 @@ export function TestConsoleScreen({
               <input
                 className="input"
                 readOnly={target === "hosted"}
-                defaultValue={target === "hosted" ? endpointUrl : "https://provider.example.com/mcp"}
+                onChange={(event) => setEndpointInput(event.target.value)}
+                value={target === "hosted" ? endpointUrl : endpointInput}
               />
             </Field>
             <div className="notice">
               This console models the endpoint-first flow. It does not claim a live Casper
               settlement until a real facilitator response and deploy hash are stored.
             </div>
-            <button className="primaryButton" onClick={() => setPhase("discovered")} type="button">
+            <button className="primaryButton" disabled={busy} onClick={discoverEndpointTools} type="button">
               Discover endpoint tools
             </button>
+            <div className="notice">{apiMessage}</div>
           </div>
         </Panel>
 
@@ -66,22 +81,22 @@ export function TestConsoleScreen({
             <div className="emptyState">Discover tools before selecting inputs.</div>
           ) : (
             <div className="stack tight">
-              {tools.map((tool) => (
+              {discoveredTools.map((tool) => (
                 <button
                   className="toolRow"
-                  data-active={tool.id === selectedToolId}
-                  key={tool.id}
-                  onClick={() => setSelectedToolId(tool.id)}
+                  data-active={tool.name === selectedToolId}
+                  key={tool.name}
+                  onClick={() => setSelectedToolId(tool.name)}
                   type="button"
                 >
                   <div>
-                    <strong className="mono">{tool.id}</strong>
+                    <strong className="mono">{tool.name}</strong>
                     <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
-                      {tool.description} - {tool.target}
+                      {tool.description ?? "Remote MCP tool"}
                     </div>
                   </div>
-                  <Chip tone={tool.published ? "signal" : "neutral"}>
-                    {tool.published ? `${tool.price?.toFixed(2)} TUSDC` : "not published"}
+                  <Chip tone={apiTools.length ? "signal" : "neutral"}>
+                    {apiTools.length ? "discovered" : "fixture"}
                   </Chip>
                 </button>
               ))}
@@ -99,9 +114,9 @@ export function TestConsoleScreen({
               <KeyValueList
                 rows={[
                   { key: "selected tool", value: selectedTool.id, mono: true },
-                  { key: "payment asset", value: "CEP-18 TUSDC", mono: true },
+                  { key: "payment asset", value: "CEP-18 WCSPR", mono: true },
                   { key: "network", value: "casper:casper-test", mono: true },
-                  { key: "price", value: `${selectedTool.price?.toFixed(2) ?? "0.00"} TUSDC`, mono: true },
+                  { key: "price", value: `${selectedTool.price?.toFixed(2) ?? "0.00"} WCSPR`, mono: true },
                 ]}
               />
               {toolNeedsInput ? (
@@ -110,7 +125,7 @@ export function TestConsoleScreen({
                     <input className="input" defaultValue="CSPR" />
                   </Field>
                   <Field label="token out">
-                    <input className="input" defaultValue="USD" />
+                    <input className="input" defaultValue="WCSPR" />
                   </Field>
                   <Field label="amount">
                     <input className="input" defaultValue="10" />
@@ -146,7 +161,7 @@ export function TestConsoleScreen({
               <button
                 className="primaryButton"
                 disabled={!selectedTool.published}
-                onClick={() => setPhase("complete")}
+                onClick={runPaidCall}
                 type="button"
               >
                 Run policy and paid call
@@ -155,36 +170,13 @@ export function TestConsoleScreen({
           )}
         </Panel>
 
-        <Panel
-          title="Result timeline"
-          action={completed ? <StatusChip status={fixtureReceipt.status} /> : undefined}
-        >
-          <div className="stack">
-            {[
-              ["Endpoint discovery", discovered ? "Tools discovered from endpoint metadata." : "Waiting for discovery."],
-              ["Policy pre-check", completed ? "Allowed fixture path reached x402." : "Runs before signing/payment."],
-              ["x402 verify / settle", completed ? "Fixture only: no deploy hash is claimed." : "Requires facilitator response."],
-              ["Receipt", completed ? fixtureReceipt.id : "Created for every meaningful attempt."],
-            ].map(([label, note], index) => (
-              <div className="timelineItem" key={label}>
-                <span className={`timelineDot ${completed || index === 0 && discovered ? "done" : ""}`}>
-                  {index + 1}
-                </span>
-                <div>
-                  <strong>{label}</strong>
-                  <div className="muted" style={{ marginTop: 3, fontSize: 13 }}>
-                    {note}
-                  </div>
-                </div>
-              </div>
-            ))}
-            {completed ? (
-              <button className="secondaryButton" onClick={() => onOpenReceipt(fixtureReceipt)} type="button">
-                Open public receipt
-              </button>
-            ) : null}
-          </div>
-        </Panel>
+        <TestConsoleTimeline
+          apiReceiptId={apiReceiptId}
+          completed={completed}
+          discovered={discovered}
+          fixtureReceipt={fixtureReceipt}
+          onOpenReceipt={onOpenReceipt}
+        />
       </div>
     </div>
   );

@@ -75,7 +75,7 @@ export default function Home() {
             ["Published tools", String(tools.filter((tool) => tool.published).length), "Hosted MCP/x402 endpoint tools"],
             ["Wallet profiles", String(wallets.length), "Spend-policy controlled accounts"],
             ["Receipt attempts", String(receipts.length), "Policy, payment, and proof outcomes"],
-            ["Live proof volume", "0.00 TUSDC", "Requires a real Testnet deploy hash"],
+            ["Live proof volume", "0.00 WCSPR", "Requires a real Testnet deploy hash"],
           ].map(([label, value, note]) => (
             <div className="stat" key={label}>
               <div className="fieldLabel">{label}</div>

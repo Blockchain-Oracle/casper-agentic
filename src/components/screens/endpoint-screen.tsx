@@ -83,7 +83,7 @@ export function EndpointScreen({
                   {tool.description}
                 </div>
               </div>
-              <Chip tone="signal">{tool.price?.toFixed(2)} TUSDC</Chip>
+              <Chip tone="signal">{tool.price?.toFixed(2)} WCSPR</Chip>
             </div>
           ))}
         </Panel>

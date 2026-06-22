@@ -47,7 +47,7 @@ export function PricingScreen({
                     </div>
                   </td>
                   <td className="mono">{tool.target}</td>
-                  <td>{tool.price === null ? "not priced" : `${tool.price.toFixed(2)} TUSDC`}</td>
+                  <td>{tool.price === null ? "not priced" : `${tool.price.toFixed(2)} WCSPR`}</td>
                   <td>
                     <div className="buttonRow">
                       <Chip tone={tool.enabled ? "signal" : "neutral"}>
@@ -76,7 +76,7 @@ export function PricingScreen({
             rows={[
               { key: "network", value: "casper:casper-test", mono: true, tone: "signal" },
               { key: "scheme", value: "exact", mono: true, tone: "signal" },
-              { key: "asset", value: "CEP-18 TUSDC", mono: true, tone: "signal" },
+              { key: "asset", value: "CEP-18 WCSPR", mono: true, tone: "signal" },
               { key: "payee account", value: "account-hash-4d2f...a017", mono: true, tone: "signal" },
               { key: "timeout", value: "120 seconds", mono: true, tone: "signal" },
             ]}

@@ -36,7 +36,7 @@ export function PricingDrawer({
             <input className="input" readOnly value="exact" />
           </Field>
           <Field label="asset">
-            <input className="input" readOnly value="CEP-18 TUSDC" />
+            <input className="input" readOnly value="CEP-18 WCSPR" />
           </Field>
           <Field label="amount">
             <input className="input" onChange={(event) => onAmount(event.target.value)} value={amount} />

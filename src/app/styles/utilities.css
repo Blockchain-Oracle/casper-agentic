@@ -1,0 +1,58 @@
+.notice {
+  padding: 12px 14px;
+  border: 1px solid var(--warn-line);
+  border-radius: 10px;
+  background: var(--warn-soft);
+  color: #6c4300;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.notice.signal {
+  border-color: var(--signal-line);
+  background: var(--signal-soft);
+  color: #0c5330;
+}
+
+.notice.danger {
+  border-color: var(--danger-line);
+  background: var(--danger-soft);
+  color: #84241f;
+}
+
+.emptyState {
+  display: grid;
+  min-height: 150px;
+  place-items: center;
+  border: 1px dashed var(--line-2);
+  border-radius: 10px;
+  background: var(--paper-2);
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.codeTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.receiptList {
+  max-height: 640px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.divider {
+  height: 1px;
+  background: var(--paper-2);
+}
+
+.right {
+  text-align: right;
+}
+
+.mobileOnly {
+  display: none;
+}

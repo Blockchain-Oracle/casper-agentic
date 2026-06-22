@@ -51,7 +51,7 @@ export function DashboardScreen({
               rows={[
                 { key: "network", value: "casper:casper-test", mono: true },
                 { key: "scheme", value: "exact", mono: true },
-                { key: "asset", value: "CEP-18 TUSDC", mono: true },
+                { key: "asset", value: "CEP-18 WCSPR", mono: true },
                 { key: "proof rule", value: "No deploy hash is shown until real Testnet proof exists" },
               ]}
             />
@@ -66,7 +66,7 @@ export function DashboardScreen({
           ["Agent wallets", String(wallets.length), "Policy-controlled Casper accounts"],
           ["Receipt attempts", String(receipts.length), "All meaningful attempts produce receipts"],
           ["Blocked by policy", String(blockedCount), "Stopped before wallet signing"],
-          ["Live proof volume", "0.00 TUSDC", "Awaiting a real deploy hash"],
+          ["Live proof volume", "0.00 WCSPR", "Awaiting a real deploy hash"],
         ].map(([label, value, note]) => (
           <div className="stat" key={label}>
             <div className="fieldLabel">{label}</div>

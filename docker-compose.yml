@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: casper_gw
+      POSTGRES_PASSWORD: casper_gw
+      POSTGRES_USER: casper_gw
+    ports:
+      - "54329:5432"
+    volumes:
+      - casper_gw_postgres:/var/lib/postgresql/data
+
+volumes:
+  casper_gw_postgres:

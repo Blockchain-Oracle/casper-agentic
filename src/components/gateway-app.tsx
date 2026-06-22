@@ -16,8 +16,6 @@ import { consoleReceiptId, screens, tools, wallets } from "@/lib/fixtures";
 import { receiptById } from "@/lib/receipt-detail";
 import type { Receipt, Screen, SourcePhase, SourceType, Tool, UpstreamAuth } from "@/lib/types";
 
-const copiedResetMs = 1400;
-
 export function GatewayApp() {
   const [screen, setScreen] = useState<Screen>("dashboard");
   const [navOpen, setNavOpen] = useState(false);
@@ -68,7 +66,7 @@ export function GatewayApp() {
   async function copy(value: string) {
     await navigator.clipboard?.writeText(value).catch(() => undefined);
     setCopied(value);
-    queueTimer(() => setCopied(null), copiedResetMs);
+    queueTimer(() => setCopied(null), 1400);
   }
 
   function runSourceDiscovery(success: boolean) {

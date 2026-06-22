@@ -13,7 +13,7 @@ export async function GET() {
       receiptAttempts: receipts.length,
       blockedByPolicy: blockedCount,
       settledWithProof,
-      liveProofVolume: "0.00 TUSDC",
+      liveProofVolume: "0.00 WCSPR",
     },
     latestReceipts: receipts.slice(0, 5),
   });

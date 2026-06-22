@@ -1,0 +1,156 @@
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--line);
+  background: rgb(248 247 243 / 0.86);
+  backdrop-filter: blur(14px) saturate(1.2);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 150px;
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.brandMark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--dark);
+  color: white;
+  box-shadow: var(--shadow);
+}
+
+.brandMark::before {
+  display: block;
+  width: 13px;
+  height: 13px;
+  border: 3px solid currentColor;
+  border-radius: 5px;
+  content: "";
+  box-shadow: inset 0 0 0 3px var(--primary);
+}
+
+.brandHyphen {
+  color: var(--primary);
+}
+
+.nav {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.navDivider {
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  background: var(--line);
+}
+
+.navButton,
+.networkPill,
+.pillButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.navButton {
+  padding: 7px 12px;
+}
+
+.navButton[data-active="true"] {
+  background: linear-gradient(180deg, var(--primary), var(--primary-2));
+  color: white;
+  box-shadow: 0 8px 20px -12px var(--primary);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.45;
+}
+
+.navButton[data-active="true"] .dot {
+  opacity: 1;
+}
+
+.networkPill {
+  min-height: 30px;
+  padding: 6px 11px;
+  border: 1px solid var(--line);
+  background: rgb(255 255 255 / 0.72);
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.runButton {
+  min-height: 36px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--dark);
+  color: white;
+  font-size: 13px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.mobileMenuButton {
+  display: none;
+  width: 46px;
+  height: 46px;
+  margin-left: auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.hamburger {
+  width: 22px;
+  height: 14px;
+  border-top: 3px solid var(--ink);
+  border-bottom: 3px solid var(--ink);
+  position: relative;
+}
+
+.hamburger::after {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 22px;
+  border-top: 3px solid var(--ink);
+  content: "";
+}
+
+.mobilePanel {
+  display: none;
+}

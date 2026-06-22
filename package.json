@@ -8,10 +8,28 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:browser": "playwright test",
+    "guard:files": "node scripts/check-file-lines.mjs",
+    "guard:product": "node scripts/guard-product-scope.mjs",
+    "guard:secrets": "node scripts/guard-secrets.mjs",
+    "verify": "pnpm guard:files && pnpm guard:product && pnpm guard:secrets && pnpm test && pnpm typecheck && pnpm lint",
+    "ci": "pnpm install --frozen-lockfile && pnpm verify && pnpm test:browser && pnpm build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "smoke:live": "tsx scripts/live-smoke.ts"
   },
   "dependencies": {
+    "@make-software/casper-x402": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@x402/core": "^2.16.0",
+    "@x402/fetch": "^2.16.0",
+    "casper-js-sdk": "^5.0.12",
+    "drizzle-orm": "^0.45.2",
     "next": "16.2.9",
+    "postgres": "^3.4.9",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
@@ -21,11 +39,16 @@
     }
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.2",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
-    "typescript": "^5"
+    "tsx": "^4.22.4",
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   }
 }

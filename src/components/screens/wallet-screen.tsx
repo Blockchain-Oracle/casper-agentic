@@ -68,7 +68,7 @@ export function WalletScreen({
               { key: "account", value: selectedWallet.fullAccount, mono: true },
               { key: "network", value: selectedWallet.network, mono: true },
               { key: "signing mode", value: selectedWallet.signingMode },
-              { key: "balance", value: `${selectedWallet.balance} TUSDC`, mono: true },
+              { key: "balance", value: `${selectedWallet.balance} WCSPR`, mono: true },
               { key: "custody note", value: "MVP signing mode - no production custody claim" },
             ]}
             copiedKey={copied}
@@ -108,11 +108,11 @@ export function WalletScreen({
             </label>
             <KeyValueList
               rows={[
-                { key: "daily limit", value: "2.00 TUSDC" },
+                { key: "daily limit", value: "2.00 WCSPR" },
                 { key: "allowed providers", value: "Make Software Labs, Weather Risk Desk" },
                 { key: "allowed tools", value: allowlist.join(", ") },
                 { key: "allowed network", value: "casper:casper-test", mono: true },
-                { key: "allowed asset", value: "CEP-18 TUSDC", mono: true },
+                { key: "allowed asset", value: "CEP-18 WCSPR", mono: true },
               ]}
             />
             <div className={`notice ${policyAllowed ? "signal" : "danger"}`}>
