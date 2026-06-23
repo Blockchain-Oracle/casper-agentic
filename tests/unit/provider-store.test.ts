@@ -97,12 +97,14 @@ describe("provider store helpers", () => {
       normalizeToolPriceInput({
         amount: "7500000000",
         asset: "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e",
+        extra: { decimals: "9", name: "Wrapped CSPR", symbol: "WCSPR", version: "1" },
         network: "casper:casper-test",
         payTo: "009accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d",
         toolId: "tool-1",
       }),
     ).toMatchObject({
       amount: "7500000000",
+      extra: { decimals: "9", name: "Wrapped CSPR", symbol: "WCSPR", version: "1" },
       maxTimeoutSeconds: 900,
       network: "casper:casper-test",
       scheme: "exact",

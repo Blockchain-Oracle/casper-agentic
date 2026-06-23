@@ -16,6 +16,7 @@ export interface CreateProviderSourceInput {
 export interface ToolPriceInput {
   amount: string;
   asset: string;
+  extra?: unknown;
   maxTimeoutSeconds?: number;
   network: string;
   payTo: string;
@@ -49,7 +50,7 @@ export function normalizeToolPriceInput(input: ToolPriceInput) {
   return {
     amount: positiveIntegerString(input.amount, "amount"),
     asset: requiredText(input.asset, "asset"),
-    extra: {},
+    extra: isRecord(input.extra) ? input.extra : {},
     maxTimeoutSeconds: positiveInteger(input.maxTimeoutSeconds ?? 900, "max timeout seconds"),
     network: requiredText(input.network, "network"),
     payTo: requiredText(input.payTo, "payTo"),

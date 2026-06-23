@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_CASPER_NETWORK, DEFAULT_WCSPR_PACKAGE, getRuntimeConfig } from "@/server/env";
 import { isOperatorAccessError, requireOperatorRequest } from "@/server/operator-access";
 import { saveToolPrice } from "@/server/provider-store";
+import { buildPaymentRequirements } from "@/server/x402-payment";
 
 export const dynamic = "force-dynamic";
 
@@ -13,12 +14,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const { id } = await context.params;
     const config = getRuntimeConfig();
     const payeeAccountHash = assertServerPaymentDefaults(body, config);
+    const requirements = buildPaymentRequirements({ ...config, payeeAccountHash });
     const price = await saveToolPrice({
-      amount: body.amount ?? config.paymentAmount,
-      asset: config.paymentAsset,
-      maxTimeoutSeconds: config.paymentTimeoutSeconds,
-      network: config.casperNetwork,
-      payTo: payeeAccountHash,
+      amount: body.amount ?? requirements.amount,
+      asset: requirements.asset,
+      extra: requirements.extra,
+      maxTimeoutSeconds: requirements.maxTimeoutSeconds,
+      network: requirements.network,
+      payTo: requirements.payTo,
       scheme: "exact",
       toolId: id,
     });
