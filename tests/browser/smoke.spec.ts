@@ -9,10 +9,10 @@ test("public explorer is public and separate from the app shell", async ({ page 
   }
   await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
   await expect(page.getByText("No sign-in required")).toBeVisible();
-  await expect(page.getByLabel("Search receipt id or deploy hash")).toBeVisible();
+  await expect(page.getByLabel("Search receipt id, deploy hash, or account hash")).toBeVisible();
   await expect(page.getByRole("button", { name: "Search explorer" })).toBeVisible();
   await expect(page.getByText("External proof is limited")).toBeVisible();
-  await expect(page.getByText("Sample receipts")).toBeVisible();
+  await expect(page.getByText(/Sample receipts|Gateway receipts/)).toBeVisible();
 });
 
 test("operator app exposes the paid tool console without changing public explorer", async ({ page }) => {

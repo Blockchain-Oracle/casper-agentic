@@ -70,6 +70,15 @@ export class CsprCloudClient {
     );
   }
 
+  async getTokenActions(params: { accountHash?: string; contractPackageHash?: string; deployHash?: string }) {
+    const queryParams = new URLSearchParams();
+    if (params.accountHash) queryParams.set("account_hash", params.accountHash);
+    if (params.contractPackageHash) queryParams.set("contract_package_hash", params.contractPackageHash);
+    if (params.deployHash) queryParams.set("deploy_hash", params.deployHash);
+    const query = queryParams.size ? `?${queryParams.toString()}` : "";
+    return this.requestList<CsprCloudFTAction>(`/ft-token-actions${query}`);
+  }
+
   private async request<T>(path: string) {
     const response = await fetch(`${this.config.csprCloudRestBaseUrl}${path}`, {
       headers: this.headers(),

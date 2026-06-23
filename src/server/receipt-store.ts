@@ -73,6 +73,23 @@ export async function getReceiptDetailByDeployHash(deployHash: string): Promise<
   return attempt ? detailForAttempt(attempt) : undefined;
 }
 
+export async function listReceiptDetailsByWallet(accountHash: string) {
+  if (!hasDatabaseUrl()) {
+    return fixtureReceipts
+      .filter((item) => item.wallet.toLowerCase() === accountHash.toLowerCase())
+      .map((receipt) => buildReceiptDetail(receipt));
+  }
+
+  const rows = await getDb()
+    .select()
+    .from(paidCallAttempts)
+    .where(eq(paidCallAttempts.walletAccountHash, accountHash))
+    .orderBy(desc(paidCallAttempts.createdAt))
+    .limit(25);
+
+  return Promise.all(rows.map((row) => detailForAttempt(row)));
+}
+
 async function detailForAttempt(attempt: typeof paidCallAttempts.$inferSelect) {
   const [proof] = await getDb().select().from(casperProofs).where(eq(casperProofs.attemptId, attempt.id)).limit(1);
   const [policy] = await getDb().select().from(policyDecisions).where(eq(policyDecisions.attemptId, attempt.id)).limit(1);

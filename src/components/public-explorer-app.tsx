@@ -39,15 +39,17 @@ export function PublicExplorerApp() {
   }, []);
 
   const receiptRows = receiptDetails.map((detail) => detail.receipt);
+  const activeDetails = searchResult?.matches ?? receiptDetails;
+  const activeReceiptRows = activeDetails.map((detail) => detail.receipt);
   const selectedReceiptId = selectedReceiptOverride ?? searchParams.get("receipt") ?? receiptRows[0]?.id ?? receipts[0].id;
   const feedReceiptDetail =
-    receiptDetails.find((detail) => detail.receipt.id === selectedReceiptId) ?? buildReceiptDetail(receiptById(selectedReceiptId));
+    activeDetails.find((detail) => detail.receipt.id === selectedReceiptId) ?? buildReceiptDetail(receiptById(selectedReceiptId));
   const receiptDetail = searchResult?.detail ?? feedReceiptDetail;
   const selectedReceipt = receiptDetail.receipt;
   const filteredReceipts = useMemo(() => {
-    if (explorerFilter === "all") return receiptRows;
-    return receiptRows.filter((receipt) => receipt.status === explorerFilter);
-  }, [explorerFilter, receiptRows]);
+    if (explorerFilter === "all") return activeReceiptRows;
+    return activeReceiptRows.filter((receipt) => receipt.status === explorerFilter);
+  }, [activeReceiptRows, explorerFilter]);
 
   async function runSearch() {
     const query = searchQuery.trim();
@@ -102,7 +104,7 @@ export function PublicExplorerApp() {
           <div className="eyebrow">Public infrastructure</div>
           <h1>Casper x402 Explorer</h1>
           <p className="subhead">
-            Public receipt inspection for rich Casper GW records plus external deploy-hash
+            Public receipt inspection for rich Casper GW records plus external deploy and account
             proof lookup. External proofs show chain facts only.
           </p>
           <div className="buttonRow" style={{ marginTop: 14 }}>

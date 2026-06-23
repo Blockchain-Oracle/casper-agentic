@@ -49,11 +49,11 @@ export function ExplorerScreen({
             }}
           >
             <label>
-              <div className="fieldLabel">Search receipt id or deploy hash</div>
+              <div className="fieldLabel">Search receipt id, deploy hash, or account hash</div>
               <input
                 className="input"
                 onChange={(event) => onSearchQuery(event.target.value)}
-                placeholder="receipt uuid or 64-char deploy hash"
+                placeholder="receipt uuid, deploy hash, account:hash, or wallet:hash"
                 value={searchQuery}
               />
             </label>
@@ -121,7 +121,9 @@ export function ExplorerScreen({
 }
 
 function sourceLabel(source: ExplorerSearchSource) {
+  if (source === "casper_gw_account") return { label: "Casper GW account receipts", tone: "signal" };
   if (source === "casper_gw_receipt") return { label: "Casper GW receipt", tone: "signal" };
+  if (source === "external_account_proof") return { label: "External account proof", tone: "primary" };
   if (source === "external_casper_proof") return { label: "External Casper proof", tone: "primary" };
   if (source === "unconfigured") return { label: "Lookup not configured", tone: "warn" };
   return { label: "Not found", tone: "danger" };

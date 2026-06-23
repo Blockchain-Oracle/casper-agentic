@@ -121,13 +121,16 @@ export interface ReceiptDetail {
 }
 
 export type ExplorerSearchSource =
+  | "casper_gw_account"
   | "casper_gw_receipt"
+  | "external_account_proof"
   | "external_casper_proof"
   | "not_found"
   | "unconfigured";
 
 export interface ExplorerSearchResult {
   detail?: ReceiptDetail;
+  matches?: ReceiptDetail[];
   message: string;
   query: string;
   source: ExplorerSearchSource;
