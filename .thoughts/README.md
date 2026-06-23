@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, and Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified. The next engineering gate should be a Phase 3 paid-tool console plan, not broad UI redesign or production custody.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, and Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified. The Phase 3 paid-tool console plan is drafted and must be accepted before coding that slice; do not jump into broad UI redesign or production custody.
 
 The current product shape:
 
@@ -135,7 +135,10 @@ No GitHub PR was opened because no remote is configured in this checkout.
 
 ## Current Build Gate
 
-The next implementation plan should be Phase 3 paid-tool console settlement. Write/accept that plan before coding it.
+Phase 3 paid-tool console settlement is the next engineering slice.
+
+- Draft plan: `.thoughts/plans/2026-06-23-casper-gw-phase-3-paid-tool-console-settlement.md`
+- Status: pending Abu acceptance before implementation.
 
 Phase 3 should likely connect:
 
