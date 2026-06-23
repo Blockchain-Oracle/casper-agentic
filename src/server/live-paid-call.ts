@@ -17,21 +17,22 @@ import { getAgentWalletRecord } from "./wallet-store";
 import { X402FacilitatorClient } from "./x402-facilitator";
 import { buildPaymentRequirements, createCasperPaymentPayload, getConfiguredSignerAddress } from "./x402-payment";
 
-const DEFAULT_GET_QUOTE_ARGS = {
-  amount: "1",
-  token_in: "CSPR",
-  token_out: "WCSPR",
-  type: "exact_in",
-};
-
 export interface PaidCallInput {
-  args?: Record<string, unknown>;
-  endpointUrl?: string;
-  toolName?: string;
-  walletId?: string;
+  args: Record<string, unknown>;
+  endpointUrl: string;
+  toolName: string;
+  walletId: string;
 }
 
-export async function runLivePaidToolCall(input: PaidCallInput = {}) {
+export class PaidCallInputError extends Error {
+  readonly status = 400;
+}
+
+export function isPaidCallInputError(error: unknown): error is PaidCallInputError {
+  return error instanceof PaidCallInputError;
+}
+
+export async function runLivePaidToolCall(input: PaidCallInput) {
   const config = requireIntegrationConfig();
   const facilitator = new X402FacilitatorClient(config);
   const csprCloud = new CsprCloudClient(config);
@@ -40,17 +41,23 @@ export async function runLivePaidToolCall(input: PaidCallInput = {}) {
     throw new Error(`CSPR.cloud facilitator does not advertise ${config.casperNetwork} exact support`);
   }
 
-  const endpointUrl = input.endpointUrl?.trim() || config.mcpUrl;
-  const toolName = input.toolName?.trim() || "get_quote";
+  const endpointUrl = requireText(input.endpointUrl, "endpointUrl");
+  const toolName = requireText(input.toolName, "toolName");
+  const walletId = requireText(input.walletId, "walletId");
+  const args = requireArgs(input.args);
+  if (endpointUrl !== config.mcpUrl) {
+    throw new PaidCallInputError("Phase 3 paid execution is limited to the configured MCP endpoint");
+  }
+
   const tools = await discoverMcpTools(endpointUrl);
   const tool = tools.find((item) => item.name === toolName);
   if (!tool) throw new Error(`Remote MCP endpoint did not expose ${toolName}`);
 
   const signer = getConfiguredSignerAddress(config);
   const signerHash = normalizeCasperAccountHash(signer);
-  const selectedWallet = input.walletId ? await getAgentWalletRecord(input.walletId) : null;
-  if (input.walletId && !selectedWallet) throw new Error("selected wallet not found");
-  const walletAccountHash = selectedWallet ? normalizeCasperAccountHash(selectedWallet.accountHash) : signerHash;
+  const selectedWallet = await getAgentWalletRecord(walletId);
+  if (!selectedWallet) throw new PaidCallInputError("selected wallet not found");
+  const walletAccountHash = normalizeCasperAccountHash(selectedWallet.accountHash);
   const paymentRequirements = buildPaymentRequirements(config);
   const attempt = await persistAttempt({
     amount: paymentRequirements.amount,
@@ -58,7 +65,7 @@ export async function runLivePaidToolCall(input: PaidCallInput = {}) {
     client: "phase-3-console",
     network: paymentRequirements.network,
     providerName: "CSPR.trade MCP",
-    redactedInput: redactInput(input.args ?? DEFAULT_GET_QUOTE_ARGS),
+    redactedInput: redactInput(args),
     status: "policy_pending",
     toolName,
     walletAccountHash,
@@ -195,7 +202,7 @@ export async function runLivePaidToolCall(input: PaidCallInput = {}) {
     proofStatus: proof.deploy.status,
   });
 
-  const result = await callMcpTool(endpointUrl, toolName, input.args ?? DEFAULT_GET_QUOTE_ARGS);
+  const result = await callMcpTool(endpointUrl, toolName, args);
   if (result.isError) {
     await updateAttemptStatus(attempt.id, "upstream_failed", "MCP tool returned an error", { text: result.text });
     await persistAudit(attempt.id, "fail", "Upstream MCP tool failed after settlement", { toolName });
@@ -214,4 +221,17 @@ function redactInput(input: Record<string, unknown>) {
   return Object.fromEntries(
     Object.entries(input).map(([key, value]) => [key, typeof value === "string" ? value.slice(0, 80) : value]),
   );
+}
+
+function requireText(value: string | undefined, label: string) {
+  const text = value?.trim();
+  if (!text) throw new PaidCallInputError(`${label} is required`);
+  return text;
+}
+
+function requireArgs(value: Record<string, unknown> | undefined) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new PaidCallInputError("args object is required");
+  }
+  return value;
 }

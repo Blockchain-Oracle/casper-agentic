@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildReceiptDetail } from "@/lib/receipt-detail";
+import { buildPersistedReceiptDetail } from "@/lib/persisted-receipt-detail";
 import type { Receipt } from "@/lib/types";
 
 describe("receipt proof rendering", () => {
@@ -73,5 +74,60 @@ describe("receipt proof rendering", () => {
     expect(detail.x402.find((row) => row.key === "settle")?.value).toBe("not attempted");
     expect(detail.casper).toEqual([]);
     expect(detail.casperNote).toContain("no transaction exists on Casper");
+  });
+
+  it("builds real receipt layers from persisted policy, x402, and proof records", () => {
+    const receipt: Receipt = {
+      amount: "7500000000",
+      asset: "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e",
+      client: "phase-3-console",
+      hash: "real-deploy-hash",
+      id: "real_attempt",
+      provider: "CSPR.trade MCP",
+      status: "settled",
+      time: "2026-06-23T12:00:00.000Z",
+      tool: "get_quote",
+      wallet: "account-hash-real-payer",
+    };
+
+    const detail = buildPersistedReceiptDetail(receipt, {
+      casperProof: {
+        deploy: { status: "processed" },
+        deployHash: "real-deploy-hash",
+        explorerUrl: "https://testnet.cspr.live/deploy/real-deploy-hash",
+        ftAction: {
+          amount: "7500000000",
+          from: "account-hash-real-payer",
+          to: "account-hash-real-payee",
+        },
+        proofStatus: "processed",
+      },
+      policyDecision: {
+        allowed: true,
+        evaluatedPolicy: { toolName: "get_quote" },
+        reason: "policy allowed before signing/payment",
+      },
+      x402Records: [
+        {
+          facilitatorUrl: "https://x402-facilitator.cspr.cloud",
+          paymentRequirements: {
+            amount: "7500000000",
+            asset: "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e",
+            network: "casper:casper-test",
+            payTo: "account-hash-real-payee",
+            scheme: "exact",
+          },
+          settleResponse: { payer: "account-hash-real-payer", success: true, transaction: "real-deploy-hash" },
+          verifyResponse: { isValid: true },
+        },
+      ],
+    });
+
+    expect(detail.policy.find((row) => row.key === "decision")?.value).toBe("ALLOWED");
+    expect(detail.x402.find((row) => row.key === "payee")?.value).toBe("account-hash-real-payee");
+    expect(detail.casper.find((row) => row.key === "payer")?.value).toBe("account-hash-real-payer");
+    expect(detail.casper.find((row) => row.key === "proof status")?.value).toBe("processed");
+    expect(JSON.stringify(detail)).not.toContain("0x4d2f...a017");
+    expect(JSON.stringify(detail)).not.toContain("0x9f3a...b2c1");
   });
 });

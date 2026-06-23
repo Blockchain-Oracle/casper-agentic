@@ -36,11 +36,15 @@ export function TestConsoleScreen({
   const activeEndpointUrl = target === "hosted" ? endpointUrl : endpointInput;
   const activeToolId = selectedToolId || tools[0]?.id || "";
   const activeWalletId = selectedWalletId || wallets[0]?.id || "";
-  const discoveredTools = apiTools.length ? apiTools : tools.map((tool) => ({ description: tool.description, name: tool.id }));
+  const discovered = phase !== "idle";
+  const discoveredTools = apiTools.length
+    ? apiTools
+    : discovered
+      ? []
+      : tools.map((tool) => ({ description: tool.description, name: tool.id }));
   const selectedApiTool = discoveredTools.find((tool) => tool.name === activeToolId) ?? discoveredTools[0] ?? null;
   const selectedTool = tools.find((tool) => tool.id === activeToolId) ?? tools.find((tool) => tool.id === selectedApiTool?.name) ?? null;
   const selectedWallet = wallets.find((wallet) => wallet.id === activeWalletId) ?? wallets[0];
-  const discovered = phase !== "idle";
   const completed = phase === "complete";
   const inputFields = inputFieldsForTool(selectedApiTool);
   const runDisabled = busy || !selectedApiTool || !activeWalletId || !operatorToken;
@@ -103,25 +107,29 @@ export function TestConsoleScreen({
             <div className="emptyState">Discover tools before selecting inputs.</div>
           ) : (
             <div className="stack tight">
-              {discoveredTools.map((tool) => (
-                <button
-                  className="toolRow"
-                  data-active={tool.name === selectedToolId}
-                  key={tool.name}
-                  onClick={() => setSelectedToolId(tool.name)}
-                  type="button"
-                >
-                  <div>
-                    <strong className="mono">{tool.name}</strong>
-                    <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
-                      {tool.description ?? "Remote MCP tool"}
+              {discoveredTools.length ? (
+                discoveredTools.map((tool) => (
+                  <button
+                    className="toolRow"
+                    data-active={tool.name === selectedToolId}
+                    key={tool.name}
+                    onClick={() => setSelectedToolId(tool.name)}
+                    type="button"
+                  >
+                    <div>
+                      <strong className="mono">{tool.name}</strong>
+                      <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
+                        {tool.description ?? "Remote MCP tool"}
+                      </div>
                     </div>
-                  </div>
-                  <Chip tone={apiTools.length ? "signal" : "neutral"}>
-                    {apiTools.length ? "discovered" : "fixture"}
-                  </Chip>
-                </button>
-              ))}
+                    <Chip tone={apiTools.length ? "signal" : "neutral"}>
+                      {apiTools.length ? "discovered" : "fixture"}
+                    </Chip>
+                  </button>
+                ))
+              ) : (
+                <div className="emptyState">No tools were returned by this endpoint.</div>
+              )}
             </div>
           )}
         </Panel>

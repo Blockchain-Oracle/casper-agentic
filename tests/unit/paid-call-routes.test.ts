@@ -6,6 +6,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/server/live-paid-call", () => ({
+  isPaidCallInputError: (error: unknown) => error instanceof Error && "status" in error,
+  PaidCallInputError: class PaidCallInputError extends Error {
+    readonly status = 400;
+  },
   runLivePaidToolCall: mocks.runLivePaidToolCall,
 }));
 
@@ -54,6 +58,47 @@ describe("paid-call route", () => {
       toolName: "get_quote",
       walletId: "wallet-1",
     });
+  });
+
+  it("rejects missing selected wallet before orchestration", async () => {
+    const { POST } = await import("@/app/api/paid-calls/run/route");
+
+    const response = await POST(
+      request({
+        body: {
+          args: { amount: "10" },
+          endpointUrl: "https://mcp.cspr.trade/mcp",
+          toolName: "get_quote",
+        },
+        token: "operator-token",
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toMatch(/walletId is required/);
+    expect(mocks.runLivePaidToolCall).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed args before orchestration", async () => {
+    const { POST } = await import("@/app/api/paid-calls/run/route");
+
+    const response = await POST(
+      request({
+        body: {
+          args: "amount=10",
+          endpointUrl: "https://mcp.cspr.trade/mcp",
+          toolName: "get_quote",
+          walletId: "wallet-1",
+        },
+        token: "operator-token",
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toMatch(/args object is required/);
+    expect(mocks.runLivePaidToolCall).not.toHaveBeenCalled();
   });
 });
 

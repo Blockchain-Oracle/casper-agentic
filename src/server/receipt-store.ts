@@ -5,6 +5,7 @@ import { getDb, hasDatabaseUrl } from "@/db/client";
 import { auditEvents, casperProofs, paidCallAttempts, policyDecisions, x402Records } from "@/db/schema";
 import { receipts as fixtureReceipts } from "@/lib/fixtures";
 import { buildReceiptDetail } from "@/lib/receipt-detail";
+import { buildPersistedReceiptDetail } from "@/lib/persisted-receipt-detail";
 import type { Receipt, ReceiptDetail, ReceiptStatus } from "@/lib/types";
 
 export interface PersistAttemptInput {
@@ -28,9 +29,19 @@ export async function listReceiptDetails() {
   const proofs = ids.length
     ? await getDb().select().from(casperProofs).where(inArray(casperProofs.attemptId, ids))
     : [];
+  const policies = ids.length
+    ? await getDb().select().from(policyDecisions).where(inArray(policyDecisions.attemptId, ids))
+    : [];
+  const x402s = ids.length
+    ? await getDb().select().from(x402Records).where(inArray(x402Records.attemptId, ids)).orderBy(desc(x402Records.createdAt))
+    : [];
   return rows.map((row) => {
     const proof = proofs.find((item) => item.attemptId === row.id);
-    return buildReceiptDetail(fromAttemptRow(row, proof?.deployHash ?? null));
+    return buildPersistedReceiptDetail(fromAttemptRow(row, proof?.deployHash ?? null), {
+      casperProof: proof,
+      policyDecision: policies.find((item) => item.attemptId === row.id),
+      x402Records: x402s.filter((item) => item.attemptId === row.id),
+    });
   });
 }
 
@@ -43,7 +54,17 @@ export async function getReceiptDetail(id: string): Promise<ReceiptDetail | unde
   const [attempt] = await getDb().select().from(paidCallAttempts).where(eq(paidCallAttempts.id, id)).limit(1);
   if (!attempt) return undefined;
   const [proof] = await getDb().select().from(casperProofs).where(eq(casperProofs.attemptId, id)).limit(1);
-  return buildReceiptDetail(fromAttemptRow(attempt, proof?.deployHash ?? null));
+  const [policy] = await getDb().select().from(policyDecisions).where(eq(policyDecisions.attemptId, id)).limit(1);
+  const x402s = await getDb()
+    .select()
+    .from(x402Records)
+    .where(eq(x402Records.attemptId, id))
+    .orderBy(desc(x402Records.createdAt));
+  return buildPersistedReceiptDetail(fromAttemptRow(attempt, proof?.deployHash ?? null), {
+    casperProof: proof,
+    policyDecision: policy,
+    x402Records: x402s,
+  });
 }
 
 export async function persistAttempt(input: PersistAttemptInput) {

@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, and Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified. The Phase 3 paid-tool console plan is drafted and must be accepted before coding that slice; do not jump into broad UI redesign or production custody.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, and Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified. Phase 3 paid-tool console settlement is locally implemented with a real Testnet deploy and is pending independent reviewer closeout; do not jump into broad UI redesign or production custody.
 
 The current product shape:
 
@@ -133,22 +133,31 @@ Phase 2 wallet readiness and policy was completed locally on 2026-06-23.
 
 No GitHub PR was opened because no remote is configured in this checkout.
 
+## Phase 3 Gate Pending Review
+
+Phase 3 paid-tool console settlement was implemented locally on 2026-06-23. Initial independent review failed with three blockers and two should-fixes; all findings were accepted and fixed. The gate is pending independent re-review closeout.
+
+- Plan: `.thoughts/plans/2026-06-23-casper-gw-phase-3-paid-tool-console-settlement.md`
+- Verification audit: `.thoughts/verification/2026-06-23-casper-gw-phase-3-paid-tool-console-settlement.md`
+- Backend selected-wallet gate commit: `8cecc37 feat: gate paid calls by selected wallet`
+- Console UI wiring commit: `cd8579d feat: wire paid console request state`
+- Product wording fix commit: `14082be fix: align signer gate wording`
+- Selected-wallet live-smoke commit: `2bd95eb test: exercise selected wallet in live smoke`
+- Review fixes include required paid-call request fields, configured-endpoint-only Phase 3 paid execution, DB-backed receipt detail layers, facilitator failure-body preservation, and no fixture fallback after empty discovery.
+- Post-fix WCSPR wrap transaction: `1f415ea5a10128cbc2ecc3061078bf64824d64dbea8fcfa42518a769415f6de4`
+- Post-fix live attempt: `dfb14079-44e0-4006-b66f-99e1f22f0fc0`
+- Post-fix live deploy hash: `8ed4569fd13c26e28d2b1826d833e88ed821bb74aeec175980992a3ba6af0810`
+- Post-fix live explorer link: `https://testnet.cspr.live/deploy/8ed4569fd13c26e28d2b1826d833e88ed821bb74aeec175980992a3ba6af0810`
+- `pnpm run ci` passed after the review fixes with 83 unit tests, 10 browser tests, 2 intentional mobile skips, and `next build`.
+- `pnpm smoke:live` passed after review fixes and spent one Abu-approved WCSPR payment.
+
+No GitHub PR was opened because no remote is configured in this checkout.
+
 ## Current Build Gate
 
-Phase 3 paid-tool console settlement is the next engineering slice.
+Do not start the next engineering slice until the Phase 3 independent re-review has passed and the verification audit is updated from conditional pass to pass.
 
-- Draft plan: `.thoughts/plans/2026-06-23-casper-gw-phase-3-paid-tool-console-settlement.md`
-- Status: pending Abu acceptance before implementation.
-
-Phase 3 should likely connect:
-
-- endpoint-first tool discovery,
-- selected persisted wallet profile and effective spend policy,
-- fail-closed policy pre-check,
-- x402 payment payload signing with the current Testnet signer path only where explicitly allowed,
-- CSPR.cloud facilitator verify/settle,
-- four-layer receipt persistence,
-- public explorer proof display.
+After reviewer closeout, the next likely engineering slice is Phase 4 public explorer + receipt-detail hardening: join datastore receipt layers with CSPR.cloud proof, improve search/filter/detail states, preserve redaction, and keep `/explorer` public/no app shell.
 
 Do not start broad design work, production custody, CSPR.click signing, Mainnet, generic send policy, registry/private tools, or new simulated product modes unless Abu explicitly changes scope through the Context Engineering flow.
 

@@ -26,17 +26,17 @@ export class X402FacilitatorClient {
     return this.request<VerifyResponse>("/verify", {
       body: JSON.stringify(body),
       method: "POST",
-    });
+    }, true);
   }
 
   async settle(body: FacilitatorRequestBody) {
     return this.request<SettleResponse>("/settle", {
       body: JSON.stringify(body),
       method: "POST",
-    });
+    }, true);
   }
 
-  private async request<T>(path: string, init: RequestInit) {
+  private async request<T>(path: string, init: RequestInit, preserveBodyFailure = false) {
     if (!this.config.csprCloudApiKey) throw new Error("CSPR_CLOUD_API_KEY is required");
     const response = await fetch(`${this.config.facilitatorUrl}${path}`, {
       ...init,
@@ -49,7 +49,9 @@ export class X402FacilitatorClient {
     });
 
     const body = (await response.json()) as T;
-    if (!response.ok) throw new Error(`x402 facilitator ${path} failed with ${response.status}`);
+    if (!response.ok && !preserveBodyFailure) {
+      throw new Error(`x402 facilitator ${path} failed with ${response.status}`);
+    }
     return body;
   }
 }
