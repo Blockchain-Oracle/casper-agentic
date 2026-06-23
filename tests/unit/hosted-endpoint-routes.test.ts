@@ -16,9 +16,13 @@ vi.mock("@/server/endpoint-access", async () => {
   };
 });
 
-vi.mock("@/server/hosted-endpoint", () => ({
-  getHostedEndpoint: mocks.getHostedEndpoint,
-}));
+vi.mock("@/server/hosted-endpoint", async () => {
+  const actual = await vi.importActual<typeof import("@/server/hosted-endpoint")>("@/server/hosted-endpoint");
+  return {
+    ...actual,
+    getHostedEndpoint: mocks.getHostedEndpoint,
+  };
+});
 
 const originalEnv = { ...process.env };
 
