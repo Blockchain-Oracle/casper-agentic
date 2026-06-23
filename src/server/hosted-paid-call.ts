@@ -122,18 +122,39 @@ export async function runHostedPaidToolCall(input: HostedPaidToolCallInput): Pro
     });
   }
 
-  const settleResponse = await facilitator.settle({ paymentPayload, paymentRequirements: requirements });
+  const settleResponse = await settlePayment(facilitator, { paymentPayload, paymentRequirements: requirements });
+  if (!settleResponse.response) {
+    const reason = "settle_request_failed";
+    await updateAttemptStatus(attempt.id, "settle_failed", reason);
+    await persistX402Record({
+      attemptId: attempt.id,
+      facilitatorUrl: config.facilitatorUrl,
+      paymentPayload,
+      paymentRequirements: requirements,
+      settleResponse: { errorMessage: settleResponse.error, errorReason: reason, success: false },
+      verifyResponse,
+    });
+    await persistAudit(attempt.id, "fail", "Hosted x402 settle request failed", {
+      reason,
+      error: settleResponse.error,
+    });
+    return paymentError(502, -32015, "payment settlement failed", {
+      attemptId: attempt.id,
+      reason,
+      status: "settle_failed",
+    });
+  }
   await persistX402Record({
     attemptId: attempt.id,
     facilitatorUrl: config.facilitatorUrl,
     paymentPayload,
     paymentRequirements: requirements,
-    settleResponse,
+    settleResponse: settleResponse.response,
     verifyResponse,
   });
 
-  if (!settleResponse.success || !settleResponse.transaction) {
-    const reason = settleResponse.errorReason ?? "settle_failed";
+  if (!settleResponse.response.success || !settleResponse.response.transaction) {
+    const reason = settleResponse.response.errorReason ?? "settle_failed";
     await updateAttemptStatus(attempt.id, "settle_failed", reason);
     await persistAudit(attempt.id, "fail", "Hosted x402 settle failed", { reason });
     return paymentError(402, -32015, "payment settlement failed", {
@@ -143,7 +164,7 @@ export async function runHostedPaidToolCall(input: HostedPaidToolCallInput): Pro
     });
   }
 
-  return completeSettledHostedCall(input, { attemptId: attempt.id, config, requirements, settleResponse });
+  return completeSettledHostedCall(input, { attemptId: attempt.id, config, requirements, settleResponse: settleResponse.response });
 }
 
 function decodePaymentHeader(paymentHeader: string) {
@@ -238,6 +259,17 @@ function normalizePayer(value: string | undefined) {
   }
 }
 
+async function settlePayment(
+  facilitator: X402FacilitatorClient,
+  input: Parameters<X402FacilitatorClient["settle"]>[0],
+) {
+  try {
+    return { response: await facilitator.settle(input) };
+  } catch (error) {
+    return { error: publicErrorMessage(error) };
+  }
+}
+
 function redactInput(input: Record<string, unknown>) {
   return Object.fromEntries(
     Object.entries(input).map(([key, value]) => [key, typeof value === "string" ? value.slice(0, 80) : value]),
@@ -246,4 +278,8 @@ function redactInput(input: Record<string, unknown>) {
 
 function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function publicErrorMessage(error: unknown) {
+  return (error instanceof Error ? error.message : "request failed").slice(0, 160);
 }

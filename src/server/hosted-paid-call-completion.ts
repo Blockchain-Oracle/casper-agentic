@@ -55,10 +55,27 @@ export async function completeSettledHostedCall(
     proofStatus: proof.deploy.status,
   });
 
-  const upstream = await callMcpTool(input.endpoint.source.endpointUrl, input.tool.name, input.args);
-  if (upstream.isError) {
+  const upstream = await callProtectedTool(input);
+  if (!upstream.response) {
+    await updateAttemptStatus(context.attemptId, "upstream_failed", "MCP tool request failed", {
+      error: upstream.error,
+    });
+    await persistAudit(context.attemptId, "fail", "Hosted upstream MCP request failed after settlement", {
+      error: upstream.error,
+      toolName: input.tool.name,
+    });
+    return paymentError(
+      502,
+      -32017,
+      "upstream MCP tool failed after settlement",
+      { attemptId: context.attemptId, reason: "upstream_request_failed", status: "upstream_failed" },
+      paymentResponseHeader,
+    );
+  }
+  const { response } = upstream;
+  if (response.isError) {
     await updateAttemptStatus(context.attemptId, "upstream_failed", "MCP tool returned an error", {
-      text: upstream.text,
+      text: response.text,
     });
     await persistAudit(context.attemptId, "fail", "Hosted upstream MCP tool failed after settlement", {
       toolName: input.tool.name,
@@ -72,7 +89,7 @@ export async function completeSettledHostedCall(
     );
   }
 
-  await updateAttemptStatus(context.attemptId, "settled", undefined, { text: upstream.text });
+  await updateAttemptStatus(context.attemptId, "settled", undefined, { text: response.text });
   await persistAudit(context.attemptId, "ok", "Hosted paid tool call settled with Casper proof", {
     deployHash: context.settleResponse.transaction,
     toolName: input.tool.name,
@@ -81,8 +98,16 @@ export async function completeSettledHostedCall(
     attemptId: context.attemptId,
     kind: "success",
     paymentResponseHeader,
-    result: upstream.result,
+    result: response.result,
   };
+}
+
+async function callProtectedTool(input: HostedPaidToolCallInput) {
+  try {
+    return { response: await callMcpTool(input.endpoint.source.endpointUrl, input.tool.name, input.args) };
+  } catch (error) {
+    return { error: publicErrorMessage(error) };
+  }
 }
 
 function paymentError(
@@ -93,4 +118,8 @@ function paymentError(
   paymentResponseHeader?: string,
 ): HostedPaidToolCallOutput {
   return { code, data, kind: "error", message, paymentResponseHeader, status };
+}
+
+function publicErrorMessage(error: unknown) {
+  return (error instanceof Error ? error.message : "request failed").slice(0, 160);
 }

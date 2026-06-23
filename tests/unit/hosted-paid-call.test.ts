@@ -161,6 +161,26 @@ describe("hosted paid-call orchestration", () => {
     expect(mocks.callMcpTool).not.toHaveBeenCalled();
   });
 
+  it("records settle request failures without proof lookup or upstream execution", async () => {
+    mocks.settle.mockRejectedValue(new Error("facilitator timeout"));
+
+    const output = await runHostedPaidToolCall(input());
+
+    expect(output).toMatchObject({ code: -32015, kind: "error", status: 502 });
+    expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "settle_failed", "settle_request_failed");
+    expect(mocks.persistX402Record).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        settleResponse: expect.objectContaining({
+          errorMessage: "facilitator timeout",
+          errorReason: "settle_request_failed",
+          success: false,
+        }),
+      }),
+    );
+    expect(mocks.resolveCasperProof).not.toHaveBeenCalled();
+    expect(mocks.callMcpTool).not.toHaveBeenCalled();
+  });
+
   it("withholds upstream execution when Casper proof is pending after settlement", async () => {
     mocks.resolveCasperProof.mockResolvedValue({ error: "not indexed" });
 
@@ -171,6 +191,29 @@ describe("hosted paid-call orchestration", () => {
     expect(mocks.persistCasperProof).toHaveBeenCalledWith(expect.objectContaining({ proofStatus: "pending_indexing" }));
     expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "raw_proof_unavailable", "Casper proof pending CSPR.cloud indexing");
     expect(mocks.callMcpTool).not.toHaveBeenCalled();
+  });
+
+  it("returns payment response and records upstream failure when MCP call throws after proof", async () => {
+    mocks.callMcpTool.mockRejectedValue(new Error("upstream timeout"));
+
+    const output = await runHostedPaidToolCall(input());
+
+    expect(output).toMatchObject({
+      code: -32017,
+      data: { attemptId: "attempt-1", reason: "upstream_request_failed", status: "upstream_failed" },
+      kind: "error",
+      status: 502,
+    });
+    expect(output.paymentResponseHeader).toBeTruthy();
+    expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "upstream_failed", "MCP tool request failed", {
+      error: "upstream timeout",
+    });
+    expect(mocks.persistAudit).toHaveBeenCalledWith(
+      "attempt-1",
+      "fail",
+      "Hosted upstream MCP request failed after settlement",
+      expect.objectContaining({ error: "upstream timeout", toolName: "get_quote" }),
+    );
   });
 });
 

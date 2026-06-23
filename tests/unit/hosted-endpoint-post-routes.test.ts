@@ -153,6 +153,39 @@ describe("hosted MCP endpoint POST route", () => {
       tool: hostedEndpoint().tools[0],
     });
   });
+
+  it("returns JSON-RPC for malformed payment signatures after request id parsing", async () => {
+    const { HostedPaidCallInputError } = await import("@/server/hosted-paid-call");
+    const { POST } = await import("@/app/api/mcp/[sourceId]/route");
+    mockScopedAccess();
+    mocks.getHostedEndpoint.mockResolvedValue(hostedEndpoint());
+    mocks.runHostedPaidToolCall.mockRejectedValue(new HostedPaidCallInputError("invalid payment signature header"));
+
+    const response = await POST(
+      request({
+        body: {
+          id: "call-1",
+          jsonrpc: "2.0",
+          method: "tools/call",
+          params: { arguments: {}, name: "get_quote" },
+        },
+        paymentSignature: "not-valid",
+      }),
+      { params: Promise.resolve({ sourceId: "source-1" }) },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({
+      error: {
+        code: -32012,
+        data: { status: "invalid_payment" },
+        message: "invalid payment signature header",
+      },
+      id: "call-1",
+      jsonrpc: "2.0",
+    });
+  });
 });
 
 function mockScopedAccess() {

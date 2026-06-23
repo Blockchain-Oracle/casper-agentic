@@ -8,7 +8,11 @@ import {
   hostedMcpTools,
   resolveHostedTool,
 } from "@/server/hosted-endpoint";
-import { HostedPaidCallInputError, runHostedPaidToolCall } from "@/server/hosted-paid-call";
+import {
+  HostedPaidCallInputError,
+  runHostedPaidToolCall,
+  type HostedPaidToolCallInput,
+} from "@/server/hosted-paid-call";
 
 export const dynamic = "force-dynamic";
 
@@ -79,13 +83,15 @@ export async function POST(request: NextRequest, context: { params: Promise<{ so
 
     const signature = paymentHeader(request);
     if (signature) {
-      const outcome = await runHostedPaidToolCall({
+      const outcome = await runPaidToolCall({
         args: requiredToolArgs(message.params),
         endpoint,
+        id: message.id,
         paymentHeader: signature,
         requestUrl: request.url,
         tool,
       });
+      if (outcome instanceof NextResponse) return outcome;
       if (outcome.kind === "success") {
         return NextResponse.json(
           { id: message.id, jsonrpc: "2.0", result: outcome.result },
@@ -126,6 +132,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ so
           ? error.status
         : 404;
     return NextResponse.json({ error: message }, { status });
+  }
+}
+
+async function runPaidToolCall(input: HostedPaidToolCallInput & { id: JsonRpcMessage["id"] }) {
+  const { id, ...paidInput } = input;
+  try {
+    return await runHostedPaidToolCall(paidInput);
+  } catch (error) {
+    if (error instanceof HostedPaidCallInputError) {
+      return jsonRpcError(id, error.code, error.message, { status: "invalid_payment" }, error.status);
+    }
+    throw error;
   }
 }
 
