@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, and Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified. Do not jump into broad UI redesign or production custody.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, and Phase 5 public explorer account search is locally implemented, reviewed, and verified. Do not jump into broad UI redesign or production custody.
 
 The current product shape:
 
@@ -180,9 +180,30 @@ Phase 4 public explorer proof lookup was completed locally on 2026-06-23.
 
 No GitHub PR was opened because no remote is configured in this checkout.
 
+## Completed Phase 5 Gate
+
+Phase 5 public explorer account search was completed locally on 2026-06-23.
+
+- Plan: `.thoughts/plans/2026-06-23-casper-gw-phase-5-explorer-account-search.md`
+- Verification audit: `.thoughts/verification/2026-06-23-casper-gw-phase-5-explorer-account-search.md`
+- Plan commit: `acd1517 docs: plan explorer account search`
+- Implementation commit: `bb9260e feat: add explorer account search`
+- Audit commit: `bf4d45f docs: audit explorer account search`
+- `/api/explorer/search` now supports receipt, deploy, account, and wallet query prefixes.
+- Casper GW account matches return rich local receipts before external CSPR.cloud account proof.
+- External account proof is labeled `External account proof` and keeps gateway, policy, and x402 context explicitly unavailable.
+- Account search accepts raw 64-character account hashes and `account-hash-<hash>` input.
+- Non-spending local account lookup resolved the Phase 3 wallet to 3 Casper GW receipts.
+- Non-spending external account lookup, with local DB intentionally disabled for that command, resolved the same account through CSPR.cloud account, gas balance, payment asset balance, and recent token-action data.
+- Chrome inspection passed for public explorer account search and no authenticated app nav.
+- Independent review passed with no findings.
+- `pnpm run ci` passed with 94 unit tests, 10 browser tests, 2 intentional mobile skips, and `next build`.
+
+No GitHub PR was opened because no remote is configured in this checkout.
+
 ## Current Build Gate
 
-The next likely engineering slice is Phase 5 public explorer account/search hardening or hosted endpoint payment-enforcement hardening, depending on Abu's priority. Account-hash chain-wide search is intentionally not part of Phase 4 and needs its own plan because it requires pagination, filtering, and clearer UX semantics.
+The next likely engineering slice is hosted endpoint payment-enforcement hardening or explicit account-history pagination for the public explorer, depending on Abu's priority. Full account-history pagination and public-key/CSPR.name search are intentionally not part of Phase 5 and need their own plan.
 
 Do not start broad design work, production custody, CSPR.click signing, Mainnet, generic send policy, registry/private tools, or new simulated product modes unless Abu explicitly changes scope through the Context Engineering flow.
 

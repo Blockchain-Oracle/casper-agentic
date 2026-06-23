@@ -6,11 +6,11 @@ Commits audited: `acd1517`, `bb9260e`
 
 ## Verdict
 
-Conditional pass, pending independent review.
+Pass.
 
 The public explorer now supports account/wallet hash search without weakening Phase 4 proof boundaries. Casper GW account matches return rich local receipts first. External account lookup falls back to CSPR.cloud account, token ownership, and configured-token action data, while gateway, policy, and x402 context remain explicitly unavailable.
 
-Local verification, browser smoke, production build, Chrome inspection, and non-spending CSPR.cloud account lookup evidence all passed. Final completion still requires independent review.
+Local verification, browser smoke, production build, Chrome inspection, non-spending CSPR.cloud account lookup evidence, and independent review all passed.
 
 ## Artifacts Checked
 
@@ -99,7 +99,7 @@ External account proof lookup:
 
 ## Gaps And Risks
 
-- Independent review is pending.
+- Full account-history pagination remains deferred.
 - Account-wide search is not a replacement for CSPR.live and does not claim full chain history.
 - External account proof depends on `CSPR_CLOUD_API_KEY`; without it, the search returns `unconfigured`.
 - `tests/unit/explorer-search.test.ts` is over the 200-line warning target but under the 300-line hard cap.
@@ -114,6 +114,8 @@ External account proof lookup:
 
 - Plan commit: `acd1517 docs: plan explorer account search`.
 - Implementation commit: `bb9260e feat: add explorer account search`.
+- Audit commit: `bf4d45f docs: audit explorer account search`.
 - `pnpm run ci`: passed with 94 tests, browser smoke, and production build.
 - Chrome inspection: passed for local account search.
 - Non-spending external account lookup: passed through CSPR.cloud.
+- Independent review: passed with no findings.
