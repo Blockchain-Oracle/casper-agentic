@@ -7,16 +7,19 @@ export type Screen =
   | "console"
   | "settings";
 
-export type ReceiptStatus =
-  | "policy_pending"
-  | "settled"
-  | "blocked"
-  | "verify_failed"
-  | "settle_failed"
-  | "upstream_failed"
-  | "auth_failed"
-  | "raw_proof_unavailable"
-  | "external_proof";
+export const receiptStatuses = [
+  "policy_pending",
+  "settled",
+  "blocked",
+  "verify_failed",
+  "settle_failed",
+  "upstream_failed",
+  "auth_failed",
+  "raw_proof_unavailable",
+  "external_proof",
+] as const;
+
+export type ReceiptStatus = (typeof receiptStatuses)[number];
 
 export type SourcePhase = "form" | "loading" | "error" | "success";
 export type SourceType = "openapi" | "mcp" | "manual";
@@ -118,6 +121,36 @@ export interface ReceiptDetail {
   policyNote?: string;
   x402Note?: string;
   casperNote?: string;
+}
+
+export interface ReceiptHistoryFilters {
+  from?: string;
+  network?: string;
+  provider?: string;
+  q?: string;
+  status?: ReceiptStatus;
+  to?: string;
+  tool?: string;
+  wallet?: string;
+}
+
+export interface ReceiptHistoryPagination {
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+export type ReceiptFeedSource = "fixture" | "postgres";
+
+export interface ReceiptHistoryResult {
+  filters: ReceiptHistoryFilters;
+  network: string;
+  pagination: ReceiptHistoryPagination;
+  receipts: ReceiptDetail[];
+  source: ReceiptFeedSource;
 }
 
 export type ExplorerSearchSource =

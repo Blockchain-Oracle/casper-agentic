@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
 
 test("public explorer is public and separate from the app shell", async ({ page }, testInfo) => {
   await page.goto("/explorer");
@@ -11,8 +11,32 @@ test("public explorer is public and separate from the app shell", async ({ page 
   await expect(page.getByText("No sign-in required")).toBeVisible();
   await expect(page.getByLabel("Search receipt id, deploy hash, or account hash")).toBeVisible();
   await expect(page.getByRole("button", { name: "Search explorer" })).toBeVisible();
+  await expect(page.getByLabel("Filter receipt history")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Previous" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Next" })).toBeVisible();
+  await expect(page.getByText(/\d+ results - page 1 of \d+/)).toBeVisible();
   await expect(page.getByText("External proof is limited")).toBeVisible();
   await expect(page.getByText(/Sample receipts|Gateway receipts/)).toBeVisible();
+});
+
+test("public explorer history browsing clears exact lookup state", async ({ page, request }) => {
+  const settledReceiptId = await firstReceiptId(request, "status=settled");
+  const blockedReceiptId = await firstReceiptId(request, "status=blocked");
+  if (!settledReceiptId || !blockedReceiptId) {
+    test.skip(true, "fixture or database needs settled and blocked receipts");
+    return;
+  }
+
+  await page.goto(`/explorer?receipt=${encodeURIComponent(settledReceiptId)}`);
+  await expect(page.getByText(`${settledReceiptId} receipt`)).toBeVisible();
+
+  await page.getByLabel("Search receipt id, deploy hash, or account hash").fill(`receipt:${settledReceiptId}`);
+  await page.getByRole("button", { name: "Search explorer" }).click();
+  await expect(page.getByText(`${settledReceiptId} receipt`)).toBeVisible();
+
+  await page.getByRole("button", { name: "Blocked", exact: true }).click();
+  await expect(page.getByText(`${blockedReceiptId} receipt`)).toBeVisible();
+  await expect(page.getByText(`${settledReceiptId} receipt`)).toHaveCount(0);
 });
 
 test("operator app exposes the paid tool console without changing public explorer", async ({ page }) => {
@@ -71,3 +95,10 @@ test("paid-call API fails closed before live payment", async ({ request }) => {
   expect(body.error).toMatch(/CASPER_GW_OPERATOR_TOKEN is required|operator access required|HTTP signing endpoint is disabled/);
   expect(JSON.stringify(body)).not.toContain("PRIVATE KEY");
 });
+
+async function firstReceiptId(request: APIRequestContext, query: string) {
+  const response = await request.get(`/api/receipts?page=1&pageSize=1&${query}`);
+  if (!response.ok()) return undefined;
+  const body = await response.json();
+  return body.receipts?.[0]?.receipt?.id as string | undefined;
+}

@@ -2,54 +2,55 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useReceiptDeepLink } from "@/components/explorer/use-receipt-deep-link";
+import { useReceiptHistory } from "@/components/explorer/use-receipt-history";
 import { ExplorerScreen, type ExplorerFilter } from "@/components/screens/explorer-screen";
 import { Chip } from "@/components/ui";
 import { receipts } from "@/lib/fixtures";
 import { buildReceiptDetail, receiptById } from "@/lib/receipt-detail";
-import type { ExplorerSearchResult, ReceiptDetail } from "@/lib/types";
+import type { ExplorerSearchResult } from "@/lib/types";
 
-type ReceiptFeedSource = "fixture" | "postgres";
+const RECEIPT_HISTORY_PAGE_SIZE = 4;
 
 export function PublicExplorerApp() {
   const searchParams = useSearchParams();
+  const receiptParam = searchParams.get("receipt");
+  const deepLink = useReceiptDeepLink(receiptParam);
   const [selectedReceiptOverride, setSelectedReceiptOverride] = useState<string | null>(null);
   const [explorerFilter, setExplorerFilter] = useState<ExplorerFilter>("all");
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyQuery, setHistoryQuery] = useState("");
+  const [historyFrom, setHistoryFrom] = useState("");
+  const [historyTo, setHistoryTo] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<ExplorerSearchResult | null>(null);
-  const [receiptFeedSource, setReceiptFeedSource] = useState<ReceiptFeedSource>("fixture");
-  const [receiptDetails, setReceiptDetails] = useState<ReceiptDetail[]>(
-    receipts.map((receipt) => buildReceiptDetail(receipt)),
-  );
+  const receiptHistory = useReceiptHistory({
+    from: historyFrom,
+    page: historyPage,
+    pageSize: RECEIPT_HISTORY_PAGE_SIZE,
+    q: historyQuery,
+    status: explorerFilter === "all" ? undefined : explorerFilter,
+    to: historyTo,
+  });
 
-  useEffect(() => {
-    let active = true;
-    fetch("/api/receipts")
-      .then((response) => (response.ok ? response.json() : undefined))
-      .then((body) => {
-        if (!active || !Array.isArray(body?.receipts)) return;
-        setReceiptDetails(body.receipts);
-        setReceiptFeedSource(body.source === "postgres" ? "postgres" : "fixture");
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const receiptRows = receiptDetails.map((detail) => detail.receipt);
-  const activeDetails = searchResult?.matches ?? receiptDetails;
+  const receiptRows = receiptHistory.receipts.map((detail) => detail.receipt);
+  const activeDetails = searchResult?.matches ?? receiptHistory.receipts;
   const activeReceiptRows = activeDetails.map((detail) => detail.receipt);
-  const selectedReceiptId = selectedReceiptOverride ?? searchParams.get("receipt") ?? receiptRows[0]?.id ?? receipts[0].id;
+  const selectedReceiptId =
+    selectedReceiptOverride ?? searchResult?.detail?.receipt.id ?? receiptParam ?? receiptRows[0]?.id ?? receipts[0].id;
   const feedReceiptDetail =
-    activeDetails.find((detail) => detail.receipt.id === selectedReceiptId) ?? buildReceiptDetail(receiptById(selectedReceiptId));
+    activeDetails.find((detail) => detail.receipt.id === selectedReceiptId) ??
+    (deepLink.detail?.receipt.id === selectedReceiptId ? deepLink.detail : undefined) ??
+    activeDetails[0] ??
+    buildReceiptDetail(receiptById(selectedReceiptId));
   const receiptDetail = searchResult?.detail ?? feedReceiptDetail;
   const selectedReceipt = receiptDetail.receipt;
   const filteredReceipts = useMemo(() => {
-    if (explorerFilter === "all") return activeReceiptRows;
+    if (!searchResult?.matches || explorerFilter === "all") return activeReceiptRows;
     return activeReceiptRows.filter((receipt) => receipt.status === explorerFilter);
-  }, [activeReceiptRows, explorerFilter]);
+  }, [activeReceiptRows, explorerFilter, searchResult?.matches]);
 
   async function runSearch() {
     const query = searchQuery.trim();
@@ -73,6 +74,46 @@ export function PublicExplorerApp() {
   function selectReceipt(receiptId: string) {
     setSearchResult(null);
     setSelectedReceiptOverride(receiptId);
+  }
+
+  function changeFilter(filter: ExplorerFilter) {
+    beginHistoryBrowse();
+    setExplorerFilter(filter);
+    setHistoryPage(1);
+  }
+
+  function changeHistoryQuery(value: string) {
+    beginHistoryBrowse();
+    setHistoryQuery(value);
+    setHistoryPage(1);
+  }
+
+  function changeHistoryFrom(value: string) {
+    beginHistoryBrowse();
+    setHistoryFrom(value);
+    setHistoryPage(1);
+  }
+
+  function changeHistoryTo(value: string) {
+    beginHistoryBrowse();
+    setHistoryTo(value);
+    setHistoryPage(1);
+  }
+
+  function beginHistoryBrowse() {
+    setSearchResult(null);
+    deepLink.clear();
+    setSelectedReceiptOverride(receiptRows[0]?.id ?? receipts[0].id);
+  }
+
+  function nextHistoryPage() {
+    beginHistoryBrowse();
+    setHistoryPage((page) => page + 1);
+  }
+
+  function previousHistoryPage() {
+    beginHistoryBrowse();
+    setHistoryPage((page) => Math.max(1, page - 1));
   }
 
   return (
@@ -108,8 +149,8 @@ export function PublicExplorerApp() {
             proof lookup. External proofs show chain facts only.
           </p>
           <div className="buttonRow" style={{ marginTop: 14 }}>
-            <Chip tone={receiptFeedSource === "postgres" ? "primary" : "warn"}>
-              {receiptFeedSource === "postgres" ? "Gateway receipts" : "Sample receipts"}
+            <Chip tone={receiptHistory.source === "postgres" ? "primary" : "warn"}>
+              {receiptHistory.source === "postgres" ? "Gateway receipts" : "Sample receipts"}
             </Chip>
             <Chip tone="warn">External proof is limited</Chip>
             <Chip tone="signal">No sign-in required</Chip>
@@ -118,7 +159,23 @@ export function PublicExplorerApp() {
         <ExplorerScreen
           explorerFilter={explorerFilter}
           filteredReceipts={filteredReceipts}
-          onFilter={setExplorerFilter}
+          historyControls={{
+            canNext: receiptHistory.pagination.hasNextPage,
+            canPrevious: receiptHistory.pagination.hasPreviousPage,
+            from: historyFrom,
+            loading: receiptHistory.loading,
+            onFrom: changeHistoryFrom,
+            onNext: nextHistoryPage,
+            onPrevious: previousHistoryPage,
+            onQuery: changeHistoryQuery,
+            onTo: changeHistoryTo,
+            pageLabel: `${receiptHistory.pagination.totalCount} result${
+              receiptHistory.pagination.totalCount === 1 ? "" : "s"
+            } - page ${receiptHistory.pagination.page} of ${receiptHistory.pagination.totalPages}`,
+            query: historyQuery,
+            to: historyTo,
+          }}
+          onFilter={changeFilter}
           onReceipt={selectReceipt}
           onSearch={runSearch}
           onSearchQuery={setSearchQuery}

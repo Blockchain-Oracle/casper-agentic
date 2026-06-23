@@ -25,6 +25,10 @@ export interface PersistAttemptInput {
 export async function listReceiptDetails() {
   if (!hasDatabaseUrl()) return fixtureReceipts.map((receipt) => buildReceiptDetail(receipt));
   const rows = await getDb().select().from(paidCallAttempts).orderBy(desc(paidCallAttempts.createdAt)).limit(50);
+  return detailsForAttemptRows(rows);
+}
+
+export async function detailsForAttemptRows(rows: (typeof paidCallAttempts.$inferSelect)[]) {
   const ids = rows.map((row) => row.id);
   const proofs = ids.length
     ? await getDb().select().from(casperProofs).where(inArray(casperProofs.attemptId, ids))
