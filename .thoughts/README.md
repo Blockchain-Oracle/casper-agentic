@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, and Phase 5 public explorer account search is locally implemented, reviewed, and verified. Do not jump into broad UI redesign or production custody.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, and Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified. Do not jump into broad UI redesign or production custody.
 
 The current product shape:
 
@@ -201,9 +201,27 @@ Phase 5 public explorer account search was completed locally on 2026-06-23.
 
 No GitHub PR was opened because no remote is configured in this checkout.
 
+## Completed Phase 6 Gate
+
+Phase 6 hosted endpoint payment enforcement was completed locally on 2026-06-23.
+
+- Plan: `.thoughts/plans/2026-06-23-casper-gw-phase-6-hosted-endpoint-payment-enforcement.md`
+- Verification audit: `.thoughts/verification/2026-06-23-casper-gw-phase-6-hosted-endpoint-payment-enforcement.md`
+- Plan commit: `afff428 docs: plan hosted endpoint enforcement`
+- Implementation commit: `9fad7b8 feat: enforce hosted endpoint payment challenge`
+- Audit commit: `b42ecce docs: audit hosted endpoint enforcement`
+- `/api/mcp/[sourceId]` now supports authenticated POST for minimal MCP JSON-RPC `initialize`, `notifications/initialized`, `tools/list`, and `tools/call`.
+- `tools/list` returns scoped published tools with Casper GW payment metadata and without provider credential refs or endpoint token hashes.
+- Unpaid `tools/call` for a priced published tool returns HTTP `402` with x402 v2 `PaymentRequired` body and `PAYMENT-REQUIRED` header.
+- Incoming `payment-signature` or `x-payment` headers fail closed with `payment_verification_not_enabled`; the route does not claim settlement, receipts, deploy hashes, or `PAYMENT-RESPONSE`.
+- Independent review passed with no findings.
+- `pnpm run ci` passed with 97 unit tests, 10 browser tests, 2 intentional mobile skips, and `next build`.
+
+No GitHub PR was opened because no remote is configured in this checkout.
+
 ## Current Build Gate
 
-The next likely engineering slice is hosted endpoint payment-enforcement hardening or explicit account-history pagination for the public explorer, depending on Abu's priority. Full account-history pagination and public-key/CSPR.name search are intentionally not part of Phase 5 and need their own plan.
+The next likely engineering slice is inbound hosted endpoint settlement or explicit account-history pagination for the public explorer, depending on Abu's priority. Inbound hosted settlement must be its own plan because it needs real `PAYMENT-SIGNATURE` verification, CSPR.cloud `/settle`, four-layer receipt persistence, Casper proof resolution, and upstream MCP execution after settlement. Full account-history pagination and public-key/CSPR.name search are intentionally not part of Phase 5 or Phase 6 and need their own plan.
 
 Do not start broad design work, production custody, CSPR.click signing, Mainnet, generic send policy, registry/private tools, or new simulated product modes unless Abu explicitly changes scope through the Context Engineering flow.
 
