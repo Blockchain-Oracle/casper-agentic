@@ -87,6 +87,7 @@ function x402Rows(
 
   const verifyFailed = verify.isValid === false || receipt.status === "verify_failed";
   const settleFailed = settle.success === false || receipt.status === "settle_failed";
+  const settleAttempted = Boolean(record.settleResponse);
   return [
     { key: "network", value: requirements.network, mono: true },
     { key: "scheme", value: "exact", mono: true },
@@ -96,8 +97,8 @@ function x402Rows(
     { key: "verify", value: verifyFailed ? "FAILED" : "verified", tone: verifyFailed ? "danger" : "signal" },
     {
       key: "settle",
-      value: settleValue(receipt, settleFailed),
-      tone: settleFailed ? "danger" : receipt.status === "raw_proof_unavailable" ? "warn" : "signal",
+      value: settleValue(receipt, { settleAttempted, settleFailed, verifyFailed }),
+      tone: settleTone(receipt, { settleAttempted, settleFailed, verifyFailed }),
     },
     { key: "facilitator", value: record.facilitatorUrl, mono: true },
   ];
@@ -148,9 +149,22 @@ function casperNote(receipt: Receipt, proof: PersistedReceiptLayers["casperProof
   return "No successful settlement occurred, so no Casper proof is attached.";
 }
 
-function settleValue(receipt: Receipt, settleFailed: boolean) {
-  if (settleFailed) return "FAILED";
+function settleValue(
+  receipt: Receipt,
+  state: { settleAttempted: boolean; settleFailed: boolean; verifyFailed: boolean },
+) {
+  if (state.verifyFailed || !state.settleAttempted) return "not attempted";
+  if (state.settleFailed) return "FAILED";
   return receipt.status === "raw_proof_unavailable" ? "settle transaction recorded - proof pending" : "settled";
+}
+
+function settleTone(
+  receipt: Receipt,
+  state: { settleAttempted: boolean; settleFailed: boolean; verifyFailed: boolean },
+): KeyValueRow["tone"] {
+  if (state.verifyFailed || !state.settleAttempted) return "neutral";
+  if (state.settleFailed) return "danger";
+  return receipt.status === "raw_proof_unavailable" ? "warn" : "signal";
 }
 
 function latestX402Record(records: PersistedX402Record[]) {

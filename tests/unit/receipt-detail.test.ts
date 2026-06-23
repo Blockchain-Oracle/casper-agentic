@@ -130,4 +130,45 @@ describe("receipt proof rendering", () => {
     expect(JSON.stringify(detail)).not.toContain("0x4d2f...a017");
     expect(JSON.stringify(detail)).not.toContain("0x9f3a...b2c1");
   });
+
+  it("does not render settlement as completed when persisted verify failed first", () => {
+    const receipt: Receipt = {
+      amount: "7500000000",
+      asset: "WCSPR",
+      client: "phase-3-console",
+      hash: null,
+      id: "verify_failed_attempt",
+      provider: "CSPR.trade MCP",
+      reason: "signature expired",
+      status: "verify_failed",
+      time: "2026-06-23T12:00:00.000Z",
+      tool: "get_quote",
+      wallet: "account-hash-real-payer",
+    };
+
+    const detail = buildPersistedReceiptDetail(receipt, {
+      policyDecision: {
+        allowed: true,
+        evaluatedPolicy: { toolName: "get_quote" },
+        reason: "policy allowed before signing/payment",
+      },
+      x402Records: [
+        {
+          facilitatorUrl: "https://x402-facilitator.cspr.cloud",
+          paymentRequirements: {
+            amount: "7500000000",
+            asset: "WCSPR",
+            network: "casper:casper-test",
+            payTo: "account-hash-real-payee",
+            scheme: "exact",
+          },
+          verifyResponse: { invalidReason: "signature expired", isValid: false },
+        },
+      ],
+    });
+
+    expect(detail.x402.find((row) => row.key === "verify")?.value).toBe("FAILED");
+    expect(detail.x402.find((row) => row.key === "settle")?.value).toBe("not attempted");
+    expect(detail.casper).toEqual([]);
+  });
 });
