@@ -19,7 +19,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "smoke:live": "tsx scripts/live-smoke.ts"
+    "smoke:live": "tsx scripts/live-smoke.ts",
+    "wrap:wcspr": "tsx scripts/wrap-wcspr.ts"
   },
   "dependencies": {
     "@make-software/casper-x402": "^1.0.0",

@@ -67,7 +67,7 @@ function createSigner(config: IntegrationRuntimeConfig) {
   };
 }
 
-function readSignerPem(config: IntegrationRuntimeConfig) {
+export function readSignerPem(config: IntegrationRuntimeConfig) {
   if (config.signerPrivateKeyPem) return config.signerPrivateKeyPem;
   if (config.signerPrivateKeyPemPath) return readFileSync(config.signerPrivateKeyPemPath, "utf8");
   throw new Error("Missing Casper Testnet signer PEM");

@@ -1,4 +1,5 @@
 import { CsprCloudClient } from "./cspr-cloud";
+import { resolveCasperProof } from "./casper-proof";
 import { requireIntegrationConfig } from "./env";
 import { callMcpTool, discoverMcpTools } from "./mcp-client";
 import { evaluateSpendPolicy } from "./policy";
@@ -129,16 +130,34 @@ export async function runLivePaidToolCall(input: PaidCallInput = {}) {
     return { attemptId: attempt.id, settleResponse, status: "settle_failed" };
   }
 
-  const deploy = await csprCloud.getDeploy(settleResponse.transaction);
-  const ftActions = await csprCloud.getContractPackageTokenActions(config.paymentAsset, settleResponse.transaction);
   const explorerUrl = `https://testnet.cspr.live/deploy/${settleResponse.transaction}`;
+  const proof = await resolveCasperProof(csprCloud, {
+    asset: config.paymentAsset,
+    deployHash: settleResponse.transaction,
+  });
+
+  if (!proof.deploy) {
+    await persistCasperProof({
+      attemptId: attempt.id,
+      deployHash: settleResponse.transaction,
+      explorerUrl,
+      proofStatus: "pending_indexing",
+    });
+    await updateAttemptStatus(attempt.id, "raw_proof_unavailable", "Casper proof pending CSPR.cloud indexing");
+    await persistAudit(attempt.id, "warn", "Casper proof pending after settlement", {
+      deployHash: settleResponse.transaction,
+      reason: proof.error,
+    });
+    return { attemptId: attempt.id, explorerUrl, status: "raw_proof_unavailable" };
+  }
+
   await persistCasperProof({
     attemptId: attempt.id,
-    deploy,
-    deployHash: deploy.deploy_hash,
+    deploy: proof.deploy,
+    deployHash: proof.deploy.deploy_hash,
     explorerUrl,
-    ftAction: ftActions[0],
-    proofStatus: deploy.status,
+    ftAction: proof.ftAction,
+    proofStatus: proof.deploy.status,
   });
 
   const result = await callMcpTool(config.mcpUrl, toolName, input.args ?? DEFAULT_GET_QUOTE_ARGS);

@@ -25,4 +25,30 @@ describe("receipt proof rendering", () => {
     expect(detail.casper.find((row) => row.key === "deploy hash")?.value).toBe(receipt.hash);
     expect(detail.casperNote).toContain("Chain proof covers payment only");
   });
+
+  it("does not present proof-pending receipts as verified deploy proof", () => {
+    const receipt: Receipt = {
+      amount: "7500000000",
+      asset: "WCSPR",
+      client: "phase-0-console",
+      hash: "settle-transaction-hash",
+      id: "rcp_pending_proof",
+      provider: "Make Software Labs",
+      reason: "Casper proof pending CSPR.cloud indexing",
+      status: "raw_proof_unavailable",
+      time: "2026-06-22T12:00:00.000Z",
+      tool: "get_quote",
+      wallet: "account-hash-payer",
+    };
+
+    const detail = buildReceiptDetail(receipt);
+
+    expect(detail.x402.find((row) => row.key === "settle")?.value).toBe(
+      "settle transaction recorded - proof pending",
+    );
+    expect(detail.casper.find((row) => row.key === "settle transaction")?.value).toBe(receipt.hash);
+    expect(detail.casper.find((row) => row.key === "proof status")?.value).toBe(
+      "CSPR.cloud indexing pending",
+    );
+  });
 });

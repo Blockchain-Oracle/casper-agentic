@@ -2,102 +2,89 @@
 
 ## Verdict
 
-Incomplete for the full Phase 0 goal.
+Phase 0 proof loop is satisfied on Casper Testnet.
 
-The repository, quality, CI, database, backend module, API, minimal UI, unit test, browser smoke, and build gates are implemented and passing locally. On 2026-06-23, local Postgres, CSPR.cloud API configuration, generated Testnet payer/payee signer material, and a persisted wallet spend policy were configured in ignored local files/state.
+On 2026-06-23, the generated Testnet signer was funded with native CSPR, wrapped native CSPR into WCSPR through the verified CSPR.trade/WCSPR `deposit` path, ran one real paid `get_quote` call through CSPR.cloud x402 facilitator, persisted the receipt layers in Postgres, and resolved the resulting deploy through CSPR.cloud.
 
-The required live Casper Testnet x402 proof gate is still not satisfied because the generated payer account is not funded/created on Testnet. `pnpm smoke:live` reaches CSPR.cloud and stops at `CSPR.cloud /accounts/<payer-account-hash> failed with 404`. Native Testnet CSPR funding is required before WCSPR/payment-asset readiness can be checked.
+No Mainnet, custody, broad redesign, marketplace, registry, or simulated product mode work is claimed by this audit.
 
-No live Casper settlement, deploy hash, or "Paid on Testnet" claim is made by this audit.
+## Live Proof
 
-## Artifacts Checked
+- WCSPR package: `3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e`
+- Latest WCSPR contract checked through CSPR.cloud: `4b351800391d4a47a7f932e9498516ed59bb41056d2743c14a8b1a5f90f67b3e`
+- WCSPR entry points checked through CSPR.cloud: `deposit`, `withdraw`, `withdraw_to`, `transfer`, `transfer_from`, `transfer_with_authorization`, `receive_with_authorization`, `approve`, allowance/balance/metadata helpers, and upgrade/admin helpers. No public `mint` path was found.
+- CSPR.trade Testnet SDK config confirms the same WCSPR package hash in `.thoughts/raw/repos/cspr-trade-mcp/packages/sdk/src/config.ts`.
+- CSPR.trade proxy helper confirms the WASM argument pattern used for wrapping in `.thoughts/raw/repos/cspr-trade-mcp/packages/sdk/src/transactions/proxy-wasm.ts`.
+- WCSPR wrap transaction: `5cb92938e22ba2fafa4db978a8e42099b52399e99afc76c8b365fa04de5e60cc`
+- WCSPR wrap explorer: `https://testnet.cspr.live/transaction/5cb92938e22ba2fafa4db978a8e42099b52399e99afc76c8b365fa04de5e60cc`
+- Paid x402 call attempt: `158ab798-5e21-4512-9823-fe6d95b8d3e5`
+- Paid x402 deploy hash: `5566d633e6dc41e20fed6d50d84bb3945ff7327cf3ebdb8ecd67e682e944fa8a`
+- Paid x402 explorer: `https://testnet.cspr.live/deploy/5566d633e6dc41e20fed6d50d84bb3945ff7327cf3ebdb8ecd67e682e944fa8a`
+- CSPR.cloud deploy resolution for paid call: `status=processed`, `error_message=null`, `block_height=8271862`, `cost=6000000000`, `contract_package_hash=3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e`
 
-- `.thoughts/plans/2026-06-22-casper-gw-phase-0-quality-ci-proof.md`
-- `.thoughts/specs/2026-06-22-casper-gw-current-spec.md`
-- `.thoughts/prototype-reintegration/2026-06-22-casper-gw-reintegration-and-codex-handoff.md`
-- `.thoughts/quality/2026-06-22-casper-gw-current-quality-profile.md`
-- `AGENTS.md`
-- Current Git branch diff on `feat/casper-gw-phase-0`
+## Commands Run
+
+- `pnpm wrap:wcspr`: pass. Wrapped `15000000000` motes into WCSPR for the generated signer.
+- `pnpm smoke:live`: pass. Returned `status=settled` for attempt `158ab798-5e21-4512-9823-fe6d95b8d3e5`.
+- `pnpm verify`: pass. File guard, product guard, secret guard, 26 Vitest tests, typecheck, and lint passed.
+- `pnpm run ci`: pass. Frozen install, verify, Playwright browser smoke, and Next build passed.
+- `pnpm ci`: not a valid project-script invocation under pnpm 10.33.0 because pnpm owns that command and returns `ERR_PNPM_CI_NOT_IMPLEMENTED`; use `pnpm run ci`.
+
+## Persisted Receipt Evidence
+
+- `paid_call_attempts`: attempt `158ab798-5e21-4512-9823-fe6d95b8d3e5`, `status=settled`, `tool_name=get_quote`, `amount=7500000000`, `network=casper:casper-test`.
+- `policy_decisions`: spend policy allowed before payment payload creation.
+- `x402_records`: first row has `verify_response.isValid=true`; second row has `settle_response.success=true` and `settle_response.transaction=5566d633e6dc41e20fed6d50d84bb3945ff7327cf3ebdb8ecd67e682e944fa8a`.
+- `casper_proofs`: deploy hash `5566d633e6dc41e20fed6d50d84bb3945ff7327cf3ebdb8ecd67e682e944fa8a`, `proof_status=processed`, explorer URL persisted.
 
 ## Requirement Traceability
 
-- Repository bootstrap: Git was initialized, branch `feat/casper-gw-phase-0` was created, and baseline commits exist before feature edits.
-- Plan artifact: the accepted Phase 0 plan was written to `.thoughts/plans/2026-06-22-casper-gw-phase-0-quality-ci-proof.md`.
-- pnpm/tooling: package manager is `pnpm@10.33.0`; Vitest, Playwright, Drizzle, Postgres, Casper/x402, MCP SDK dependencies and scripts are in `package.json`.
-- CI: GitHub Actions workflow exists at `.github/workflows/ci.yml` with pnpm install, guards, tests, browser smoke, and build.
-- Quality guards: file-size, product-scope, and secret guards exist under `scripts/` and pass locally.
-- File-size cleanup: `src/app/globals.css` and fixture data were split; active source files are below the 200-line target and 300-line hard cap.
-- Database: Drizzle schema and migration cover providers, tools, prices, access keys, wallets, spend policies, paid-call attempts, policy decisions, x402 records, Casper proofs, receipts through attempt/proof rows, and audit events.
-- Integration modules: server-only modules exist for env, Drizzle client, CSPR.cloud REST, x402 facilitator, MCP client, wallet readiness, operator access, endpoint safety, spend policy, receipt storage, and live paid-call orchestration.
-- MCP path: discovery/call code uses `@modelcontextprotocol/sdk` Streamable HTTP transport against configurable MCP endpoint, defaulting to `https://mcp.cspr.trade/mcp`; server-side discovery validates HTTPS endpoints, blocks unsafe resolved addresses, and uses manual redirect handling.
-- x402 path: code uses CSPR.cloud facilitator `/supported`, `/verify`, and `/settle`, and branches on response bodies for verify/settle success.
-- Policy: paid-call orchestration loads persisted wallet policy from Postgres and blocks before payment payload creation when no active policy exists or limits fail.
-- API: required routes exist for integration health, tool discovery, paid-call run, wallet readiness, receipts list, and receipt detail. Tool discovery and HTTP paid-call routes require operator access; HTTP signing also requires an explicit enable flag.
-- UI: public `/explorer` consumes receipt API with fixture fallback and remains outside the authenticated app shell; `/app` console can call discovery/run APIs and does not fake success when credentials are missing.
+- Repository bootstrap: Git branch `feat/casper-gw-phase-0` exists with baseline, plan, implementation, and setup commits before this live-proof update.
+- Plan artifact: `.thoughts/plans/2026-06-22-casper-gw-phase-0-quality-ci-proof.md` exists.
+- pnpm/tooling: `pnpm@10.33.0`, Vitest, Playwright, Drizzle, Postgres, Casper/x402, and MCP SDK dependencies are configured.
+- CI: `.github/workflows/ci.yml` runs pnpm install, guards, tests, browser smoke, typecheck, lint, and build.
+- Quality guards: file-size, product-scope, and secret guards pass.
+- File-size gate: active source files remain below the 200-line target and 300-line hard cap.
+- Database: Drizzle schema and migration cover provider/tool/pricing, endpoint access, wallets, spend policies, paid-call attempts, policy decisions, x402 records, Casper proofs, and audit events.
+- MCP path: Streamable HTTP discovery/call uses `@modelcontextprotocol/sdk` against `https://mcp.cspr.trade/mcp` and starts with real `get_quote`.
+- x402 path: CSPR.cloud `/supported`, `/verify`, and `/settle` are used; success is based on response body fields, not HTTP status alone.
+- Casper proof path: deploy lookup retries CSPR.cloud after settlement; if indexing still lags, it persists the settle transaction as proof-pending and leaves the receipt status as `raw_proof_unavailable` rather than claiming `settled`.
+- Policy: persisted wallet policy blocks before payment creation when wallet, tool, asset, network, or balance checks fail.
+- API: required routes exist for integration health, tool discovery, paid-call run, wallet readiness, receipts list, and receipt detail.
+- UI: `/explorer` remains public and outside the app shell; `/app` consumes real APIs where Phase 0 needs it.
 
-## Acceptance Criteria Coverage
+## Browser And Build Evidence
 
-- Public explorer no sidebar/sign-in: covered by Playwright desktop/mobile smoke.
-- App console route present: covered by Playwright desktop/mobile smoke.
-- Integration health redacts secrets: covered by Playwright API smoke.
-- Env preflight: covered by Vitest unit tests and `pnpm smoke:live` missing-config output.
-- Operator route guard: covered by Vitest unit tests and Playwright API smoke proving unauthenticated paid-call HTTP access fails closed.
-- MCP endpoint safety: covered by Vitest unit tests rejecting non-HTTPS URLs, credentialed URLs, localhost, blocked resolved addresses, and IPv4-mapped IPv6 forms for private/link-local/shared ranges.
-- Policy fail-closed: covered by Vitest unit tests for allow, disallowed tool, max-per-call, insufficient asset balance, and live paid-call orchestration blocking before payment when persisted policy is missing or over limit.
-- Facilitator body handling: covered by Vitest unit test preserving an HTTP-200 invalid verify body.
-- Fixture fallback receipt separation: covered by Vitest unit test verifying gateway/policy/x402/Casper receipt layers.
-- Receipt proof rendering: covered by Vitest unit test showing Casper proof when a real deploy hash exists even if the upstream tool fails after settlement.
-- Build/type/lint: covered by `pnpm run ci`.
-- Drizzle migration: applied successfully against local Homebrew Postgres after creating `casper_gw` role/database.
+- Vitest: 9 files, 26 tests passed.
+- Playwright: 8 checks passed across desktop and mobile Chromium.
+- Browser coverage includes public explorer separation, app paid-tool console presence, secret-redacted integration health, and fail-closed paid-call HTTP behavior.
+- Next production build passed and produced static `/`, `/app`, and `/explorer` plus the required dynamic API routes.
 
-## Quality Gates
+## Independent Review
 
-- `pnpm verify`: pass.
-- `pnpm test`: pass, 8 files and 22 tests.
-- `pnpm test:browser`: pass, 8 Playwright checks across desktop and mobile Chromium.
-- `pnpm build`: pass, Next.js production build succeeds.
-- `pnpm run ci`: pass, frozen install, verify, browser smoke, and build complete successfully.
-- `pnpm smoke:live`: expected fail at live funding gate because CSPR.cloud cannot resolve the generated payer account before faucet funding.
-- `pnpm ci`: not usable with pnpm 10.33.0 because pnpm owns that command and returns `ERR_PNPM_CI_NOT_IMPLEMENTED`; use `pnpm run ci` for the project CI script.
-- Independent review: first pass found blockers in operator auth, policy, SSRF, and proof rendering; those were fixed and re-tested. Second pass found one remaining IPv4-mapped IPv6 SSRF gap; it was fixed and covered by tests.
+- Reviewer `019ef312-ff1a-7ac3-9d37-5ff4ac0fa7f5` found one should-fix issue: immediately resolving the deploy after `/settle` could fail during CSPR.cloud indexing lag and leave a real settled payment without a proof-pending receipt row.
+- Fix applied: `src/server/casper-proof.ts` now retries deploy/token-action lookup, `src/server/live-paid-call.ts` persists `pending_indexing` proof rows on lookup failure, and `src/lib/receipt-detail.ts` avoids presenting proof-pending receipts as verified deploy proof.
+- Tests added: `tests/unit/live-paid-call.test.ts` covers successful `/settle` followed by deploy lookup failure; `tests/unit/receipt-detail.test.ts` covers proof-pending receipt presentation; `tests/unit/proxy-wasm.test.ts` covers WCSPR proxy runtime args.
 
-## Deviations From Plan
+## Deviations And Constraints
 
-- The literal `pnpm ci` command cannot be implemented as a package script under pnpm 10.33.0. The equivalent project command is `pnpm run ci`.
-- Docker Compose Postgres could not start because the configured Docker socket was unavailable. The migration gate was run against Homebrew Postgres on `127.0.0.1:5432` instead.
-- The live Casper proof gate was run through the first CSPR.cloud account-readiness step after local credentials/signer/database setup. It is blocked because the generated payer account has not been funded on Testnet.
-- No GitHub PR was opened because no GitHub remote is configured.
+- `pnpm ci` cannot be made to override pnpm's builtin `ci` command in this environment. The enforced project CI command is `pnpm run ci`.
+- Docker Compose was not used because the available Postgres path is Homebrew Postgres on `127.0.0.1:5432`.
+- No GitHub PR was opened because no remote is configured.
+- The signer is build-time integration material only. It is not the product wallet UX and must not be treated as production custody.
+- The WCSPR wrapper command is an operator support command, not a user-facing product mode.
 
-## Gaps And Risks
+## Residual Risks
 
-- Live settlement remains unverified. Required next input is Testnet funding for the generated payer account, first native CSPR for gas/account creation, then WCSPR/payment asset support.
-- WCSPR funding was not verified. If WCSPR cannot be funded, Abu must choose whether to fund WCSPR or use/deploy another CEP-18 test token.
-- `@make-software/casper-x402` root CJS import fails under the local `tsx` path. The implementation avoids that path by using the working `@make-software/casper-x402/exact/client` export and local signer adapter, but this should be rechecked during the credentialed live smoke.
-- pnpm install reports ignored build scripts for `esbuild`, `sharp`, and `unrs-resolver`; current build/tests pass, but the team may choose to run `pnpm approve-builds` before CI hardening.
+- A second live paid call would require enough remaining WCSPR after the first settlement. The current wrapper can be rerun with adjusted `CASPER_WCSPR_WRAP_AMOUNT`.
+- The paid call depends on CSPR.cloud hosted facilitator, CSPR.cloud REST indexing, Casper Testnet RPC, and CSPR.trade MCP availability.
+- The root CJS import path for `@make-software/casper-x402` still fails under the local `tsx` path; the implementation uses the working `@make-software/casper-x402/exact/client` export instead.
+- No production wallet UX is implemented yet; CSPR.click/browser signing remains later product work.
 
-## Follow-ups
+## Sources Checked
 
-- Fund the generated payer account on Casper Testnet, confirm WCSPR/payment asset support, then run `pnpm smoke:live`.
-- After live proof succeeds, verify that the persisted receipt has a real deploy hash resolvable at `testnet.cspr.live`.
-- Add the GitHub remote, push the feature branch, and open a PR after live proof/review requirements are satisfied.
-
-## Evidence Log
-
-- Baseline commit: `33d57ae chore: establish current baseline`.
-- Plan commit: `360f708 docs: add phase 0 quality proof plan`.
-- `pnpm run ci`: passed on 2026-06-22 after review fixes.
-- `pnpm test:browser`: passed on 2026-06-22 with 8 checks.
-- `pnpm build`: passed on 2026-06-22.
-- `pnpm smoke:live`: failed with missing integration configuration only after the payment import preflight bug was fixed.
-- Drizzle migration: `migrations applied successfully!` against local Homebrew Postgres.
-
-## 2026-06-23 Live Setup Update
-
-- Added signer PEM path support so ignored local signer files can be used without storing multiline private key content in env.
-- Added `@next/env` so `pnpm smoke:live` loads `.env.local` deterministically.
-- Local Postgres is configured at `postgres://casper_gw:casper_gw@127.0.0.1:5432/casper_gw`; migrations apply successfully.
-- Generated ignored Testnet payer/payee key material under `.secrets/casper-phase0/`.
-- Seeded a persisted wallet spend policy for the generated payer allowing only `get_quote`, Casper Testnet, the configured WCSPR package, and the configured per-call amount.
-- CSPR.cloud x402 facilitator `/supported` succeeds and advertises `casper:casper-test` with `exact`.
-- `pnpm run ci` passed on 2026-06-23: guards, 22 Vitest tests, typecheck, lint, 8 Playwright browser checks, and Next build.
-- `pnpm smoke:live` fails at the expected current funding gate: CSPR.cloud account lookup returns 404 for the generated payer account because it has not received Testnet CSPR yet.
+- Local CSPR.trade SDK config: `.thoughts/raw/repos/cspr-trade-mcp/packages/sdk/src/config.ts`
+- Local CSPR.trade proxy helper: `.thoughts/raw/repos/cspr-trade-mcp/packages/sdk/src/transactions/proxy-wasm.ts`
+- Local CSPR.trade proxy WASM: `.thoughts/raw/repos/cspr-trade-mcp/packages/sdk/src/assets/proxy_caller.wasm`
+- CSPR.cloud contract package, entry-points, entry-point costs, deploy lookup, FT ownership, and FT action endpoints.
+- Context7 Casper docs for CEP-18 and Casper JS SDK transaction syntax.

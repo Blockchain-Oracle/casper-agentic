@@ -1,14 +1,13 @@
 import { loadEnvConfig } from "@next/env";
 
 import { closeDb } from "../src/db/client";
-import { runLivePaidToolCall } from "../src/server/live-paid-call";
+import { wrapWcsprForSigner } from "../src/server/wcspr-wrap";
 
 loadEnvConfig(process.cwd());
 
 async function main() {
-  const result = await runLivePaidToolCall();
+  const result = await wrapWcsprForSigner();
   console.log(JSON.stringify(result, null, 2));
-  if (result.status !== "settled") process.exitCode = 1;
 }
 
 main().catch((error) => {

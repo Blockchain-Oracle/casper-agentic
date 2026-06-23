@@ -9,7 +9,8 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
   const isAuth = receipt.status === "auth_failed";
   const isBlocked = receipt.status === "blocked";
   const isProofUnavailable = receipt.status === "raw_proof_unavailable";
-  const hasRealProof = Boolean(receipt.hash);
+  const hasPendingProofHash = isProofUnavailable && Boolean(receipt.hash);
+  const hasRealProof = Boolean(receipt.hash) && !isProofUnavailable;
   const endpointSlug = receipt.provider === "Make Software Labs" ? "make-software" : "weather-risk";
   const endpoint = `https://gw.casper-gateway.io/mcp/${endpointSlug}`;
   const verifyTone: KeyValueRow["tone"] =
@@ -63,7 +64,9 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
               receipt.status === "settle_failed"
                 ? "FAILED"
                 : isProofUnavailable
-                  ? "proof pending - no deploy hash claimed"
+                  ? hasPendingProofHash
+                    ? "settle transaction recorded - proof pending"
+                    : "proof pending - no deploy hash claimed"
                 : receipt.status === "upstream_failed" && !hasRealProof
                   ? "withheld"
                   : "settled",
@@ -90,12 +93,22 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
         ]
       : isProofUnavailable
         ? [
-            { key: "deploy hash", value: "not present in fixture data", mono: true, tone: "warn" as const },
+            {
+              key: hasPendingProofHash ? "settle transaction" : "deploy hash",
+              value: receipt.hash ?? "not present in fixture data",
+              mono: true,
+              tone: "warn" as const,
+            },
             { key: "network", value: "casper:casper-test", mono: true },
             { key: "payer", value: "0x9f3a...b2c1", mono: true },
             { key: "payee", value: "0x4d2f...a017", mono: true },
             { key: "amount", value: `${receipt.amount} WCSPR`, mono: true },
-            { key: "proof status", value: "design fixture - no live claim", tone: "warn" as const, mono: true },
+            {
+              key: "proof status",
+              value: hasPendingProofHash ? "CSPR.cloud indexing pending" : "design fixture - no live claim",
+              tone: "warn" as const,
+              mono: true,
+            },
           ]
       : [];
 

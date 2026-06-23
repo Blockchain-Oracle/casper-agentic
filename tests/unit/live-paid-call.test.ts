@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   createCasperPaymentPayload: vi.fn(),
   discoverMcpTools: vi.fn(),
   getAccount: vi.fn(),
+  getContractPackageTokenActions: vi.fn(),
+  getDeploy: vi.fn(),
   getConfiguredSignerAddress: vi.fn(),
   getFTOwnerships: vi.fn(),
   getSpendPolicyForWallet: vi.fn(),
@@ -53,6 +55,8 @@ vi.mock("@/server/cspr-cloud", () => ({
   CsprCloudClient: vi.fn().mockImplementation(function CsprCloudClient() {
     return {
       getAccount: mocks.getAccount,
+      getContractPackageTokenActions: mocks.getContractPackageTokenActions,
+      getDeploy: mocks.getDeploy,
       getFTOwnerships: mocks.getFTOwnerships,
     };
   }),
@@ -87,6 +91,7 @@ import { runLivePaidToolCall } from "@/server/live-paid-call";
 describe("live paid-call orchestration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
     mocks.supported.mockResolvedValue({ kinds: [{ network: "casper:casper-test", scheme: "exact" }] });
     mocks.discoverMcpTools.mockResolvedValue([{ name: "get_quote" }]);
     mocks.getConfiguredSignerAddress.mockReturnValue("00payer");
@@ -97,7 +102,16 @@ describe("live paid-call orchestration", () => {
       asset: "asset",
       network: "casper:casper-test",
     });
+    mocks.callMcpTool.mockResolvedValue({ isError: false, text: "quote" });
+    mocks.createCasperPaymentPayload.mockResolvedValue({
+      paymentPayload: { payload: true },
+      paymentRequirements: { amount: "5", asset: "asset", network: "casper:casper-test" },
+    });
+    mocks.getContractPackageTokenActions.mockResolvedValue([{ action: "transfer" }]);
+    mocks.getDeploy.mockResolvedValue({ deploy_hash: "deploy-1", status: "processed" });
     mocks.persistAttempt.mockResolvedValue({ id: "attempt-1" });
+    mocks.settle.mockResolvedValue({ success: true, transaction: "deploy-1" });
+    mocks.verify.mockResolvedValue({ isValid: true });
   });
 
   it("blocks before payment when no persisted spend policy exists", async () => {
@@ -135,5 +149,41 @@ describe("live paid-call orchestration", () => {
       "blocked",
       "payment amount exceeds max per call",
     );
+  });
+
+  it("records proof-pending when CSPR.cloud deploy indexing lags after settlement", async () => {
+    vi.stubEnv("CASPER_PROOF_LOOKUP_ATTEMPTS", "1");
+    mocks.getSpendPolicyForWallet.mockResolvedValue({
+      allowedAsset: "asset",
+      allowedNetwork: "casper:casper-test",
+      allowedTools: ["get_quote"],
+      disabled: false,
+      maxPerCall: BigInt(5),
+    });
+    mocks.getDeploy.mockRejectedValue(new Error("CSPR.cloud /deploys/deploy-1 failed with 404"));
+
+    await expect(runLivePaidToolCall()).resolves.toMatchObject({
+      attemptId: "attempt-1",
+      status: "raw_proof_unavailable",
+    });
+
+    expect(mocks.persistCasperProof).toHaveBeenCalledWith({
+      attemptId: "attempt-1",
+      deployHash: "deploy-1",
+      explorerUrl: "https://testnet.cspr.live/deploy/deploy-1",
+      proofStatus: "pending_indexing",
+    });
+    expect(mocks.updateAttemptStatus).toHaveBeenCalledWith(
+      "attempt-1",
+      "raw_proof_unavailable",
+      "Casper proof pending CSPR.cloud indexing",
+    );
+    expect(mocks.persistAudit).toHaveBeenCalledWith(
+      "attempt-1",
+      "warn",
+      "Casper proof pending after settlement",
+      expect.objectContaining({ deployHash: "deploy-1" }),
+    );
+    expect(mocks.callMcpTool).not.toHaveBeenCalled();
   });
 });

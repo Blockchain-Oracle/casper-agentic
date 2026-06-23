@@ -1,4 +1,5 @@
 export const DEFAULT_CASPER_NETWORK = "casper:casper-test";
+export const DEFAULT_CASPER_NODE_RPC_URL = "https://node.testnet.casper.network/rpc";
 export const DEFAULT_CSPR_CLOUD_REST_BASE_URL = "https://api.testnet.cspr.cloud";
 export const DEFAULT_FACILITATOR_URL = "https://x402-facilitator.cspr.cloud";
 export const DEFAULT_MCP_URL = "https://mcp.cspr.trade/mcp";
@@ -6,6 +7,7 @@ export const DEFAULT_WCSPR_PACKAGE = "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279
 
 export interface RuntimeConfig {
   casperNetwork: string;
+  casperNodeRpcUrl: string;
   csprCloudApiKey?: string;
   csprCloudRestBaseUrl: string;
   facilitatorUrl: string;
@@ -20,6 +22,8 @@ export interface RuntimeConfig {
   signerKeyAlgo: "ed25519" | "secp256k1";
   signerPrivateKeyPem?: string;
   signerPrivateKeyPemPath?: string;
+  wcsprDepositPaymentAmount: string;
+  wcsprWrapAmount: string;
 }
 
 export type IntegrationRuntimeConfig = RuntimeConfig & {
@@ -30,6 +34,7 @@ export type IntegrationRuntimeConfig = RuntimeConfig & {
 export function getRuntimeConfig(): RuntimeConfig {
   return {
     casperNetwork: process.env.CASPER_NETWORK ?? DEFAULT_CASPER_NETWORK,
+    casperNodeRpcUrl: process.env.CASPER_NODE_RPC_URL ?? DEFAULT_CASPER_NODE_RPC_URL,
     csprCloudApiKey: optional(process.env.CSPR_CLOUD_API_KEY),
     csprCloudRestBaseUrl: process.env.CSPR_CLOUD_REST_BASE_URL ?? DEFAULT_CSPR_CLOUD_REST_BASE_URL,
     facilitatorUrl: process.env.CSPR_X402_FACILITATOR_URL ?? DEFAULT_FACILITATOR_URL,
@@ -44,6 +49,8 @@ export function getRuntimeConfig(): RuntimeConfig {
     signerKeyAlgo: signerAlgo(process.env.CASPER_TESTNET_SIGNER_KEY_ALGO),
     signerPrivateKeyPem: optional(process.env.CASPER_TESTNET_SIGNER_PRIVATE_KEY_PEM),
     signerPrivateKeyPemPath: optional(process.env.CASPER_TESTNET_SIGNER_PRIVATE_KEY_PEM_PATH),
+    wcsprDepositPaymentAmount: process.env.CASPER_WCSPR_DEPOSIT_PAYMENT_AMOUNT ?? "5000000000",
+    wcsprWrapAmount: process.env.CASPER_WCSPR_WRAP_AMOUNT ?? "15000000000",
   };
 }
 

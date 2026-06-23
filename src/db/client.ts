@@ -24,3 +24,10 @@ export function getDb() {
   }
   return dbInstance;
 }
+
+export async function closeDb() {
+  const client = queryClient;
+  dbInstance = null;
+  queryClient = null;
+  if (client) await client.end({ timeout: 5 });
+}
