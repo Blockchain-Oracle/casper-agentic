@@ -1,7 +1,17 @@
 # Plan: Casper GW Phase 1 Provider Gateway
 
 Date: 2026-06-23
-Status: Draft for implementation after Phase 0 proof
+Status: In progress
+
+## Progress
+
+2026-06-23:
+
+- Phase 1A provider data access layer started: `provider-store` and `provider-model` cover provider source, discovered tool, price, publish-state, and sanitized source views.
+- Phase 1B route foundation added: operator-gated source create/list, source discovery, and tool list routes.
+- Phase 1C route foundation added: operator-gated select, price, and publish routes.
+- Non-payment smoke created a real Remote MCP provider source for `https://mcp.cspr.trade/mcp`, discovered 23 real tools, persisted them as draft tools, priced `get_quote`, and published it.
+- Phase 1D hosted endpoint and Phase 1E UI wiring remain pending.
 
 ## Inputs
 
