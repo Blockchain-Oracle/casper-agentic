@@ -3,6 +3,8 @@ import { desc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { agentWallets, spendPolicies } from "@/db/schema";
 
+import { casperAccountAliases } from "./casper-account";
+
 export interface StoredSpendPolicy {
   allowedAsset: string;
   allowedNetwork: string;
@@ -12,7 +14,7 @@ export interface StoredSpendPolicy {
 }
 
 export async function getSpendPolicyForWallet(accountHash: string): Promise<StoredSpendPolicy | null> {
-  const aliases = accountAliases(accountHash);
+  const aliases = casperAccountAliases(accountHash);
   const [wallet] = await getDb()
     .select()
     .from(agentWallets)
@@ -35,11 +37,6 @@ export async function getSpendPolicyForWallet(accountHash: string): Promise<Stor
     disabled: policy.disabled,
     maxPerCall: BigInt(policy.maxPerCall),
   };
-}
-
-function accountAliases(accountHash: string) {
-  const stripped = accountHash.startsWith("00") && accountHash.length === 66 ? accountHash.slice(2) : accountHash;
-  return Array.from(new Set([accountHash, stripped, `account-hash-${stripped}`]));
 }
 
 function isString(value: unknown): value is string {

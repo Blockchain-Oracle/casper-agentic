@@ -1,4 +1,5 @@
 import { CsprCloudClient } from "./cspr-cloud";
+import { normalizeCasperAccountHash } from "./casper-account";
 import { resolveCasperProof } from "./casper-proof";
 import { requireIntegrationConfig } from "./env";
 import { callMcpTool, discoverMcpTools } from "./mcp-client";
@@ -42,7 +43,7 @@ export async function runLivePaidToolCall(input: PaidCallInput = {}) {
   if (!tool) throw new Error(`Remote MCP endpoint did not expose ${toolName}`);
 
   const payer = getConfiguredSignerAddress(config);
-  const payerHash = stripAccountPrefix(payer);
+  const payerHash = normalizeCasperAccountHash(payer);
   const account = await csprCloud.getAccount(payerHash);
   const ownerships = await csprCloud.getFTOwnerships(account.account_hash, config.paymentAsset);
   const assetBalance = BigInt(ownerships[0]?.balance ?? "0");
@@ -173,10 +174,6 @@ export async function runLivePaidToolCall(input: PaidCallInput = {}) {
     toolName,
   });
   return { attemptId: attempt.id, explorerUrl, status: "settled" };
-}
-
-function stripAccountPrefix(accountHash: string) {
-  return accountHash.startsWith("00") && accountHash.length === 66 ? accountHash.slice(2) : accountHash;
 }
 
 function redactInput(input: Record<string, unknown>) {

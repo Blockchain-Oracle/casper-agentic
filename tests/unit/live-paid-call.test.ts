@@ -88,14 +88,17 @@ vi.mock("@/server/x402-payment", () => ({
 
 import { runLivePaidToolCall } from "@/server/live-paid-call";
 
+const payerHash = "9accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d";
+const payerAddress = `00${payerHash}`;
+
 describe("live paid-call orchestration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
     mocks.supported.mockResolvedValue({ kinds: [{ network: "casper:casper-test", scheme: "exact" }] });
     mocks.discoverMcpTools.mockResolvedValue([{ name: "get_quote" }]);
-    mocks.getConfiguredSignerAddress.mockReturnValue("00payer");
-    mocks.getAccount.mockResolvedValue({ account_hash: "payer", balance: "10" });
+    mocks.getConfiguredSignerAddress.mockReturnValue(payerAddress);
+    mocks.getAccount.mockResolvedValue({ account_hash: payerHash, balance: "10" });
     mocks.getFTOwnerships.mockResolvedValue([{ balance: "10" }]);
     mocks.buildPaymentRequirements.mockReturnValue({
       amount: "5",

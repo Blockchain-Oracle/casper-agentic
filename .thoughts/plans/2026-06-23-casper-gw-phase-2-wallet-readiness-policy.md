@@ -1,7 +1,7 @@
 # Plan: Casper GW Phase 2 Wallet Readiness And Policy
 
 Date: 2026-06-23
-Status: Draft for execution after Phase 1 verification
+Status: In execution; Phase 2A backend/readiness checkpoint passed
 
 ## Inputs
 
@@ -71,6 +71,21 @@ RQ-20 to RQ-26, RQ-56 to RQ-60; AC-04 and AC-05 partially.
 ### Stop Condition
 
 A persisted wallet profile can be queried for readiness, and the response is derived from CSPR.cloud gas + WCSPR balance evidence.
+
+### Checkpoint Evidence
+
+Completed on 2026-06-23:
+
+- Added persisted wallet profile create/list APIs.
+- Updated wallet readiness route to resolve persisted wallet ids or direct account hashes.
+- Normalized Casper account identifiers so x402 signer addresses (`00` + account hash) are not stored or queried as account hashes.
+- Updated CSPR.cloud FT ownership lookup to use the account-scoped endpoint.
+- `pnpm verify` passed with 18 test files and 61 tests.
+- Non-payment readiness smoke passed against the configured Testnet signer wallet:
+  - CSPR gas balance detected.
+  - WCSPR balance detected.
+  - readiness verdict: ready.
+  - no CSPR.cloud token or signing material printed.
 
 ## Phase 2B: Spend Policy Persistence And Fail-Closed Evaluation
 

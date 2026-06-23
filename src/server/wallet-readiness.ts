@@ -1,3 +1,4 @@
+import { normalizeCasperAccountHash } from "./casper-account";
 import { CsprCloudClient } from "./cspr-cloud";
 import type { RuntimeConfig } from "./env";
 
@@ -13,7 +14,7 @@ export interface WalletReadiness {
 
 export async function getWalletReadiness(config: RuntimeConfig, accountIdentifier: string) {
   const client = new CsprCloudClient(config);
-  const account = await client.getAccount(accountIdentifier);
+  const account = await client.getAccount(normalizeCasperAccountHash(accountIdentifier));
   const ownerships = await client.getFTOwnerships(account.account_hash, config.paymentAsset);
   const assetBalance = ownerships[0]?.balance ?? "0";
   const gasBalance = account.balance ?? "0";

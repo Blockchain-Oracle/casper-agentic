@@ -54,12 +54,11 @@ export class CsprCloudClient {
     return this.request<CsprCloudDeploy>(`/deploys/${encodeURIComponent(deployHash)}`);
   }
 
-  async getFTOwnerships(ownerHash: string, contractPackageHash: string) {
-    const params = new URLSearchParams({
-      contract_package_hash: contractPackageHash,
-      owner_hash: ownerHash,
-    });
-    return this.requestList<CsprCloudFTOwnership>(`/ft-token-ownerships?${params.toString()}`);
+  async getFTOwnerships(accountIdentifier: string, contractPackageHash: string) {
+    const ownerships = await this.requestList<CsprCloudFTOwnership>(
+      `/accounts/${encodeURIComponent(accountIdentifier)}/ft-token-ownership`,
+    );
+    return ownerships.filter((ownership) => ownership.contract_package_hash === contractPackageHash);
   }
 
   async getContractPackageTokenActions(contractPackageHash: string, deployHash?: string) {
