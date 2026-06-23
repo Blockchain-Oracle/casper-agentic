@@ -1,0 +1,1 @@
+ALTER TABLE "spend_policies" ADD COLUMN "session_limit" numeric(40, 0);

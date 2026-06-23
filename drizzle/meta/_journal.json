@@ -8,6 +8,13 @@
       "when": 1782148877465,
       "tag": "0000_careless_power_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782215508748,
+      "tag": "0001_fixed_mattie_franklin",
+      "breakpoints": true
     }
   ]
 }

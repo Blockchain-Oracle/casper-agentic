@@ -65,6 +65,7 @@ export const spendPolicies = pgTable("spend_policies", {
   walletId: uuid("wallet_id").references(() => agentWallets.id),
   maxPerCall: numeric("max_per_call", { precision: 40, scale: 0 }).notNull(),
   dailyLimit: numeric("daily_limit", { precision: 40, scale: 0 }),
+  sessionLimit: numeric("session_limit", { precision: 40, scale: 0 }),
   allowedNetwork: text("allowed_network").notNull(),
   allowedAsset: text("allowed_asset").notNull(),
   allowedTools: jsonb("allowed_tools").default([]).notNull(),

@@ -122,6 +122,23 @@ RQ-27 to RQ-29, RQ-36 to RQ-38, RQ-50, RQ-57 to RQ-59; AC-06.
 
 A policy-blocked call path creates a persisted policy/audit record and no Casper transaction or x402 settlement record.
 
+### Checkpoint Evidence
+
+Completed on 2026-06-23:
+
+- Added persisted wallet policy create/read API at `/api/wallets/[id]/policy`.
+- Added policy validation for max-per-call, allowed tools, disabled state, and optional daily/session limits.
+- Kept allowed network and payment asset server-owned from runtime config for this phase.
+- Added `session_limit` to the Drizzle schema and applied the migration to local Postgres.
+- Updated live paid-call orchestration to load persisted policy, daily spend headroom, and block before payment payload creation.
+- Fixed policy lookup across duplicate wallet profiles with the same account hash by loading the newest policy across all matching profiles.
+- Real no-payment policy-block smoke passed:
+  - blocked attempt id `7200a0f5-72e4-48c1-b0b1-8dea7acf9e48`;
+  - reason: `payment amount exceeds max per call`;
+  - no deploy hash or payment claim created;
+  - restored an allow policy afterward for the signer wallet.
+- `pnpm verify` passed with 20 test files and 69 tests.
+
 ## Phase 2C: Minimal Wallet UI Wiring
 
 ### Goal

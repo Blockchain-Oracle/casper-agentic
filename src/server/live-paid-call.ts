@@ -12,7 +12,7 @@ import {
   persistX402Record,
   updateAttemptStatus,
 } from "./receipt-store";
-import { getSpendPolicyForWallet } from "./spend-policy-store";
+import { getSpendPolicyForWallet, getWalletDailySpend } from "./spend-policy-store";
 import { X402FacilitatorClient } from "./x402-facilitator";
 import { buildPaymentRequirements, createCasperPaymentPayload, getConfiguredSignerAddress } from "./x402-payment";
 
@@ -62,25 +62,35 @@ export async function runLivePaidToolCall(input: PaidCallInput = {}) {
   });
 
   const storedPolicy = await getSpendPolicyForWallet(payer);
+  const dailySpent = storedPolicy?.dailyLimit
+    ? await getWalletDailySpend(payer, config.paymentAsset, config.casperNetwork)
+    : BigInt(0);
   const policy = storedPolicy
     ? evaluateSpendPolicy({
         allowedAsset: storedPolicy.allowedAsset,
         allowedNetwork: storedPolicy.allowedNetwork,
         allowedTools: storedPolicy.allowedTools,
         assetBalance,
+        dailyLimit: storedPolicy.dailyLimit,
+        dailySpent,
         disabled: storedPolicy.disabled,
         gasBalance,
         maxPerCall: storedPolicy.maxPerCall,
         network: config.casperNetwork,
         paymentAmount: BigInt(config.paymentAmount),
         paymentAsset: config.paymentAsset,
+        sessionLimit: storedPolicy.sessionLimit,
+        sessionSpent: BigInt(0),
         toolName,
       })
     : { allowed: false, reason: "no active spend policy for wallet" };
   await persistPolicyDecision(attempt.id, policy.allowed, policy.reason, {
     assetBalance: assetBalance.toString(),
+    dailyLimit: storedPolicy?.dailyLimit?.toString(),
+    dailySpent: dailySpent.toString(),
     gasBalance: gasBalance.toString(),
     policyLoaded: Boolean(storedPolicy),
+    sessionLimit: storedPolicy?.sessionLimit?.toString(),
     toolName,
   });
 

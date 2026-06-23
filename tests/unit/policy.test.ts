@@ -43,4 +43,28 @@ describe("spend policy", () => {
       reason: "wallet lacks enough CEP-18 payment asset",
     });
   });
+
+  it("blocks before payment when day or session headroom is exhausted", () => {
+    expect(
+      evaluateSpendPolicy({
+        ...basePolicy,
+        dailyLimit: BigInt(100),
+        dailySpent: BigInt(51),
+      }),
+    ).toEqual({
+      allowed: false,
+      reason: "daily limit exceeded",
+    });
+
+    expect(
+      evaluateSpendPolicy({
+        ...basePolicy,
+        sessionLimit: BigInt(60),
+        sessionSpent: BigInt(11),
+      }),
+    ).toEqual({
+      allowed: false,
+      reason: "session limit exceeded",
+    });
+  });
 });
