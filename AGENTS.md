@@ -19,6 +19,8 @@ Authoritative context lives in `.thoughts/`: wiki, research, raw reports, cloned
 - If local context is insufficient, say exactly what was checked and ask Abu before doing broad web research, unless Abu explicitly requested online research in that turn.
 - Context7 is still required for current library/API/SDK/CLI syntax, but it does not replace local `.thoughts/` research for product decisions.
 - Do not make product decisions from memory when `.thoughts/` contains relevant research.
+- Before any meaningful implementation change, do a short local-reference checkpoint and mention which artifacts informed the decision. At minimum, check `.thoughts/README.md`, the active spec/plan/audit for the slice, and any relevant `.thoughts/raw/` or `.thoughts/raw/repos/` references for MCP Pay-style flows, x402 agent/payment patterns, provider discovery, receipt behavior, and UX patterns.
+- Use cloned/reference repos as practical pattern references, not source to copy. Prefer their proven flow shape over inventing new product behavior, then use Context7/current docs for the exact SDK/API syntax needed to implement that flow.
 
 ## Working Rules
 
