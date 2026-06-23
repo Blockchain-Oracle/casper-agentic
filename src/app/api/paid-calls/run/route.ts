@@ -16,7 +16,9 @@ export async function POST(request: NextRequest) {
     requireHttpSigningEnabled();
     const result = await runLivePaidToolCall({
       args: isRecord(body.args) ? body.args : undefined,
+      endpointUrl: stringValue(body.endpointUrl),
       toolName: typeof body.toolName === "string" ? body.toolName : undefined,
+      walletId: stringValue(body.walletId),
     });
     return NextResponse.json(result);
   } catch (error) {
@@ -32,4 +34,8 @@ export async function POST(request: NextRequest) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }

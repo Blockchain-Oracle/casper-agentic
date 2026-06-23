@@ -13,6 +13,7 @@ import {
   updateAttemptStatus,
 } from "./receipt-store";
 import { getSpendPolicyForWallet, getWalletDailySpend } from "./spend-policy-store";
+import { getAgentWalletRecord } from "./wallet-store";
 import { X402FacilitatorClient } from "./x402-facilitator";
 import { buildPaymentRequirements, createCasperPaymentPayload, getConfiguredSignerAddress } from "./x402-payment";
 
@@ -25,7 +26,9 @@ const DEFAULT_GET_QUOTE_ARGS = {
 
 export interface PaidCallInput {
   args?: Record<string, unknown>;
+  endpointUrl?: string;
   toolName?: string;
+  walletId?: string;
 }
 
 export async function runLivePaidToolCall(input: PaidCallInput = {}) {
@@ -37,33 +40,54 @@ export async function runLivePaidToolCall(input: PaidCallInput = {}) {
     throw new Error(`CSPR.cloud facilitator does not advertise ${config.casperNetwork} exact support`);
   }
 
-  const toolName = input.toolName ?? "get_quote";
-  const tools = await discoverMcpTools(config.mcpUrl);
+  const endpointUrl = input.endpointUrl?.trim() || config.mcpUrl;
+  const toolName = input.toolName?.trim() || "get_quote";
+  const tools = await discoverMcpTools(endpointUrl);
   const tool = tools.find((item) => item.name === toolName);
   if (!tool) throw new Error(`Remote MCP endpoint did not expose ${toolName}`);
 
-  const payer = getConfiguredSignerAddress(config);
-  const payerHash = normalizeCasperAccountHash(payer);
-  const account = await csprCloud.getAccount(payerHash);
-  const ownerships = await csprCloud.getFTOwnerships(account.account_hash, config.paymentAsset);
-  const assetBalance = BigInt(ownerships[0]?.balance ?? "0");
-  const gasBalance = BigInt(account.balance ?? "0");
+  const signer = getConfiguredSignerAddress(config);
+  const signerHash = normalizeCasperAccountHash(signer);
+  const selectedWallet = input.walletId ? await getAgentWalletRecord(input.walletId) : null;
+  if (input.walletId && !selectedWallet) throw new Error("selected wallet not found");
+  const walletAccountHash = selectedWallet ? normalizeCasperAccountHash(selectedWallet.accountHash) : signerHash;
   const paymentRequirements = buildPaymentRequirements(config);
   const attempt = await persistAttempt({
     amount: paymentRequirements.amount,
     asset: paymentRequirements.asset,
-    client: "phase-0-console",
+    client: "phase-3-console",
     network: paymentRequirements.network,
     providerName: "CSPR.trade MCP",
     redactedInput: redactInput(input.args ?? DEFAULT_GET_QUOTE_ARGS),
     status: "policy_pending",
     toolName,
-    walletAccountHash: payer,
+    walletAccountHash,
   });
 
-  const storedPolicy = await getSpendPolicyForWallet(payer);
+  if (walletAccountHash !== signerHash) {
+    const reason = "selected wallet is not the configured local Testnet signer";
+    await persistPolicyDecision(attempt.id, false, reason, {
+      selectedWalletId: input.walletId,
+      signerAccountHash: signerHash,
+      signingMode: selectedWallet?.signingMode,
+      walletAccountHash,
+    });
+    await updateAttemptStatus(attempt.id, "blocked", reason);
+    await persistAudit(attempt.id, "block", "Selected wallet cannot sign through local Testnet signer", {
+      reason,
+      selectedWalletId: input.walletId,
+    });
+    return { attemptId: attempt.id, policy: { allowed: false, reason }, status: "blocked" };
+  }
+
+  const account = await csprCloud.getAccount(walletAccountHash);
+  const ownerships = await csprCloud.getFTOwnerships(account.account_hash, config.paymentAsset);
+  const assetBalance = BigInt(ownerships[0]?.balance ?? "0");
+  const gasBalance = BigInt(account.balance ?? "0");
+
+  const storedPolicy = await getSpendPolicyForWallet(walletAccountHash);
   const dailySpent = storedPolicy?.dailyLimit
-    ? await getWalletDailySpend(payer, config.paymentAsset, config.casperNetwork)
+    ? await getWalletDailySpend(walletAccountHash, config.paymentAsset, config.casperNetwork)
     : BigInt(0);
   const policy = storedPolicy
     ? evaluateSpendPolicy({
@@ -100,7 +124,7 @@ export async function runLivePaidToolCall(input: PaidCallInput = {}) {
     return { attemptId: attempt.id, policy, status: "blocked" };
   }
 
-  const resourceUrl = `${config.mcpUrl}#${toolName}`;
+  const resourceUrl = `${endpointUrl}#${toolName}`;
   const payment = await createCasperPaymentPayload(config, resourceUrl);
   const verifyResponse = await facilitator.verify({
     paymentPayload: payment.paymentPayload,
@@ -171,7 +195,7 @@ export async function runLivePaidToolCall(input: PaidCallInput = {}) {
     proofStatus: proof.deploy.status,
   });
 
-  const result = await callMcpTool(config.mcpUrl, toolName, input.args ?? DEFAULT_GET_QUOTE_ARGS);
+  const result = await callMcpTool(endpointUrl, toolName, input.args ?? DEFAULT_GET_QUOTE_ARGS);
   if (result.isError) {
     await updateAttemptStatus(attempt.id, "upstream_failed", "MCP tool returned an error", { text: result.text });
     await persistAudit(attempt.id, "fail", "Upstream MCP tool failed after settlement", { toolName });

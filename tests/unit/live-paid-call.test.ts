@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   getDeploy: vi.fn(),
   getConfiguredSignerAddress: vi.fn(),
   getFTOwnerships: vi.fn(),
+  getAgentWalletRecord: vi.fn(),
   getSpendPolicyForWallet: vi.fn(),
   getWalletDailySpend: vi.fn(),
   persistAttempt: vi.fn(),
@@ -68,6 +69,10 @@ vi.mock("@/server/mcp-client", () => ({
   discoverMcpTools: mocks.discoverMcpTools,
 }));
 
+vi.mock("@/server/wallet-store", () => ({
+  getAgentWalletRecord: mocks.getAgentWalletRecord,
+}));
+
 vi.mock("@/server/receipt-store", () => ({
   persistAttempt: mocks.persistAttempt,
   persistAudit: mocks.persistAudit,
@@ -92,6 +97,7 @@ import { runLivePaidToolCall } from "@/server/live-paid-call";
 
 const payerHash = "9accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d";
 const payerAddress = `00${payerHash}`;
+const endpointUrl = "https://mcp.cspr.trade/mcp";
 
 function storedPolicy(overrides: Record<string, unknown> = {}) {
   return { allowedAsset: "asset", allowedNetwork: "casper:casper-test", allowedTools: ["get_quote"], disabled: false, maxPerCall: BigInt(5), ...overrides };
@@ -110,6 +116,12 @@ describe("live paid-call orchestration", () => {
     mocks.supported.mockResolvedValue({ kinds: [{ network: "casper:casper-test", scheme: "exact" }] });
     mocks.discoverMcpTools.mockResolvedValue([{ name: "get_quote" }]);
     mocks.getConfiguredSignerAddress.mockReturnValue(payerAddress);
+    mocks.getAgentWalletRecord.mockResolvedValue({
+      accountHash: payerHash,
+      id: "wallet-1",
+      label: "Phase 3 signer wallet",
+      signingMode: "test-signer",
+    });
     mocks.getAccount.mockResolvedValue({ account_hash: payerHash, balance: "10" });
     mocks.getFTOwnerships.mockResolvedValue([{ balance: "10" }]);
     mocks.getWalletDailySpend.mockResolvedValue(BigInt(0));
@@ -139,6 +151,69 @@ describe("live paid-call orchestration", () => {
     expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "blocked", "no active spend policy for wallet");
   });
 
+  it("fails closed when the selected wallet is not the configured local signer", async () => {
+    const otherHash = "1accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d";
+    mocks.getAgentWalletRecord.mockResolvedValue({
+      accountHash: otherHash,
+      id: "wallet-2",
+      label: "Browser wallet",
+      signingMode: "browser-wallet",
+    });
+
+    await expect(
+      runLivePaidToolCall({
+        args: { amount: "10", token_in: "CSPR", token_out: "WCSPR", type: "exact_in" },
+        endpointUrl,
+        toolName: "get_quote",
+        walletId: "wallet-2",
+      } as never),
+    ).resolves.toMatchObject({
+      attemptId: "attempt-1",
+      status: "blocked",
+    });
+
+    expect(mocks.persistAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        redactedInput: { amount: "10", token_in: "CSPR", token_out: "WCSPR", type: "exact_in" },
+        status: "policy_pending",
+        walletAccountHash: otherHash,
+      }),
+    );
+    expect(mocks.persistPolicyDecision).toHaveBeenCalledWith(
+      "attempt-1",
+      false,
+      "selected wallet is not the configured local Testnet signer",
+      expect.objectContaining({ selectedWalletId: "wallet-2", signingMode: "browser-wallet" }),
+    );
+    expectNoPayment();
+    expect(mocks.getAccount).not.toHaveBeenCalled();
+  });
+
+  it("uses selected endpoint, wallet, tool, and args for an allowed paid call", async () => {
+    mocks.getSpendPolicyForWallet.mockResolvedValue(storedPolicy());
+
+    await expect(
+      runLivePaidToolCall({
+        args: { amount: "10", token_in: "CSPR", token_out: "WCSPR", type: "exact_in" },
+        endpointUrl,
+        toolName: "get_quote",
+        walletId: "wallet-1",
+      } as never),
+    ).resolves.toMatchObject({ attemptId: "attempt-1", status: "settled" });
+
+    expect(mocks.getAgentWalletRecord).toHaveBeenCalledWith("wallet-1");
+    expect(mocks.discoverMcpTools).toHaveBeenCalledWith(endpointUrl);
+    expect(mocks.getSpendPolicyForWallet).toHaveBeenCalledWith(payerHash);
+    expect(mocks.getWalletDailySpend).not.toHaveBeenCalled();
+    expect(mocks.createCasperPaymentPayload).toHaveBeenCalledWith(expect.any(Object), `${endpointUrl}#get_quote`);
+    expect(mocks.callMcpTool).toHaveBeenCalledWith(endpointUrl, "get_quote", {
+      amount: "10",
+      token_in: "CSPR",
+      token_out: "WCSPR",
+      type: "exact_in",
+    });
+  });
+
   it("blocks before payment when persisted max-per-call is exceeded", async () => {
     mocks.getSpendPolicyForWallet.mockResolvedValue(storedPolicy({ maxPerCall: BigInt(4) }));
 
@@ -152,7 +227,7 @@ describe("live paid-call orchestration", () => {
     mocks.getWalletDailySpend.mockResolvedValue(BigInt(1));
 
     await expect(runLivePaidToolCall()).resolves.toMatchObject({ status: "blocked" });
-    expect(mocks.getWalletDailySpend).toHaveBeenCalledWith(payerAddress, "asset", "casper:casper-test");
+    expect(mocks.getWalletDailySpend).toHaveBeenCalledWith(payerHash, "asset", "casper:casper-test");
     expectNoPayment();
     expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "blocked", "daily limit exceeded");
   });
