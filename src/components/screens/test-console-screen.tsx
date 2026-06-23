@@ -69,7 +69,7 @@ export function TestConsoleScreen({
   return (
     <div className="grid two">
       <div className="stack">
-        <Panel title="Endpoint target" action={<Chip tone="signal">Local Testnet signer gate</Chip>}>
+        <Panel title="Endpoint target" action={<Chip tone="signal">Testnet signer gate</Chip>}>
           <div className="stack">
             <Segmented<ConsoleTarget>
               options={[
@@ -88,7 +88,7 @@ export function TestConsoleScreen({
               />
             </Field>
             <div className="notice">
-              The selected wallet must match the configured local Testnet signer until browser
+              The selected wallet must match the configured Testnet signer until browser
               signing is implemented. Mismatches stop before payment.
             </div>
             <button className="primaryButton" disabled={busy} onClick={discoverEndpointTools} type="button">

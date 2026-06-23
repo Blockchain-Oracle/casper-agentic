@@ -151,7 +151,7 @@ describe("live paid-call orchestration", () => {
     expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "blocked", "no active spend policy for wallet");
   });
 
-  it("fails closed when the selected wallet is not the configured local signer", async () => {
+  it("fails closed when the selected wallet is not the configured signer", async () => {
     const otherHash = "1accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d";
     mocks.getAgentWalletRecord.mockResolvedValue({
       accountHash: otherHash,
@@ -182,7 +182,7 @@ describe("live paid-call orchestration", () => {
     expect(mocks.persistPolicyDecision).toHaveBeenCalledWith(
       "attempt-1",
       false,
-      "selected wallet is not the configured local Testnet signer",
+      "selected wallet is not the configured Testnet signer",
       expect.objectContaining({ selectedWalletId: "wallet-2", signingMode: "browser-wallet" }),
     );
     expectNoPayment();

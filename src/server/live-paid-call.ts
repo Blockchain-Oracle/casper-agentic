@@ -65,7 +65,7 @@ export async function runLivePaidToolCall(input: PaidCallInput = {}) {
   });
 
   if (walletAccountHash !== signerHash) {
-    const reason = "selected wallet is not the configured local Testnet signer";
+    const reason = "selected wallet is not the configured Testnet signer";
     await persistPolicyDecision(attempt.id, false, reason, {
       selectedWalletId: input.walletId,
       signerAccountHash: signerHash,
@@ -73,7 +73,7 @@ export async function runLivePaidToolCall(input: PaidCallInput = {}) {
       walletAccountHash,
     });
     await updateAttemptStatus(attempt.id, "blocked", reason);
-    await persistAudit(attempt.id, "block", "Selected wallet cannot sign through local Testnet signer", {
+    await persistAudit(attempt.id, "block", "Selected wallet cannot sign through configured Testnet signer", {
       reason,
       selectedWalletId: input.walletId,
     });
