@@ -123,7 +123,11 @@ function casperRows(
 }
 
 function policyNote(receipt: Receipt, policy: PersistedReceiptLayers["policyDecision"]) {
-  if (policy?.allowed === false) return "Spend was stopped before signing. A block is a successful control outcome and has no transaction.";
+  if (policy?.allowed === false) {
+    return receipt.client === "hosted-mcp-endpoint"
+      ? "Spend was stopped before settlement. A block is a successful control outcome and has no transaction."
+      : "Spend was stopped before signing. A block is a successful control outcome and has no transaction.";
+  }
   if (receipt.status === "policy_pending") return "Policy evaluation did not complete. No payment step or Casper transaction is attached.";
   return undefined;
 }

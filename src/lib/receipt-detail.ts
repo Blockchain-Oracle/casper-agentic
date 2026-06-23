@@ -135,7 +135,9 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
     x402,
     casper,
     policyNote: isBlocked
-      ? "Spend was stopped before signing. A block is a successful control outcome and has no transaction."
+      ? receipt.client === "hosted-mcp-endpoint"
+        ? "Spend was stopped before settlement. A block is a successful control outcome and has no transaction."
+        : "Spend was stopped before signing. A block is a successful control outcome and has no transaction."
       : isPolicyPending
         ? "Policy evaluation did not complete. No payment step or Casper transaction is attached."
         : isAuth

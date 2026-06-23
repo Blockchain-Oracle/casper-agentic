@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getHostedEndpoint: vi.fn(),
   requireEndpointAccess: vi.fn(),
+  runHostedPaidToolCall: vi.fn(),
 }));
 
 vi.mock("@/server/endpoint-access", async () => {
@@ -19,6 +20,14 @@ vi.mock("@/server/hosted-endpoint", async () => {
   return {
     ...actual,
     getHostedEndpoint: mocks.getHostedEndpoint,
+  };
+});
+
+vi.mock("@/server/hosted-paid-call", async () => {
+  const actual = await vi.importActual<typeof import("@/server/hosted-paid-call")>("@/server/hosted-paid-call");
+  return {
+    ...actual,
+    runHostedPaidToolCall: mocks.runHostedPaidToolCall,
   };
 });
 
@@ -103,10 +112,16 @@ describe("hosted MCP endpoint POST route", () => {
     expect(JSON.stringify(body)).not.toContain("deploy");
   });
 
-  it("fails closed when payment headers arrive before inbound settlement is implemented", async () => {
+  it("delegates signed payment calls and returns payment response headers on success", async () => {
     const { POST } = await import("@/app/api/mcp/[sourceId]/route");
     mockScopedAccess();
     mocks.getHostedEndpoint.mockResolvedValue(hostedEndpoint());
+    mocks.runHostedPaidToolCall.mockResolvedValue({
+      attemptId: "attempt-1",
+      kind: "success",
+      paymentResponseHeader: "encoded-settlement",
+      result: { content: [{ text: "quote", type: "text" }] },
+    });
 
     const response = await POST(
       request({
@@ -122,19 +137,20 @@ describe("hosted MCP endpoint POST route", () => {
     );
     const body = await response.json();
 
-    expect(response.status).toBe(501);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("PAYMENT-RESPONSE")).toBe("encoded-settlement");
+    expect(response.headers.get("x-casper-gw-receipt-id")).toBe("attempt-1");
     expect(body).toEqual({
-      error: {
-        code: -32011,
-        data: {
-          status: "deferred",
-          toolId: "tool-1",
-          toolName: "get_quote",
-        },
-        message: "payment_verification_not_enabled",
-      },
       id: "call-1",
       jsonrpc: "2.0",
+      result: { content: [{ text: "quote", type: "text" }] },
+    });
+    expect(mocks.runHostedPaidToolCall).toHaveBeenCalledWith({
+      args: {},
+      endpoint: hostedEndpoint(),
+      paymentHeader: "base64-payment-payload",
+      requestUrl: "https://gw.test/api/mcp/source-1",
+      tool: hostedEndpoint().tools[0],
     });
   });
 });

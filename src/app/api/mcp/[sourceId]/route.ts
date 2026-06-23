@@ -8,6 +8,7 @@ import {
   hostedMcpTools,
   resolveHostedTool,
 } from "@/server/hosted-endpoint";
+import { HostedPaidCallInputError, runHostedPaidToolCall } from "@/server/hosted-paid-call";
 
 export const dynamic = "force-dynamic";
 
@@ -76,17 +77,30 @@ export async function POST(request: NextRequest, context: { params: Promise<{ so
       );
     }
 
-    if (paymentHeader(request)) {
+    const signature = paymentHeader(request);
+    if (signature) {
+      const outcome = await runHostedPaidToolCall({
+        args: requiredToolArgs(message.params),
+        endpoint,
+        paymentHeader: signature,
+        requestUrl: request.url,
+        tool,
+      });
+      if (outcome.kind === "success") {
+        return NextResponse.json(
+          { id: message.id, jsonrpc: "2.0", result: outcome.result },
+          {
+            headers: hostedPaymentHeaders(outcome.paymentResponseHeader, outcome.attemptId),
+          },
+        );
+      }
       return jsonRpcError(
         message.id,
-        -32011,
-        "payment_verification_not_enabled",
-        {
-          status: "deferred",
-          toolId: tool.id,
-          toolName: tool.name,
-        },
-        501,
+        outcome.code,
+        outcome.message,
+        outcome.data,
+        outcome.status,
+        outcome.paymentResponseHeader ? hostedPaymentHeaders(outcome.paymentResponseHeader, outcome.attemptId) : undefined,
       );
     }
 
@@ -108,6 +122,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ so
       ? error.status
       : error instanceof HostedEndpointRequestError
         ? error.status
+        : error instanceof HostedPaidCallInputError
+          ? error.status
         : 404;
     return NextResponse.json({ error: message }, { status });
   }
@@ -162,6 +178,14 @@ function requiredToolName(params: unknown) {
   return params.name.trim();
 }
 
+function requiredToolArgs(params: unknown) {
+  if (!isRecord(params)) throw new HostedEndpointRequestError("tools/call params object is required", 400);
+  const args = params.arguments;
+  if (args === undefined) return {};
+  if (!isRecord(args)) throw new HostedEndpointRequestError("tools/call params.arguments must be an object", 400);
+  return args;
+}
+
 function jsonRpcResult(id: JsonRpcMessage["id"], result: unknown) {
   if (id === undefined) return new NextResponse(null, { status: 202 });
   return NextResponse.json({ id, jsonrpc: "2.0", result });
@@ -173,9 +197,10 @@ function jsonRpcError(
   message: string,
   data?: Record<string, unknown>,
   status = 200,
+  headers?: HeadersInit,
 ) {
   if (id === undefined) return new NextResponse(null, { status });
-  return NextResponse.json({ error: { code, data, message }, id, jsonrpc: "2.0" }, { status });
+  return NextResponse.json({ error: { code, data, message }, id, jsonrpc: "2.0" }, { headers, status });
 }
 
 function normalizeJsonRpcId(value: unknown) {
@@ -187,6 +212,14 @@ function normalizeJsonRpcId(value: unknown) {
 
 function paymentHeader(request: NextRequest) {
   return request.headers.get("payment-signature") ?? request.headers.get("x-payment");
+}
+
+function hostedPaymentHeaders(paymentResponseHeader: string, attemptId?: string): HeadersInit {
+  return {
+    "Access-Control-Expose-Headers": "PAYMENT-RESPONSE,x-casper-gw-receipt-id",
+    "PAYMENT-RESPONSE": paymentResponseHeader,
+    ...(attemptId ? { "x-casper-gw-receipt-id": attemptId } : {}),
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
