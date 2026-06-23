@@ -1,6 +1,6 @@
 # Casper GW Context Front Door
 
-Last updated: 2026-06-22
+Last updated: 2026-06-23
 
 Use this file when an agent enters the project cold. It is a map, not the full context.
 
@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Build can start with the smallest real Phase-0 loop while the designer applies the scoped structure pass.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is now proven on Casper Testnet; continue with Phase 1 provider-gateway work from the current plan before broad UI redesign.
 
 The current product shape:
 
@@ -84,9 +84,36 @@ The current product shape:
 - Do not reintroduce private tools, private registries, hidden registries, generic send policy, or simulated/local product modes.
 - Wallet policy means spend and permission controls for paid agent tool calls.
 
+## Completed Phase 0 Gate
+
+Phase 0 proof was completed on 2026-06-23.
+
+- Verification audit: `.thoughts/verification/2026-06-22-casper-gw-phase-0.md`
+- Commit: `883cb9c feat: prove casper x402 paid call`
+- WCSPR wrap transaction: `5cb92938e22ba2fafa4db978a8e42099b52399e99afc76c8b365fa04de5e60cc`
+- Paid x402 deploy hash: `5566d633e6dc41e20fed6d50d84bb3945ff7327cf3ebdb8ecd67e682e944fa8a`
+- Persisted receipt attempt: `158ab798-5e21-4512-9823-fe6d95b8d3e5`
+- `pnpm verify` and `pnpm run ci` passed after independent review fixes.
+
+No GitHub PR was opened because no remote is configured.
+
 ## Current Build Gate
 
-Start with Phase 0 from the 2026-06-22 handoff:
+Current implementation plan:
+
+- `.thoughts/plans/2026-06-23-casper-gw-phase-1-provider-gateway.md`
+
+Phase 1 should build the provider-gateway path:
+
+- provider source/tool/price/access-key store,
+- real Remote MCP source discovery, starting with `https://mcp.cspr.trade/mcp`,
+- tool selection, pricing, and publish state,
+- hosted MCP/x402 endpoint metadata and payment requirements,
+- minimal UI wiring for source discovery, tool pricing, and endpoint config.
+
+Do not start broad design work or wallet production UX as part of Phase 1 unless Abu explicitly changes scope.
+
+Historical Phase 0 gate, now satisfied:
 
 - Build CSPR.cloud REST/streaming client paths needed for deploy proof, account balance, and CEP-18/token-action reads.
 - Build CSPR.cloud x402 facilitator client for `/supported`, `/verify`, and `/settle`.
