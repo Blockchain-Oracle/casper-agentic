@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, and Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified. Do not jump into broad UI redesign or production custody.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified, and Phase 7 hosted endpoint settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy. Do not jump into broad UI redesign or production custody.
 
 The current product shape:
 
@@ -219,9 +219,32 @@ Phase 6 hosted endpoint payment enforcement was completed locally on 2026-06-23.
 
 No GitHub PR was opened because no remote is configured in this checkout.
 
+## Completed Phase 7 Gate
+
+Phase 7 hosted endpoint settlement was completed locally on 2026-06-23.
+
+- Plan: `.thoughts/plans/2026-06-23-casper-gw-phase-7-hosted-endpoint-settlement.md`
+- Verification audit: `.thoughts/verification/2026-06-23-casper-gw-phase-7-hosted-endpoint-settlement.md`
+- Plan commit: `0cedb61 docs: plan hosted endpoint settlement`
+- Implementation commit: `35368d1 feat: settle hosted endpoint payments`
+- Review-fix commit: `36cecee fix: persist hosted settlement failures`
+- Hosted metadata/smoke commit: `e6863ca fix: preserve hosted payment metadata`
+- Cleanup commit: `6cb971d fix: keep pricing helper top-level`
+- `/api/mcp/[sourceId]` now accepts `PAYMENT-SIGNATURE`/`x-payment` for signed `tools/call` requests, binds the signed resource to the exact hosted route/tool, verifies through CSPR.cloud, enforces wallet policy before settlement, settles through CSPR.cloud, resolves Casper proof, and calls upstream MCP only after successful proof.
+- Failure paths persist honest receipt/audit state for verify failure, policy block, settle body failure, settle request failure, proof pending, upstream returned error, and upstream thrown error.
+- Hosted tool pricing now preserves server-owned WCSPR metadata in payment requirements; a first hosted smoke failed safely with `invalid_exact_casper_missing_token_name`, then passed after the metadata fix.
+- Hosted live smoke receipt: `6bd29008-6943-4e71-aeca-4451effff473`
+- Hosted live smoke deploy hash: `a27e519e06c56b9132768683b3eeae0fdda5f5b2e85a8a4034adbfb67b16352e`
+- Hosted live smoke explorer link: `https://testnet.cspr.live/deploy/a27e519e06c56b9132768683b3eeae0fdda5f5b2e85a8a4034adbfb67b16352e`
+- Independent review initially found two blockers and one should-fix; all were fixed. Scoped re-reviews passed with no findings.
+- `pnpm run ci` passed after final code changes with 106 unit tests, 10 browser tests, 2 intentional mobile skips, and `next build`.
+- `pnpm smoke:hosted-live` passed and spent one Abu-approved WCSPR hosted endpoint payment on Casper Testnet.
+
+No GitHub PR was opened because no remote is configured in this checkout.
+
 ## Current Build Gate
 
-The next likely engineering slice is inbound hosted endpoint settlement or explicit account-history pagination for the public explorer, depending on Abu's priority. Inbound hosted settlement must be its own plan because it needs real `PAYMENT-SIGNATURE` verification, CSPR.cloud `/settle`, four-layer receipt persistence, Casper proof resolution, and upstream MCP execution after settlement. Full account-history pagination and public-key/CSPR.name search are intentionally not part of Phase 5 or Phase 6 and need their own plan.
+The next likely engineering slice is explicit account-history pagination for the public explorer, hosted endpoint client polish, CSPR.click/browser signing planning, or another Abu-approved Context Engineering slice. Full account-history pagination and public-key/CSPR.name search are intentionally not part of Phase 5, Phase 6, or Phase 7 and need their own plan.
 
 Do not start broad design work, production custody, CSPR.click signing, Mainnet, generic send policy, registry/private tools, or new simulated product modes unless Abu explicitly changes scope through the Context Engineering flow.
 
