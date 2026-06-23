@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 
 import { getDb } from "@/db/client";
@@ -71,6 +71,25 @@ export async function listProviderTools(sourceId?: string) {
   return rows.map(toProviderToolView);
 }
 
+export async function listPublishedEndpointTools(sourceId: string) {
+  const tools = await getDb()
+    .select()
+    .from(providerTools)
+    .where(and(eq(providerTools.sourceId, sourceId), eq(providerTools.status, "published")))
+    .orderBy(desc(providerTools.createdAt));
+  if (!tools.length) return [];
+
+  const prices = await getDb()
+    .select()
+    .from(toolPrices)
+    .where(inArray(toolPrices.toolId, tools.map((tool) => tool.id)));
+
+  return tools.map((tool) => ({
+    ...toProviderToolView(tool),
+    price: prices.find((price) => price.toolId === tool.id) ?? null,
+  }));
+}
+
 export async function setProviderToolStatus(toolId: string, status: ProviderToolStatus) {
   assertToolStatus(status);
   const [tool] = await getDb()
@@ -107,4 +126,8 @@ export async function saveToolPrice(input: ToolPriceInput) {
 
 async function logProviderAudit(kind: string, label: string, metadata: Record<string, unknown>) {
   await getDb().insert(auditEvents).values({ kind, label, metadata });
+}
+
+export async function logProviderEvent(kind: string, label: string, metadata: Record<string, unknown>) {
+  await logProviderAudit(kind, label, metadata);
 }

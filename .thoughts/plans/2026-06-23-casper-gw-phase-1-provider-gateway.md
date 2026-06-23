@@ -11,7 +11,11 @@ Status: In progress
 - Phase 1B route foundation added: operator-gated source create/list, source discovery, and tool list routes.
 - Phase 1C route foundation added: operator-gated select, price, and publish routes.
 - Non-payment smoke created a real Remote MCP provider source for `https://mcp.cspr.trade/mcp`, discovered 23 real tools, persisted them as draft tools, priced `get_quote`, and published it.
-- Phase 1D hosted endpoint and Phase 1E UI wiring remain pending.
+- Phase 1D hosted endpoint foundation added: scoped client access keys are hashed at rest, hosted endpoint metadata requires bearer access, and published tools return persisted Casper Testnet x402 payment requirements without provider credential leakage.
+- Phase 1D non-payment smoke created endpoint access key `57572955-ca93-4a66-a700-d0441eb60337`, authenticated without printing the token, and confirmed one published `get_quote` tool with `casper:casper-test` / `exact` payment requirements.
+- `pnpm verify` passed with 15 test files and 47 tests.
+- `pnpm run ci` passed, including Playwright browser smoke and `next build`.
+- Phase 1E UI wiring remains pending.
 
 ## Inputs
 
@@ -23,7 +27,7 @@ Status: In progress
 - `.thoughts/quality/2026-06-22-casper-gw-current-quality-profile.md`
 - `.thoughts/design/2026-06-22-design-direction-and-structure.md`
 - `.thoughts/verification/2026-06-22-casper-gw-phase-0.md`
-- Current repo state on `feat/casper-gw-phase-0`, commit `883cb9c`.
+- Current repo state on `feat/casper-gw-phase-0`. Phase 0 proof commit is `883cb9c`; Phase 1 provider foundation commit is `57bce54`.
 
 ## Assumptions
 

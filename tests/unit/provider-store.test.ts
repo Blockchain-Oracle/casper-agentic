@@ -119,4 +119,32 @@ describe("provider store helpers", () => {
       }),
     ).toThrow("amount must be a positive integer string");
   });
+
+  it("matches the accepted provider gateway semantics", () => {
+    const source = normalizeProviderSourceInput({
+      authMode: "none",
+      endpointUrl: "https://mcp.cspr.trade/mcp",
+      name: "CSPR Trade",
+      sourceType: "mcp",
+    });
+    const tool = normalizeDiscoveredTool("source-1", source.endpointUrl, {
+      inputSchema: {},
+      name: "get_quote",
+    });
+    const price = normalizeToolPriceInput({
+      amount: "7500000000",
+      asset: "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e",
+      network: "casper:casper-test",
+      payTo: "009accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d",
+      toolId: "tool-1",
+    });
+
+    expect(source.sourceType).toBe("mcp");
+    expect(tool.status).toBe("draft");
+    expect(tool).not.toHaveProperty("visibility");
+    expect(price).toMatchObject({
+      network: "casper:casper-test",
+      scheme: "exact",
+    });
+  });
 });
