@@ -51,14 +51,31 @@ export async function getReceiptDetail(id: string): Promise<ReceiptDetail | unde
     return receipt ? buildReceiptDetail(receipt) : undefined;
   }
 
+  if (!isUuid(id)) return undefined;
   const [attempt] = await getDb().select().from(paidCallAttempts).where(eq(paidCallAttempts.id, id)).limit(1);
   if (!attempt) return undefined;
-  const [proof] = await getDb().select().from(casperProofs).where(eq(casperProofs.attemptId, id)).limit(1);
-  const [policy] = await getDb().select().from(policyDecisions).where(eq(policyDecisions.attemptId, id)).limit(1);
+  return detailForAttempt(attempt);
+}
+
+export async function getReceiptDetailByDeployHash(deployHash: string): Promise<ReceiptDetail | undefined> {
+  if (!hasDatabaseUrl()) {
+    const receipt = fixtureReceipts.find((item) => item.hash === deployHash);
+    return receipt ? buildReceiptDetail(receipt) : undefined;
+  }
+
+  const [proof] = await getDb().select().from(casperProofs).where(eq(casperProofs.deployHash, deployHash)).limit(1);
+  if (!proof?.attemptId) return undefined;
+  const [attempt] = await getDb().select().from(paidCallAttempts).where(eq(paidCallAttempts.id, proof.attemptId)).limit(1);
+  return attempt ? detailForAttempt(attempt) : undefined;
+}
+
+async function detailForAttempt(attempt: typeof paidCallAttempts.$inferSelect) {
+  const [proof] = await getDb().select().from(casperProofs).where(eq(casperProofs.attemptId, attempt.id)).limit(1);
+  const [policy] = await getDb().select().from(policyDecisions).where(eq(policyDecisions.attemptId, attempt.id)).limit(1);
   const x402s = await getDb()
     .select()
     .from(x402Records)
-    .where(eq(x402Records.attemptId, id))
+    .where(eq(x402Records.attemptId, attempt.id))
     .orderBy(desc(x402Records.createdAt));
   return buildPersistedReceiptDetail(fromAttemptRow(attempt, proof?.deployHash ?? null), {
     casperProof: proof,
@@ -146,4 +163,8 @@ function fromAttemptRow(row: typeof paidCallAttempts.$inferSelect, hash: string 
     tool: row.toolName,
     wallet: row.walletAccountHash,
   };
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }

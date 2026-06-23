@@ -83,4 +83,5 @@ export const statusMeta: Record<ReceiptStatus, { label: string; tone: string }> 
   upstream_failed: { label: "Upstream 502", tone: "danger" },
   auth_failed: { label: "MCP auth fail", tone: "danger" },
   raw_proof_unavailable: { label: "Proof pending", tone: "warn" },
+  external_proof: { label: "External proof", tone: "primary" },
 };

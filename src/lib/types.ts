@@ -15,7 +15,8 @@ export type ReceiptStatus =
   | "settle_failed"
   | "upstream_failed"
   | "auth_failed"
-  | "raw_proof_unavailable";
+  | "raw_proof_unavailable"
+  | "external_proof";
 
 export type SourcePhase = "form" | "loading" | "error" | "success";
 export type SourceType = "openapi" | "mcp" | "manual";
@@ -117,4 +118,17 @@ export interface ReceiptDetail {
   policyNote?: string;
   x402Note?: string;
   casperNote?: string;
+}
+
+export type ExplorerSearchSource =
+  | "casper_gw_receipt"
+  | "external_casper_proof"
+  | "not_found"
+  | "unconfigured";
+
+export interface ExplorerSearchResult {
+  detail?: ReceiptDetail;
+  message: string;
+  query: string;
+  source: ExplorerSearchSource;
 }

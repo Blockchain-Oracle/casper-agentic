@@ -1,7 +1,7 @@
 import { Panel, ProofPanel, TabButton } from "@/components/screen-primitives";
-import { StatusChip } from "@/components/ui";
+import { Chip, StatusChip } from "@/components/ui";
 import { statusMeta } from "@/lib/fixtures";
-import type { Receipt, ReceiptDetail, ReceiptStatus } from "@/lib/types";
+import type { ExplorerSearchSource, Receipt, ReceiptDetail, ReceiptStatus } from "@/lib/types";
 
 export type ExplorerFilter = "all" | ReceiptStatus;
 
@@ -10,7 +10,13 @@ export function ExplorerScreen({
   filteredReceipts,
   onFilter,
   onReceipt,
+  onSearch,
+  onSearchQuery,
   receiptDetail,
+  searchMessage,
+  searchQuery,
+  searchSource,
+  searching,
   selectedReceipt,
   selectedReceiptId,
 }: {
@@ -18,16 +24,47 @@ export function ExplorerScreen({
   filteredReceipts: Receipt[];
   onFilter: (filter: ExplorerFilter) => void;
   onReceipt: (receiptId: string) => void;
+  onSearch: () => void;
+  onSearchQuery: (query: string) => void;
   receiptDetail: ReceiptDetail;
+  searchMessage?: string;
+  searchQuery: string;
+  searchSource?: ExplorerSearchSource;
+  searching: boolean;
   selectedReceipt: Receipt;
   selectedReceiptId: string;
 }) {
   const filters: ExplorerFilter[] = ["all", ...(Object.keys(statusMeta) as ReceiptStatus[])];
+  const sourceChip = searchSource ? sourceLabel(searchSource) : null;
 
   return (
     <div className="receiptLayout">
       <Panel title="Receipts">
         <div className="stack">
+          <form
+            className="stack tight"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSearch();
+            }}
+          >
+            <label>
+              <div className="fieldLabel">Search receipt id or deploy hash</div>
+              <input
+                className="input"
+                onChange={(event) => onSearchQuery(event.target.value)}
+                placeholder="receipt uuid or 64-char deploy hash"
+                value={searchQuery}
+              />
+            </label>
+            <div className="buttonRow">
+              <button className="primaryButton" disabled={searching} type="submit">
+                {searching ? "Searching..." : "Search explorer"}
+              </button>
+              {sourceChip ? <Chip tone={sourceChip.tone}>{sourceChip.label}</Chip> : null}
+            </div>
+            {searchMessage ? <div className={`notice ${searchSource === "not_found" ? "danger" : ""}`}>{searchMessage}</div> : null}
+          </form>
           <div className="codeTabs">
             {filters.map((filter) => (
               <TabButton active={explorerFilter === filter} key={filter} onClick={() => onFilter(filter)}>
@@ -36,27 +73,31 @@ export function ExplorerScreen({
             ))}
           </div>
           <div className="receiptList">
-            {filteredReceipts.map((receipt) => (
-              <button
-                className="receiptRow"
-                data-active={receipt.id === selectedReceiptId}
-                key={receipt.id}
-                onClick={() => onReceipt(receipt.id)}
-                type="button"
-              >
-                <div className="receiptMeta">
-                  <strong className="mono">{receipt.id}</strong>
-                  <StatusChip status={receipt.status} />
-                </div>
-                <div className="miniMeta">
-                  <span>{receipt.time}</span>
-                  <span>{receipt.provider}</span>
-                  <span>
-                    {receipt.amount} {receipt.asset}
-                  </span>
-                </div>
-              </button>
-            ))}
+            {filteredReceipts.length ? (
+              filteredReceipts.map((receipt) => (
+                <button
+                  className="receiptRow"
+                  data-active={receipt.id === selectedReceiptId}
+                  key={receipt.id}
+                  onClick={() => onReceipt(receipt.id)}
+                  type="button"
+                >
+                  <div className="receiptMeta">
+                    <strong className="mono">{receipt.id}</strong>
+                    <StatusChip status={receipt.status} />
+                  </div>
+                  <div className="miniMeta">
+                    <span>{receipt.time}</span>
+                    <span>{receipt.provider}</span>
+                    <span>
+                      {receipt.amount} {receipt.asset}
+                    </span>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="emptyState">No receipts match this filter.</div>
+            )}
           </div>
         </div>
       </Panel>
@@ -77,4 +118,11 @@ export function ExplorerScreen({
       </div>
     </div>
   );
+}
+
+function sourceLabel(source: ExplorerSearchSource) {
+  if (source === "casper_gw_receipt") return { label: "Casper GW receipt", tone: "signal" };
+  if (source === "external_casper_proof") return { label: "External Casper proof", tone: "primary" };
+  if (source === "unconfigured") return { label: "Lookup not configured", tone: "warn" };
+  return { label: "Not found", tone: "danger" };
 }
