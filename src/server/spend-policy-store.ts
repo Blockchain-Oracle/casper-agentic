@@ -60,7 +60,27 @@ export async function getLatestSpendPolicyForWalletId(walletId: string) {
   return policy ? toSpendPolicyView(policy) : null;
 }
 
+export async function getEffectiveSpendPolicyViewForWallet(accountHash: string) {
+  const policy = await getLatestPolicyForAccountHash(accountHash);
+  return policy ? toSpendPolicyView(policy) : null;
+}
+
 export async function getSpendPolicyForWallet(accountHash: string): Promise<StoredSpendPolicy | null> {
+  const policy = await getLatestPolicyForAccountHash(accountHash);
+  if (!policy) return null;
+
+  return {
+    allowedAsset: policy.allowedAsset,
+    allowedNetwork: policy.allowedNetwork,
+    allowedTools: Array.isArray(policy.allowedTools) ? policy.allowedTools.filter(isString) : [],
+    dailyLimit: policy.dailyLimit ? BigInt(policy.dailyLimit) : undefined,
+    disabled: policy.disabled,
+    maxPerCall: BigInt(policy.maxPerCall),
+    sessionLimit: policy.sessionLimit ? BigInt(policy.sessionLimit) : undefined,
+  };
+}
+
+async function getLatestPolicyForAccountHash(accountHash: string) {
   const aliases = casperAccountAliases(accountHash);
   const wallets = await getDb()
     .select()
@@ -75,17 +95,7 @@ export async function getSpendPolicyForWallet(accountHash: string): Promise<Stor
     .where(inArray(spendPolicies.walletId, walletIds))
     .orderBy(desc(spendPolicies.createdAt))
     .limit(1);
-  if (!policy) return null;
-
-  return {
-    allowedAsset: policy.allowedAsset,
-    allowedNetwork: policy.allowedNetwork,
-    allowedTools: Array.isArray(policy.allowedTools) ? policy.allowedTools.filter(isString) : [],
-    dailyLimit: policy.dailyLimit ? BigInt(policy.dailyLimit) : undefined,
-    disabled: policy.disabled,
-    maxPerCall: BigInt(policy.maxPerCall),
-    sessionLimit: policy.sessionLimit ? BigInt(policy.sessionLimit) : undefined,
-  };
+  return policy ?? null;
 }
 
 export async function getWalletDailySpend(accountHash: string, asset: string, network: string) {

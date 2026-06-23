@@ -8,6 +8,7 @@ export type Screen =
   | "settings";
 
 export type ReceiptStatus =
+  | "policy_pending"
   | "settled"
   | "blocked"
   | "verify_failed"

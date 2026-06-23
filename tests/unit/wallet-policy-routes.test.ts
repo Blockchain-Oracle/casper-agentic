@@ -3,13 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   createSpendPolicy: vi.fn(),
+  getEffectiveSpendPolicyViewForWallet: vi.fn(),
   getAgentWalletRecord: vi.fn(),
-  getLatestSpendPolicyForWalletId: vi.fn(),
 }));
 
 vi.mock("@/server/spend-policy-store", () => ({
   createSpendPolicy: mocks.createSpendPolicy,
-  getLatestSpendPolicyForWalletId: mocks.getLatestSpendPolicyForWalletId,
+  getEffectiveSpendPolicyViewForWallet: mocks.getEffectiveSpendPolicyViewForWallet,
 }));
 
 vi.mock("@/server/wallet-store", () => ({
@@ -46,12 +46,12 @@ describe("wallet policy route", () => {
     });
 
     expect(response.status).toBe(403);
-    expect(mocks.getLatestSpendPolicyForWalletId).not.toHaveBeenCalled();
+    expect(mocks.getEffectiveSpendPolicyViewForWallet).not.toHaveBeenCalled();
   });
 
-  it("returns the latest persisted policy for a wallet profile", async () => {
+  it("returns the effective policy for the wallet account hash", async () => {
     const { GET } = await import("@/app/api/wallets/[id]/policy/route");
-    mocks.getLatestSpendPolicyForWalletId.mockResolvedValue({ id: "policy-1", maxPerCall: "50" });
+    mocks.getEffectiveSpendPolicyViewForWallet.mockResolvedValue({ id: "policy-1", maxPerCall: "50" });
 
     const response = await GET(request("https://gw.test/api/wallets/wallet-1/policy", { token: "operator-token" }), {
       params: Promise.resolve({ id: "wallet-1" }),
@@ -59,7 +59,7 @@ describe("wallet policy route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(mocks.getLatestSpendPolicyForWalletId).toHaveBeenCalledWith("wallet-1");
+    expect(mocks.getEffectiveSpendPolicyViewForWallet).toHaveBeenCalledWith(accountHash);
     expect(body.policy).toEqual({ id: "policy-1", maxPerCall: "50" });
     expect(body.wallet).toEqual({
       accountHash,

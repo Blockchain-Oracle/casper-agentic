@@ -75,6 +75,7 @@ export const screens: Array<{
 ];
 
 export const statusMeta: Record<ReceiptStatus, { label: string; tone: string }> = {
+  policy_pending: { label: "Policy pending", tone: "warn" },
   settled: { label: "Settled", tone: "signal" },
   blocked: { label: "Blocked", tone: "primary" },
   verify_failed: { label: "Verify fail", tone: "danger" },

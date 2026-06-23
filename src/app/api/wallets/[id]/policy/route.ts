@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getRuntimeConfig } from "@/server/env";
 import { isOperatorAccessError, requireOperatorRequest } from "@/server/operator-access";
-import { createSpendPolicy, getLatestSpendPolicyForWalletId } from "@/server/spend-policy-store";
+import { createSpendPolicy, getEffectiveSpendPolicyViewForWallet } from "@/server/spend-policy-store";
 import { getAgentWalletRecord } from "@/server/wallet-store";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   try {
     requireOperatorRequest(request);
     const wallet = await resolveWallet(context);
-    const policy = await getLatestSpendPolicyForWalletId(wallet.id);
+    const policy = await getEffectiveSpendPolicyViewForWallet(wallet.accountHash);
     return NextResponse.json({ policy, wallet: walletView(wallet) });
   } catch (error) {
     return policyError(error);

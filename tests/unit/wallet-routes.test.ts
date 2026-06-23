@@ -61,6 +61,25 @@ describe("wallet profile routes", () => {
       signingMode: "external",
     });
   });
+
+  it("rejects wallet network overrides in Phase 2", async () => {
+    const { POST } = await import("@/app/api/wallets/route");
+
+    const response = await POST(
+      request("https://gw.test/api/wallets", {
+        body: {
+          accountHash,
+          label: "Judge Wallet",
+          network: "casper:casper-main",
+          signingMode: "external",
+        },
+        token: "operator-token",
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(mocks.createAgentWallet).not.toHaveBeenCalled();
+  });
 });
 
 describe("wallet readiness route", () => {

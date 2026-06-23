@@ -8,6 +8,7 @@ export function receiptById(id: string): Receipt {
 export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
   const isAuth = receipt.status === "auth_failed";
   const isBlocked = receipt.status === "blocked";
+  const isPolicyPending = receipt.status === "policy_pending";
   const isProofUnavailable = receipt.status === "raw_proof_unavailable";
   const hasPendingProofHash = isProofUnavailable && Boolean(receipt.hash);
   const hasRealProof = Boolean(receipt.hash) && !isProofUnavailable;
@@ -25,6 +26,11 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
   const policy =
     isAuth
       ? [{ key: "decision", value: "Not reached - MCP client auth failed first", tone: "neutral" as const }]
+      : isPolicyPending
+        ? [
+            { key: "decision", value: "PENDING", tone: "warn" as const },
+            { key: "reason", value: receipt.reason ?? "Policy evaluation did not complete", tone: "warn" as const },
+          ]
       : isBlocked
         ? [
             { key: "decision", value: "BLOCKED", tone: "primary" as const },
@@ -40,7 +46,7 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
           ];
 
   const x402 =
-    isAuth || isBlocked
+    isAuth || isBlocked || isPolicyPending
       ? [
           { key: "network", value: "casper:casper-test", mono: true },
           { key: "scheme", value: "exact", mono: true },
@@ -130,11 +136,13 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
     casper,
     policyNote: isBlocked
       ? "Spend was stopped before signing. A block is a successful control outcome and has no transaction."
-      : isAuth
-        ? "The request was rejected at the MCP client-access boundary before policy or payment."
-        : undefined,
+      : isPolicyPending
+        ? "Policy evaluation did not complete. No payment step or Casper transaction is attached."
+        : isAuth
+          ? "The request was rejected at the MCP client-access boundary before policy or payment."
+          : undefined,
     x402Note:
-      isAuth || isBlocked
+      isAuth || isBlocked || isPolicyPending
         ? "No payment step ran - the call never reached the facilitator."
         : isProofUnavailable
           ? "This receipt is fixture data until a real facilitator settle response and deploy hash are stored."
@@ -147,6 +155,8 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
         ? "The gateway must not claim raw Casper proof until a transaction/deploy hash or explorer proof is available."
       : isBlocked
         ? "Blocked before signing - no transaction exists on Casper."
+        : isPolicyPending
+          ? "Policy evaluation did not complete - no transaction exists on Casper."
         : isAuth
           ? "Rejected at MCP client auth - no payment, no transaction."
           : "No successful settlement occurred, so no Casper proof is attached.",

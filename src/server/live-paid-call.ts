@@ -56,7 +56,7 @@ export async function runLivePaidToolCall(input: PaidCallInput = {}) {
     network: paymentRequirements.network,
     providerName: "CSPR.trade MCP",
     redactedInput: redactInput(input.args ?? DEFAULT_GET_QUOTE_ARGS),
-    status: "raw_proof_unavailable",
+    status: "policy_pending",
     toolName,
     walletAccountHash: payer,
   });

@@ -51,4 +51,27 @@ describe("receipt proof rendering", () => {
       "CSPR.cloud indexing pending",
     );
   });
+
+  it("does not render pre-policy failures as proof-pending Casper receipts", () => {
+    const receipt: Receipt = {
+      amount: "7500000000",
+      asset: "WCSPR",
+      client: "phase-0-console",
+      hash: null,
+      id: "rcp_policy_pending",
+      provider: "Make Software Labs",
+      reason: "Policy evaluation did not complete",
+      status: "policy_pending",
+      time: "2026-06-22T12:00:00.000Z",
+      tool: "get_quote",
+      wallet: "account-hash-payer",
+    };
+
+    const detail = buildReceiptDetail(receipt);
+
+    expect(detail.policy.find((row) => row.key === "decision")?.value).toBe("PENDING");
+    expect(detail.x402.find((row) => row.key === "settle")?.value).toBe("not attempted");
+    expect(detail.casper).toEqual([]);
+    expect(detail.casperNote).toContain("no transaction exists on Casper");
+  });
 });
