@@ -68,6 +68,17 @@ describe("explorer search", () => {
     expect(mocks.getDeploy).not.toHaveBeenCalled();
   });
 
+  it("normalizes uppercase deploy hashes before Casper GW deploy lookup", async () => {
+    const detail = receiptDetail(deployHash);
+    mocks.getReceiptDetailByDeployHash.mockResolvedValue(detail);
+
+    const result = await searchExplorer(deployHash.toUpperCase());
+
+    expect(result.source).toBe("casper_gw_receipt");
+    expect(mocks.getReceiptDetailByDeployHash).toHaveBeenCalledWith(deployHash);
+    expect(mocks.getDeploy).not.toHaveBeenCalled();
+  });
+
   it("builds limited external proof context for unknown deploy hashes", async () => {
     mocks.getDeploy.mockResolvedValue({ deploy_hash: deployHash, status: "processed", timestamp: "2026-06-23T12:00:00Z" });
     mocks.getContractPackageTokenActions.mockResolvedValue([
@@ -89,6 +100,39 @@ describe("explorer search", () => {
     expect(result.detail?.policy.find((row) => row.key === "status")?.value).toBe("unavailable");
     expect(result.detail?.x402.find((row) => row.key === "status")?.value).toBe("unavailable");
     expect(result.detail?.casper.find((row) => row.key === "payer")?.value).toBe("account-hash-payer");
+  });
+
+  it("does not render token action data unless deploy hash and package match", async () => {
+    mocks.getDeploy.mockResolvedValue({ deploy_hash: deployHash, status: "processed" });
+    mocks.getContractPackageTokenActions.mockResolvedValue([
+      {
+        amount: "7500000000",
+        contract_package_hash: "wcspr-package",
+        deploy_hash: "0000000000000000000000000000000000000000000000000000000000000000",
+        from_hash: "account-hash-wrong-payer",
+        ft_action_type_id: 0,
+        timestamp: "2026-06-23T12:00:01Z",
+        to_hash: "account-hash-wrong-payee",
+      },
+      {
+        amount: "7500000000",
+        contract_package_hash: "different-package",
+        deploy_hash: deployHash,
+        from_hash: "account-hash-wrong-package",
+        ft_action_type_id: 0,
+        timestamp: "2026-06-23T12:00:01Z",
+        to_hash: "account-hash-wrong-package-payee",
+      },
+    ]);
+
+    const result = await searchExplorer(deployHash);
+
+    expect(result.source).toBe("external_casper_proof");
+    expect(result.detail?.casper.find((row) => row.key === "payment token action")?.value).toBe(
+      "not found for configured asset",
+    );
+    expect(JSON.stringify(result.detail)).not.toContain("account-hash-wrong-payer");
+    expect(JSON.stringify(result.detail)).not.toContain("account-hash-wrong-package");
   });
 
   it("does not claim external lookup when CSPR.cloud is not configured", async () => {

@@ -9,6 +9,8 @@ import { receipts } from "@/lib/fixtures";
 import { buildReceiptDetail, receiptById } from "@/lib/receipt-detail";
 import type { ExplorerSearchResult, ReceiptDetail } from "@/lib/types";
 
+type ReceiptFeedSource = "fixture" | "postgres";
+
 export function PublicExplorerApp() {
   const searchParams = useSearchParams();
   const [selectedReceiptOverride, setSelectedReceiptOverride] = useState<string | null>(null);
@@ -16,6 +18,7 @@ export function PublicExplorerApp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<ExplorerSearchResult | null>(null);
+  const [receiptFeedSource, setReceiptFeedSource] = useState<ReceiptFeedSource>("fixture");
   const [receiptDetails, setReceiptDetails] = useState<ReceiptDetail[]>(
     receipts.map((receipt) => buildReceiptDetail(receipt)),
   );
@@ -25,7 +28,9 @@ export function PublicExplorerApp() {
     fetch("/api/receipts")
       .then((response) => (response.ok ? response.json() : undefined))
       .then((body) => {
-        if (active && Array.isArray(body?.receipts)) setReceiptDetails(body.receipts);
+        if (!active || !Array.isArray(body?.receipts)) return;
+        setReceiptDetails(body.receipts);
+        setReceiptFeedSource(body.source === "postgres" ? "postgres" : "fixture");
       })
       .catch(() => undefined);
     return () => {
@@ -101,7 +106,9 @@ export function PublicExplorerApp() {
             proof lookup. External proofs show chain facts only.
           </p>
           <div className="buttonRow" style={{ marginTop: 14 }}>
-            <Chip tone="primary">Gateway receipts</Chip>
+            <Chip tone={receiptFeedSource === "postgres" ? "primary" : "warn"}>
+              {receiptFeedSource === "postgres" ? "Gateway receipts" : "Sample receipts"}
+            </Chip>
             <Chip tone="warn">External proof is limited</Chip>
             <Chip tone="signal">No sign-in required</Chip>
           </div>

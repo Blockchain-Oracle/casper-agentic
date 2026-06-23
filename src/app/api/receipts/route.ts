@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ReceiptStatus } from "@/lib/types";
-import { listReceiptDetails } from "@/server/receipt-store";
+import { listReceiptDetails, receiptStoreSource } from "@/server/receipt-store";
 
 export const dynamic = "force-dynamic";
 
@@ -13,5 +13,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     network: "casper:casper-test",
     receipts: filtered,
+    source: receiptStoreSource(),
   });
 }

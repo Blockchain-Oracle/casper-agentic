@@ -38,7 +38,11 @@ async function lookupExternalDeploy(deployHash: string): Promise<ExplorerSearchR
   const client = new CsprCloudClient(config);
   try {
     const deploy = await client.getDeploy(deployHash);
-    const ftActions = await client.getContractPackageTokenActions(config.paymentAsset, deployHash);
+    const ftActions = (await client.getContractPackageTokenActions(config.paymentAsset, deployHash)).filter(
+      (action) =>
+        action.deploy_hash.toLowerCase() === deployHash.toLowerCase() &&
+        action.contract_package_hash.toLowerCase() === config.paymentAsset.toLowerCase(),
+    );
     const detail = buildExternalProofDetail({
       deploy,
       explorerUrl: `https://testnet.cspr.live/deploy/${deploy.deploy_hash}`,
@@ -54,7 +58,8 @@ async function lookupExternalDeploy(deployHash: string): Promise<ExplorerSearchR
 }
 
 function normalizeQuery(query: string) {
-  return query.trim().replace(/^deploy:/i, "").replace(/^receipt:/i, "");
+  const trimmed = query.trim().replace(/^deploy:/i, "").replace(/^receipt:/i, "");
+  return isDeployHash(trimmed) ? trimmed.toLowerCase() : trimmed;
 }
 
 function isDeployHash(query: string) {

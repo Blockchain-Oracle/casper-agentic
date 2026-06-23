@@ -45,6 +45,10 @@ export async function listReceiptDetails() {
   });
 }
 
+export function receiptStoreSource() {
+  return hasDatabaseUrl() ? "postgres" : "fixture";
+}
+
 export async function getReceiptDetail(id: string): Promise<ReceiptDetail | undefined> {
   if (!hasDatabaseUrl()) {
     const receipt = fixtureReceipts.find((item) => item.id === id);

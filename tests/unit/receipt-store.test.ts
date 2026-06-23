@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { listReceiptDetails } from "@/server/receipt-store";
+import { listReceiptDetails, receiptStoreSource } from "@/server/receipt-store";
 
 const originalEnv = { ...process.env };
 
@@ -19,5 +19,6 @@ describe("receipt store", () => {
     expect(details[0]).toHaveProperty("policy");
     expect(details[0]).toHaveProperty("x402");
     expect(details[0]).toHaveProperty("casper");
+    expect(receiptStoreSource()).toBe("fixture");
   });
 });
