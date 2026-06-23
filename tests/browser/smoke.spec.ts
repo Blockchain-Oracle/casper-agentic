@@ -17,6 +17,8 @@ test("operator app exposes the paid tool console without changing public explore
   await page.getByRole("button", { name: "Open test console" }).click();
   await expect(page.getByRole("heading", { name: "Paid Tool Test Console" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Discover endpoint tools" })).toBeVisible();
+  await expect(page.getByText("Design fixture")).toHaveCount(0);
+  await expect(page.getByText("Local Testnet signer gate")).toBeVisible();
 });
 
 test("provider wiring avoids fake hosted credentials", async ({ page }, testInfo) => {

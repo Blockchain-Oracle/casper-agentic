@@ -13,7 +13,7 @@ import { TestConsoleScreen } from "@/components/screens/test-console-screen";
 import { defaultProviderPriceAmount, useProviderGateway } from "@/components/screens/use-provider-gateway";
 import { useWalletControl } from "@/components/screens/use-wallet-control";
 import { WalletScreen } from "@/components/screens/wallet-screen";
-import { endpointUrl, type ConfigTab } from "@/lib/client-config";
+import type { ConfigTab } from "@/lib/client-config";
 import { consoleReceiptId, screens } from "@/lib/fixtures";
 import { receiptById } from "@/lib/receipt-detail";
 import type { Receipt, Screen, Tool } from "@/lib/types";
@@ -170,9 +170,10 @@ export function GatewayApp() {
         ) : null}
         {screen === "console" ? (
           <TestConsoleScreen
-            endpointUrl={endpointUrl}
+            endpointUrl={provider.sourceUrl}
             fixtureReceipt={consoleReceipt}
             onOpenReceipt={openReceipt}
+            operatorToken={provider.operatorToken}
             tools={provider.publishedTools}
             wallets={wallet.walletProfiles}
           />

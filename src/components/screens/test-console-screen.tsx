@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Panel, Segmented } from "@/components/screen-primitives";
 import { Chip, Field, KeyValueList } from "@/components/ui";
+import { inputFieldsForTool } from "./console-schema";
 import { TestConsoleTimeline } from "./test-console-timeline";
 import { usePaidCallConsole } from "./use-paid-call-console";
 import type { ConsolePhase, Receipt, Tool, WalletProfile } from "@/lib/types";
@@ -13,12 +14,14 @@ export function TestConsoleScreen({
   endpointUrl,
   fixtureReceipt,
   onOpenReceipt,
+  operatorToken,
   tools,
   wallets,
 }: {
   endpointUrl: string;
   fixtureReceipt: Receipt;
   onOpenReceipt: (receipt: Receipt) => void;
+  operatorToken: string;
   tools: Tool[];
   wallets: WalletProfile[];
 }) {
@@ -27,29 +30,46 @@ export function TestConsoleScreen({
   const [endpointInput, setEndpointInput] = useState(endpointUrl);
   const [selectedToolId, setSelectedToolId] = useState(tools[0]?.id ?? "");
   const [selectedWalletId, setSelectedWalletId] = useState(wallets[0]?.id ?? "");
-  const { apiMessage, apiReceiptId, apiTools, busy, discover, run } = usePaidCallConsole();
+  const [toolArgs, setToolArgs] = useState<Record<string, string>>({});
+  const { apiMessage, apiReceiptId, apiTools, busy, discover, run } = usePaidCallConsole(operatorToken);
 
+  const activeEndpointUrl = target === "hosted" ? endpointUrl : endpointInput;
   const activeToolId = selectedToolId || tools[0]?.id || "";
   const activeWalletId = selectedWalletId || wallets[0]?.id || "";
-  const selectedTool = tools.find((tool) => tool.id === activeToolId) ?? tools[0];
+  const discoveredTools = apiTools.length ? apiTools : tools.map((tool) => ({ description: tool.description, name: tool.id }));
+  const selectedApiTool = discoveredTools.find((tool) => tool.name === activeToolId) ?? discoveredTools[0] ?? null;
+  const selectedTool = tools.find((tool) => tool.id === activeToolId) ?? tools.find((tool) => tool.id === selectedApiTool?.name) ?? null;
   const selectedWallet = wallets.find((wallet) => wallet.id === activeWalletId) ?? wallets[0];
   const discovered = phase !== "idle";
   const completed = phase === "complete";
-  const toolNeedsInput = selectedTool?.id !== "list_pairs";
-  const discoveredTools = apiTools.length ? apiTools : tools.map((tool) => ({ description: tool.description, name: tool.id }));
+  const inputFields = inputFieldsForTool(selectedApiTool);
+  const runDisabled = busy || !selectedApiTool || !activeWalletId || !operatorToken;
 
   async function discoverEndpointTools() {
-    if (await discover(endpointInput, setSelectedToolId)) setPhase("discovered");
+    const found = await discover(activeEndpointUrl);
+    if (!found) return;
+    const first = found[0] ?? null;
+    setSelectedToolId(first?.name ?? "");
+    setToolArgs(defaultArgs(first));
+    setPhase("discovered");
   }
 
   async function runPaidCall() {
-    if (await run(activeToolId)) setPhase("complete");
+    if (!selectedApiTool || !activeWalletId) return;
+    const args = Object.fromEntries(inputFields.map((field) => [field.name, toolArgs[field.name] ?? field.defaultValue]));
+    if (await run({ args, endpointUrl: activeEndpointUrl, toolName: selectedApiTool.name, walletId: activeWalletId })) {
+      setPhase("complete");
+    }
+  }
+
+  function updateArg(name: string, value: string) {
+    setToolArgs((current) => ({ ...current, [name]: value }));
   }
 
   return (
     <div className="grid two">
       <div className="stack">
-        <Panel title="Endpoint target" action={<Chip tone="warn">Design fixture</Chip>}>
+        <Panel title="Endpoint target" action={<Chip tone="signal">Local Testnet signer gate</Chip>}>
           <div className="stack">
             <Segmented<ConsoleTarget>
               options={[
@@ -64,12 +84,12 @@ export function TestConsoleScreen({
                 className="input"
                 readOnly={target === "hosted"}
                 onChange={(event) => setEndpointInput(event.target.value)}
-                value={target === "hosted" ? endpointUrl : endpointInput}
+                value={activeEndpointUrl}
               />
             </Field>
             <div className="notice">
-              This console models the endpoint-first flow. It does not claim a live Casper
-              settlement until a real facilitator response and deploy hash are stored.
+              The selected wallet must match the configured local Testnet signer until browser
+              signing is implemented. Mismatches stop before payment.
             </div>
             <button className="primaryButton" disabled={busy} onClick={discoverEndpointTools} type="button">
               Discover endpoint tools
@@ -109,35 +129,47 @@ export function TestConsoleScreen({
 
       <div className="stack">
         <Panel title="Tool input and wallet policy">
-          {!discovered || !selectedTool ? (
+          {!discovered || !selectedApiTool ? (
             <div className="emptyState">Select a discovered tool to continue.</div>
           ) : (
             <div className="stack">
               <KeyValueList
                 rows={[
-                  { key: "selected tool", value: selectedTool.id, mono: true },
+                  { key: "selected tool", value: selectedApiTool.name, mono: true },
                   { key: "payment asset", value: "CEP-18 WCSPR", mono: true },
                   { key: "network", value: "casper:casper-test", mono: true },
-                  { key: "price", value: `${selectedTool.price?.toFixed(2) ?? "0.00"} WCSPR`, mono: true },
+                  {
+                    key: "price",
+                    value: selectedTool?.price ? `${selectedTool.price.toFixed(2)} WCSPR` : "server-configured WCSPR",
+                    mono: true,
+                  },
                 ]}
               />
-              {toolNeedsInput ? (
+              {inputFields.length ? (
                 <div className="formGrid">
-                  <Field label="token in">
-                    <input className="input" defaultValue="CSPR" />
-                  </Field>
-                  <Field label="token out">
-                    <input className="input" defaultValue="WCSPR" />
-                  </Field>
-                  <Field label="amount">
-                    <input className="input" defaultValue="10" />
-                  </Field>
-                  <Field label="quote type">
-                    <select className="input" defaultValue="exact_in">
-                      <option value="exact_in">exact_in</option>
-                      <option value="exact_out">exact_out</option>
-                    </select>
-                  </Field>
+                  {inputFields.map((field) => (
+                    <Field key={field.name} label={field.required ? `${field.name} *` : field.name}>
+                      {field.options.length ? (
+                        <select
+                          className="input"
+                          onChange={(event) => updateArg(field.name, event.target.value)}
+                          value={toolArgs[field.name] ?? field.defaultValue}
+                        >
+                          {field.options.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          className="input"
+                          onChange={(event) => updateArg(field.name, event.target.value)}
+                          value={toolArgs[field.name] ?? field.defaultValue}
+                        />
+                      )}
+                    </Field>
+                  ))}
                 </div>
               ) : (
                 <div className="emptyState">No input required for this tool.</div>
@@ -146,7 +178,7 @@ export function TestConsoleScreen({
                 <select
                   className="input"
                   onChange={(event) => setSelectedWalletId(event.target.value)}
-                value={activeWalletId}
+                  value={activeWalletId}
                 >
                   {wallets.map((wallet) => (
                     <option key={wallet.id} value={wallet.id}>
@@ -156,13 +188,15 @@ export function TestConsoleScreen({
                 </select>
               </Field>
               <div className={selectedWallet?.funded ? "notice signal" : "notice"}>
-                {selectedWallet?.funded
-                  ? "Policy pre-check can run before wallet signing."
-                  : "Wallet is not ready; a real run must stop before signing/payment."}
+                {activeWalletId
+                  ? selectedWallet?.funded
+                    ? "Policy pre-check can run before wallet signing."
+                    : "Wallet is not ready; a real run must stop before signing/payment."
+                  : "Select a real wallet profile before running a paid call."}
               </div>
               <button
                 className="primaryButton"
-                disabled={!selectedTool.published}
+                disabled={runDisabled}
                 onClick={runPaidCall}
                 type="button"
               >
@@ -182,4 +216,8 @@ export function TestConsoleScreen({
       </div>
     </div>
   );
+}
+
+function defaultArgs(tool: { inputSchema?: Record<string, unknown>; name: string } | null) {
+  return Object.fromEntries(inputFieldsForTool(tool).map((field) => [field.name, field.defaultValue]));
 }
