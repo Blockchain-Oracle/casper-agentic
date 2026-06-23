@@ -1,4 +1,4 @@
-import type { providerSources, providerTools } from "@/db/schema";
+import type { providerSources, providerTools, toolPrices } from "@/db/schema";
 import type { DiscoveredMcpTool } from "./mcp-client";
 
 export type ProviderSourceType = "openapi" | "mcp" | "manual";
@@ -79,6 +79,19 @@ export function toProviderToolView(row: typeof providerTools.$inferSelect) {
     sourceId: row.sourceId,
     status: row.status as ProviderToolStatus,
     upstreamTarget: row.upstreamTarget,
+  };
+}
+
+export function toToolPriceView(row: typeof toolPrices.$inferSelect) {
+  return {
+    amount: row.amount,
+    asset: row.asset,
+    extra: row.extra,
+    maxTimeoutSeconds: row.maxTimeoutSeconds,
+    network: row.network,
+    payTo: row.payTo,
+    scheme: row.scheme,
+    toolId: row.toolId,
   };
 }
 

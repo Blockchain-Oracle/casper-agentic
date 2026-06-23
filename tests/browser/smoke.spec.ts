@@ -19,6 +19,21 @@ test("operator app exposes the paid tool console without changing public explore
   await expect(page.getByRole("button", { name: "Discover endpoint tools" })).toBeVisible();
 });
 
+test("provider wiring avoids fake hosted credentials", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.includes("mobile"), "mobile nav switching is covered separately");
+
+  await page.goto("/app");
+  await page.getByRole("button", { name: "Start provider flow" }).click();
+  await expect(page.getByRole("heading", { name: "Source Import" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Discover Remote MCP" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Load provider records" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Endpoint" }).click();
+  await expect(page.getByText("/api/mcp/{sourceId}", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/client-access-token/).first()).toBeVisible();
+  await expect(page.getByText("gw.casper-gateway.io")).toHaveCount(0);
+});
+
 test("integration health reports preflight state without secret values", async ({ request }) => {
   const response = await request.get("/api/health/integrations");
   expect(response.ok()).toBeTruthy();

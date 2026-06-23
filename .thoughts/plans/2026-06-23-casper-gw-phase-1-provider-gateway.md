@@ -15,7 +15,11 @@ Status: In progress
 - Phase 1D non-payment smoke created endpoint access key `57572955-ca93-4a66-a700-d0441eb60337`, authenticated without printing the token, and confirmed one published `get_quote` tool with `casper:casper-test` / `exact` payment requirements.
 - `pnpm verify` passed with 15 test files and 47 tests.
 - `pnpm run ci` passed, including Playwright browser smoke and `next build`.
-- Phase 1E UI wiring remains pending.
+- Phase 1E UI wiring added for provider source discovery, persisted tool loading, price/publish actions, hosted endpoint URL, and generated client-access config. Wallet/receipt/console fixture areas remain separate.
+- Removed fake hosted endpoint/token values from generated client config; endpoint snippets now use `/api/mcp/{sourceId}` and `<client-access-token>` until a real scoped token is generated.
+- Pricing UI now submits WCSPR base-unit amounts and uses server-side Casper payment defaults for asset, network, payee, and timeout.
+- `pnpm verify` passed with 16 test files and 50 tests.
+- `pnpm run ci` passed, including 9 Playwright browser checks, 1 mobile-only skip for the desktop provider-wiring check, and `next build`.
 
 ## Inputs
 
@@ -27,7 +31,7 @@ Status: In progress
 - `.thoughts/quality/2026-06-22-casper-gw-current-quality-profile.md`
 - `.thoughts/design/2026-06-22-design-direction-and-structure.md`
 - `.thoughts/verification/2026-06-22-casper-gw-phase-0.md`
-- Current repo state on `feat/casper-gw-phase-0`. Phase 0 proof commit is `883cb9c`; Phase 1 provider foundation commit is `57bce54`.
+- Current repo state on `feat/casper-gw-phase-0`. Phase 0 proof commit is `883cb9c`; Phase 1 provider foundation commit is `57bce54`; Phase 1 hosted endpoint commit is `dd3f5df`.
 
 ## Assumptions
 

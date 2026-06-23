@@ -14,7 +14,8 @@ export function PricingDrawer({
   onSave: () => void;
   tool: Tool;
 }) {
-  const validAmount = Number(amount) > 0;
+  const validAmount = /^[1-9][0-9]*$/.test(amount);
+  const displayAmount = validAmount ? (Number(amount) / 1_000_000_000).toFixed(2) : "0.00";
 
   return (
     <div className="drawerBackdrop" role="presentation">
@@ -36,25 +37,21 @@ export function PricingDrawer({
             <input className="input" readOnly value="exact" />
           </Field>
           <Field label="asset">
-            <input className="input" readOnly value="CEP-18 WCSPR" />
+            <input className="input" readOnly value="CEP-18 WCSPR package" />
           </Field>
-          <Field label="amount">
+          <Field label="amount in base units">
             <input className="input" onChange={(event) => onAmount(event.target.value)} value={amount} />
           </Field>
           <Field label="payee account">
-            <input
-              className="input"
-              readOnly
-              value="account-hash-4d2f0000000000000000000000000000000000000000000000000000000000a017"
-            />
+            <input className="input" readOnly value="server-side CASPER_PAYEE_ACCOUNT_HASH" />
           </Field>
           <Field label="timeout seconds">
-            <input className="input" readOnly value="120" />
+            <input className="input" readOnly value="900" />
           </Field>
           <div className={`notice ${validAmount ? "signal" : "danger"}`}>
             {validAmount
-              ? "Amount, asset, payee, network, and timeout pass the hosted endpoint publish checks."
-              : "Amount must be greater than zero before publishing."}
+              ? `${displayAmount} WCSPR will be saved with server-side Casper payment defaults.`
+              : "Amount must be a positive integer string before publishing."}
           </div>
           <button className="primaryButton" disabled={!validAmount} onClick={onSave} type="button">
             Save and publish tool

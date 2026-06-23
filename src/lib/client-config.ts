@@ -1,17 +1,23 @@
 export type ConfigTab = "cursor" | "claude" | "curl";
 
-export const endpointUrl = "https://gw.casper-gateway.io/mcp/make-software";
-export const clientToken = "cgw_test_scoped_mcp_9fd2";
+export const endpointUrl = "/api/mcp/{sourceId}";
+export const clientToken = "<client-access-token>";
 
-export function clientConfig(tab: ConfigTab) {
+export function clientConfig(
+  tab: ConfigTab,
+  config: { clientToken?: string | null; endpointUrl?: string } = {},
+) {
+  const url = config.endpointUrl ?? endpointUrl;
+  const token = config.clientToken ?? clientToken;
+
   if (tab === "cursor") {
     return JSON.stringify(
       {
         mcpServers: {
           "casper-gw": {
-            url: endpointUrl,
+            url,
             headers: {
-              Authorization: `Bearer ${clientToken}`,
+              Authorization: `Bearer ${token}`,
             },
           },
         },
@@ -27,9 +33,9 @@ export function clientConfig(tab: ConfigTab) {
         mcpServers: {
           "casper-gw": {
             command: "npx",
-            args: ["mcp-remote", endpointUrl],
+            args: ["mcp-remote", url],
             env: {
-              MCP_ACCESS_TOKEN: clientToken,
+              MCP_ACCESS_TOKEN: token,
             },
           },
         },
@@ -39,7 +45,7 @@ export function clientConfig(tab: ConfigTab) {
     );
   }
 
-  return `curl ${endpointUrl}/tools/get_cspr_quote \\
-  -H "Authorization: Bearer ${clientToken}" \\
+  return `curl ${url} \\
+  -H "Authorization: Bearer ${token}" \\
   -H "Accept: application/json"`;
 }

@@ -11,6 +11,7 @@ import {
   normalizeToolPriceInput,
   toProviderSourceView,
   toProviderToolView,
+  toToolPriceView,
   type CreateProviderSourceInput,
   type ProviderToolStatus,
   type ToolPriceInput,
@@ -58,17 +59,28 @@ export async function persistDiscoveredMcpTools(sourceId: string, endpointUrl: s
 }
 
 export async function listProviderTools(sourceId?: string) {
+  let rows: Array<typeof providerTools.$inferSelect>;
   if (sourceId) {
-    const rows = await getDb()
+    rows = await getDb()
       .select()
       .from(providerTools)
       .where(eq(providerTools.sourceId, sourceId))
       .orderBy(desc(providerTools.createdAt));
-    return rows.map(toProviderToolView);
+  } else {
+    rows = await getDb().select().from(providerTools).orderBy(desc(providerTools.createdAt));
   }
+  if (!rows.length) return [];
 
-  const rows = await getDb().select().from(providerTools).orderBy(desc(providerTools.createdAt));
-  return rows.map(toProviderToolView);
+  const prices = await getDb()
+    .select()
+    .from(toolPrices)
+    .where(inArray(toolPrices.toolId, rows.map((tool) => tool.id)))
+    .orderBy(desc(toolPrices.createdAt));
+
+  return rows.map((tool) => ({
+    ...toProviderToolView(tool),
+    price: priceForTool(prices, tool.id),
+  }));
 }
 
 export async function listPublishedEndpointTools(sourceId: string) {
@@ -82,11 +94,12 @@ export async function listPublishedEndpointTools(sourceId: string) {
   const prices = await getDb()
     .select()
     .from(toolPrices)
-    .where(inArray(toolPrices.toolId, tools.map((tool) => tool.id)));
+    .where(inArray(toolPrices.toolId, tools.map((tool) => tool.id)))
+    .orderBy(desc(toolPrices.createdAt));
 
   return tools.map((tool) => ({
     ...toProviderToolView(tool),
-    price: prices.find((price) => price.toolId === tool.id) ?? null,
+    price: priceForTool(prices, tool.id),
   }));
 }
 
@@ -130,4 +143,9 @@ async function logProviderAudit(kind: string, label: string, metadata: Record<st
 
 export async function logProviderEvent(kind: string, label: string, metadata: Record<string, unknown>) {
   await logProviderAudit(kind, label, metadata);
+}
+
+function priceForTool(prices: Array<typeof toolPrices.$inferSelect>, toolId: string) {
+  const price = prices.find((row) => row.toolId === toolId);
+  return price ? toToolPriceView(price) : null;
 }

@@ -26,9 +26,46 @@ export interface Tool {
   description: string;
   target: string;
   price: number | null;
+  priceAmount?: string | null;
+  recordId?: string;
   enabled: boolean;
   published: boolean;
   provider: string;
+  status?: ProviderToolStatus;
+}
+
+export type ProviderToolStatus = "draft" | "selected" | "priced" | "published" | "unpublished" | "unsupported";
+
+export interface ProviderSource {
+  authMode: UpstreamAuth;
+  credentialConfigured: boolean;
+  endpointUrl: string;
+  id: string;
+  name: string;
+  sourceType: SourceType;
+}
+
+export interface ProviderToolPrice {
+  amount: string;
+  asset: string;
+  extra: unknown;
+  maxTimeoutSeconds: number;
+  network: string;
+  payTo: string;
+  scheme: "exact";
+  toolId: string;
+}
+
+export interface ProviderTool {
+  description: string | null;
+  id: string;
+  inputSchema: unknown;
+  name: string;
+  outputSchema: unknown;
+  price?: ProviderToolPrice | null;
+  sourceId: string;
+  status: ProviderToolStatus;
+  upstreamTarget: string;
 }
 
 export interface WalletProfile {

@@ -8,15 +8,11 @@ describe("hosted endpoint model", () => {
       paymentRequirementsFromPrice({
         amount: "7500000000",
         asset: "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e",
-        createdAt: new Date(),
         extra: { decimals: "9", symbol: "WCSPR" },
-        id: "price-1",
         maxTimeoutSeconds: 900,
         network: "casper:casper-test",
         payTo: "009accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d",
         scheme: "exact",
-        toolId: "tool-1",
-        updatedAt: new Date(),
       }),
     ).toEqual({
       amount: "7500000000",

@@ -26,7 +26,8 @@ export function PricingScreen({
           </div>
         }
       >
-        <div className="tableWrap">
+        {toolRows.length ? (
+          <div className="tableWrap">
           <table className="table">
             <thead>
               <tr>
@@ -51,7 +52,7 @@ export function PricingScreen({
                   <td>
                     <div className="buttonRow">
                       <Chip tone={tool.enabled ? "signal" : "neutral"}>
-                        {tool.enabled ? "enabled" : "disabled"}
+                        {tool.status ?? (tool.enabled ? "selected" : "draft")}
                       </Chip>
                       <Chip tone={tool.published ? "signal" : "neutral"}>
                         {tool.published ? "published" : "draft"}
@@ -67,7 +68,10 @@ export function PricingScreen({
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        ) : (
+          <div className="emptyState">No provider tools loaded from Postgres yet.</div>
+        )}
       </Panel>
 
       <div className="grid two">
@@ -77,8 +81,8 @@ export function PricingScreen({
               { key: "network", value: "casper:casper-test", mono: true, tone: "signal" },
               { key: "scheme", value: "exact", mono: true, tone: "signal" },
               { key: "asset", value: "CEP-18 WCSPR", mono: true, tone: "signal" },
-              { key: "payee account", value: "account-hash-4d2f...a017", mono: true, tone: "signal" },
-              { key: "timeout", value: "120 seconds", mono: true, tone: "signal" },
+              { key: "payee account", value: "server-side CASPER_PAYEE_ACCOUNT_HASH", mono: true, tone: "signal" },
+              { key: "timeout", value: "900 seconds", mono: true, tone: "signal" },
             ]}
           />
         </Panel>

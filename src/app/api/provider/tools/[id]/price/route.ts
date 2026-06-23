@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { getRuntimeConfig } from "@/server/env";
 import { isOperatorAccessError, requireOperatorRequest } from "@/server/operator-access";
 import { saveToolPrice } from "@/server/provider-store";
 
@@ -10,13 +11,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   try {
     requireOperatorRequest(request);
     const { id } = await context.params;
+    const config = getRuntimeConfig();
     const price = await saveToolPrice({
-      amount: body.amount,
-      asset: body.asset,
-      maxTimeoutSeconds: body.maxTimeoutSeconds,
-      network: body.network,
-      payTo: body.payTo,
-      scheme: body.scheme,
+      amount: body.amount ?? config.paymentAmount,
+      asset: body.asset ?? config.paymentAsset,
+      maxTimeoutSeconds: body.maxTimeoutSeconds ?? config.paymentTimeoutSeconds,
+      network: body.network ?? config.casperNetwork,
+      payTo: body.payTo ?? config.payeeAccountHash,
+      scheme: body.scheme ?? "exact",
       toolId: id,
     });
     return NextResponse.json({ price });

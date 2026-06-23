@@ -61,6 +61,31 @@ describe("provider tool action routes", () => {
     );
   });
 
+  it("uses server-side Casper payment defaults when UI pricing omits public payment fields", async () => {
+    const { POST } = await import("@/app/api/provider/tools/[id]/price/route");
+    process.env.CASPER_PAYEE_ACCOUNT_HASH = "009accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d";
+    mocks.saveToolPrice.mockResolvedValue({ amount: "7500000000", toolId: "tool-1" });
+
+    const response = await POST(
+      request("https://gw.test/api/provider/tools/tool-1/price", {
+        body: { amount: "7500000000" },
+        token: "operator-token",
+      }),
+      { params: Promise.resolve({ id: "tool-1" }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.saveToolPrice).toHaveBeenCalledWith({
+      amount: "7500000000",
+      asset: "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e",
+      maxTimeoutSeconds: 900,
+      network: "casper:casper-test",
+      payTo: "009accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d",
+      scheme: "exact",
+      toolId: "tool-1",
+    });
+  });
+
   it("publishes provider tools through the store guard", async () => {
     const { POST } = await import("@/app/api/provider/tools/[id]/publish/route");
     mocks.publishProviderTool.mockResolvedValue({ id: "tool-1", status: "published" });

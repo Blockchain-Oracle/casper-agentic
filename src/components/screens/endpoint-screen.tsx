@@ -1,22 +1,32 @@
 import { Panel, TabButton, TrustBoundaryGrid } from "@/components/screen-primitives";
 import { Chip, KeyValueList } from "@/components/ui";
-import { clientConfig, endpointUrl, type ConfigTab } from "@/lib/client-config";
+import { clientConfig, type ConfigTab } from "@/lib/client-config";
 import type { Tool } from "@/lib/types";
 
 export function EndpointScreen({
+  clientToken,
   configTab,
   copied,
+  endpointToolCount,
+  endpointUrl,
+  loading,
   onConfigTab,
   onCopy,
+  onCreateAccess,
   publishedTools,
 }: {
+  clientToken: string | null;
   configTab: ConfigTab;
   copied: string | null;
+  endpointToolCount: number;
+  endpointUrl: string;
+  loading: boolean;
   onConfigTab: (tab: ConfigTab) => void;
   onCopy: (value: string) => void;
+  onCreateAccess: () => void;
   publishedTools: Tool[];
 }) {
-  const code = clientConfig(configTab);
+  const code = clientConfig(configTab, { clientToken, endpointUrl });
 
   return (
     <div className="stack">
@@ -34,8 +44,13 @@ export function EndpointScreen({
           <KeyValueList
             rows={[
               { key: "hosted url", value: endpointUrl, mono: true },
-              { key: "client auth", value: "Scoped bearer token MVP; OAuth 2.1 target" },
+              {
+                key: "client auth",
+                value: clientToken ? "scoped bearer token generated" : "generate scoped bearer token",
+                tone: clientToken ? "signal" : "warn",
+              },
               { key: "wallet auth", value: "separate x402 payment payload" },
+              { key: "endpoint tools", value: `${endpointToolCount || publishedTools.length} published` },
             ]}
             copiedKey={copied}
             onCopy={onCopy}
@@ -44,6 +59,14 @@ export function EndpointScreen({
             Client access tokens authenticate MCP clients only. They are not provider upstream
             credentials and cannot authorize wallet spending.
           </div>
+          <button
+            className="primaryButton"
+            disabled={loading || !publishedTools.length}
+            onClick={onCreateAccess}
+            type="button"
+          >
+            {loading ? "Generating..." : "Generate client access"}
+          </button>
         </div>
       </Panel>
 
@@ -83,9 +106,10 @@ export function EndpointScreen({
                   {tool.description}
                 </div>
               </div>
-              <Chip tone="signal">{tool.price?.toFixed(2)} WCSPR</Chip>
+              <Chip tone="signal">{tool.price === null ? "priced" : `${tool.price.toFixed(2)} WCSPR`}</Chip>
             </div>
           ))}
+          {!publishedTools.length ? <div className="emptyState">No published tools available yet.</div> : null}
         </Panel>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { PricingDrawer } from "@/components/pricing-drawer";
 import { Chip } from "@/components/ui";
@@ -10,21 +10,18 @@ import { ImportScreen } from "@/components/screens/import-screen";
 import { PricingScreen } from "@/components/screens/pricing-screen";
 import { SettingsScreen } from "@/components/screens/settings-screen";
 import { TestConsoleScreen } from "@/components/screens/test-console-screen";
+import { defaultProviderPriceAmount, useProviderGateway } from "@/components/screens/use-provider-gateway";
 import { WalletScreen } from "@/components/screens/wallet-screen";
 import { endpointUrl, type ConfigTab } from "@/lib/client-config";
-import { consoleReceiptId, screens, tools, wallets } from "@/lib/fixtures";
+import { consoleReceiptId, screens, wallets } from "@/lib/fixtures";
 import { receiptById } from "@/lib/receipt-detail";
-import type { Receipt, Screen, SourcePhase, SourceType, Tool, UpstreamAuth } from "@/lib/types";
+import type { Receipt, Screen, Tool } from "@/lib/types";
 
 export function GatewayApp() {
   const [screen, setScreen] = useState<Screen>("dashboard");
   const [navOpen, setNavOpen] = useState(false);
-  const [sourceType, setSourceType] = useState<SourceType>("openapi");
-  const [upstreamAuth, setUpstreamAuth] = useState<UpstreamAuth>("apikey");
-  const [sourcePhase, setSourcePhase] = useState<SourcePhase>("form");
-  const [toolRows, setToolRows] = useState<Tool[]>(tools);
   const [pricingToolId, setPricingToolId] = useState<string | null>(null);
-  const [amount, setAmount] = useState("0.05");
+  const [amount, setAmount] = useState(defaultProviderPriceAmount);
   const [configTab, setConfigTab] = useState<ConfigTab>("cursor");
   const [selectedWalletId, setSelectedWalletId] = useState(wallets[0].id);
   const [policyAmount, setPolicyAmount] = useState("0.05");
@@ -32,20 +29,11 @@ export function GatewayApp() {
   const [manualApproval, setManualApproval] = useState(false);
   const [allowlist] = useState<string[]>(["get_cspr_quote"]);
   const [copied, setCopied] = useState<string | null>(null);
-  const timers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
-
-  useEffect(() => {
-    const activeTimers = timers.current;
-    return () => {
-      activeTimers.forEach((timer) => clearTimeout(timer));
-    };
-  }, []);
+  const provider = useProviderGateway();
 
   const activeScreen = screens.find((item) => item.id === screen) ?? screens[0];
   const selectedWallet = wallets.find((wallet) => wallet.id === selectedWalletId) ?? wallets[0];
-  const pricedTools = toolRows.filter((tool) => tool.enabled && tool.price !== null);
-  const publishedTools = toolRows.filter((tool) => tool.published);
-  const pricingTool = toolRows.find((tool) => tool.id === pricingToolId) ?? null;
+  const pricingTool = provider.toolRows.find((tool) => tool.id === pricingToolId) ?? null;
   const consoleReceipt = receiptById(consoleReceiptId);
   const policyAllowed =
     Number(policyAmount) <= 0.08 &&
@@ -58,37 +46,20 @@ export function GatewayApp() {
     setNavOpen(false);
   }
 
-  function queueTimer(callback: () => void, ms: number) {
-    const timer = setTimeout(callback, ms);
-    timers.current.push(timer);
-  }
-
   async function copy(value: string) {
     await navigator.clipboard?.writeText(value).catch(() => undefined);
     setCopied(value);
-    queueTimer(() => setCopied(null), 1400);
-  }
-
-  function runSourceDiscovery(success: boolean) {
-    setSourcePhase("loading");
-    queueTimer(() => setSourcePhase(success ? "success" : "error"), 700);
+    window.setTimeout(() => setCopied(null), 1400);
   }
 
   function configurePricing(tool: Tool) {
     setPricingToolId(tool.id);
-    setAmount(tool.price?.toFixed(2) ?? "0.05");
+    setAmount(tool.priceAmount ?? defaultProviderPriceAmount);
   }
 
-  function savePricing() {
-    const numericAmount = Number(amount);
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0 || !pricingToolId) return;
-    setToolRows((current) =>
-      current.map((tool) =>
-        tool.id === pricingToolId
-          ? { ...tool, enabled: true, price: numericAmount, published: true }
-          : tool,
-      ),
-    );
+  async function savePricing() {
+    if (!pricingTool) return;
+    await provider.priceAndPublishTool(pricingTool, amount);
     setPricingToolId(null);
   }
 
@@ -120,37 +91,52 @@ export function GatewayApp() {
             onOpenReceipt={openReceipt}
             onOpenConsole={() => go("console")}
             onScreen={go}
-            publishedToolCount={publishedTools.length}
+            publishedToolCount={provider.publishedTools.length}
           />
         ) : null}
         {screen === "import" ? (
           <ImportScreen
-            onDiscover={runSourceDiscovery}
+            errorMessage={provider.errorMessage}
+            loading={provider.loading}
+            onDiscover={provider.discoverSource}
+            onLoadRecords={() => provider.loadProviderState()}
+            onOperatorToken={provider.setOperatorToken}
             onScreen={go}
-            onSourceType={setSourceType}
-            onUpstreamAuth={setUpstreamAuth}
-            sourcePhase={sourcePhase}
-            sourceType={sourceType}
-            toolRows={toolRows}
-            upstreamAuth={upstreamAuth}
+            onSourceName={provider.setSourceName}
+            onSourceType={provider.setSourceType}
+            onSourceUrl={provider.setSourceUrl}
+            onUpstreamAuth={provider.setUpstreamAuth}
+            operatorToken={provider.operatorToken}
+            sourceName={provider.sourceName}
+            sourcePhase={provider.sourcePhase}
+            sourceType={provider.sourceType}
+            sourceUrl={provider.sourceUrl}
+            statusMessage={provider.statusMessage}
+            toolRows={provider.toolRows}
+            upstreamAuth={provider.upstreamAuth}
           />
         ) : null}
         {screen === "pricing" ? (
           <PricingScreen
             onConfigure={configurePricing}
             onScreen={go}
-            pricedCount={pricedTools.length}
-            publishedCount={publishedTools.length}
-            toolRows={toolRows}
+            pricedCount={provider.pricedTools.length}
+            publishedCount={provider.publishedTools.length}
+            toolRows={provider.toolRows}
           />
         ) : null}
         {screen === "endpoint" ? (
           <EndpointScreen
+            clientToken={provider.endpointClientToken}
             configTab={configTab}
             copied={copied}
+            endpointToolCount={provider.endpointToolCount}
+            endpointUrl={provider.hostedEndpointUrl}
+            loading={provider.loading}
             onConfigTab={setConfigTab}
             onCopy={copy}
-            publishedTools={publishedTools}
+            onCreateAccess={provider.createClientAccess}
+            publishedTools={provider.publishedTools}
           />
         ) : null}
         {screen === "wallet" ? (
@@ -167,7 +153,7 @@ export function GatewayApp() {
             policyAllowed={policyAllowed}
             policyAmount={policyAmount}
             policyTool={policyTool}
-            policyTools={toolRows}
+            policyTools={provider.toolRows}
             selectedWallet={selectedWallet}
             selectedWalletId={selectedWalletId}
           />
@@ -177,7 +163,7 @@ export function GatewayApp() {
             endpointUrl={endpointUrl}
             fixtureReceipt={consoleReceipt}
             onOpenReceipt={openReceipt}
-            tools={publishedTools}
+            tools={provider.publishedTools}
             wallets={wallets}
           />
         ) : null}

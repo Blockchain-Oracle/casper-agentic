@@ -3,21 +3,41 @@ import { Chip, Field } from "@/components/ui";
 import type { Screen, SourcePhase, SourceType, Tool, UpstreamAuth } from "@/lib/types";
 
 export function ImportScreen({
+  errorMessage,
+  loading,
   onDiscover,
+  onLoadRecords,
+  onOperatorToken,
   onScreen,
+  onSourceName,
   onSourceType,
+  onSourceUrl,
   onUpstreamAuth,
+  operatorToken,
+  sourceName,
   sourcePhase,
   sourceType,
+  sourceUrl,
+  statusMessage,
   toolRows,
   upstreamAuth,
 }: {
-  onDiscover: (success: boolean) => void;
+  errorMessage: string | null;
+  loading: boolean;
+  onDiscover: () => void;
+  onLoadRecords: () => void;
+  onOperatorToken: (token: string) => void;
   onScreen: (screen: Screen) => void;
+  onSourceName: (name: string) => void;
   onSourceType: (type: SourceType) => void;
+  onSourceUrl: (url: string) => void;
   onUpstreamAuth: (auth: UpstreamAuth) => void;
+  operatorToken: string;
+  sourceName: string;
   sourcePhase: SourcePhase;
   sourceType: SourceType;
+  sourceUrl: string;
+  statusMessage: string;
   toolRows: Tool[];
   upstreamAuth: UpstreamAuth;
 }) {
@@ -43,11 +63,21 @@ export function ImportScreen({
             onChange={onSourceType}
           />
           <div className="formGrid">
-            <Field label="source name">
-              <input className="input" defaultValue="CSPR Trade Quote" />
+            <Field label="operator token">
+              <input
+                className="input"
+                onChange={(event) => onOperatorToken(event.target.value)}
+                placeholder="operator token"
+                type="password"
+                value={operatorToken}
+              />
             </Field>
-            <Field label="owner / workspace">
-              <input className="input" defaultValue="Make Software Labs" />
+            <Field label="source name">
+              <input
+                className="input"
+                onChange={(event) => onSourceName(event.target.value)}
+                value={sourceName}
+              />
             </Field>
           </div>
           <Field label="source description">
@@ -58,7 +88,11 @@ export function ImportScreen({
             />
           </Field>
           <Field label={sourceLabel}>
-            <input className="input" defaultValue={sourceDefault} />
+            <input
+              className="input"
+              onChange={(event) => onSourceUrl(event.target.value)}
+              value={sourceType === "mcp" ? sourceUrl : sourceDefault}
+            />
           </Field>
           <div className="divider" />
           <div>
@@ -78,12 +112,20 @@ export function ImportScreen({
             Provider upstream credentials stay server-side only. They are not MCP client tokens,
             wallet keys, x402 payment payloads, receipt fields, endpoint metadata, or browser logs.
           </div>
+          <div className={`notice ${errorMessage ? "danger" : "signal"}`}>
+            {errorMessage ?? statusMessage}
+          </div>
           <div className="buttonRow">
-            <button className="primaryButton" onClick={() => onDiscover(true)} type="button">
-              Test upstream connection
+            <button
+              className="primaryButton"
+              disabled={loading || sourceType !== "mcp"}
+              onClick={onDiscover}
+              type="button"
+            >
+              {loading ? "Discovering..." : "Discover Remote MCP"}
             </button>
-            <button className="secondaryButton" onClick={() => onDiscover(false)} type="button">
-              Show 401 error
+            <button className="secondaryButton" disabled={loading} onClick={onLoadRecords} type="button">
+              Load provider records
             </button>
           </div>
         </div>
@@ -91,13 +133,12 @@ export function ImportScreen({
 
       <Panel title="Tool discovery">
         {sourcePhase === "form" ? (
-          <div className="emptyState">Run the source test to normalize operations into paid tool candidates.</div>
+          <div className="emptyState">Run Remote MCP discovery to normalize operations into paid tool candidates.</div>
         ) : null}
         {sourcePhase === "loading" ? <div className="emptyState">Discovering provider operations...</div> : null}
         {sourcePhase === "error" ? (
           <div className="notice danger">
-            Upstream returned 401. The gateway stores this as a provider-source error and never
-            exposes the credential value to agent clients.
+            {errorMessage ?? "Provider discovery failed. Credential values were not exposed to agent clients."}
           </div>
         ) : null}
         {sourcePhase === "success" ? (

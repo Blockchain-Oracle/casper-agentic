@@ -1,8 +1,15 @@
-import type { toolPrices } from "@/db/schema";
 import { getProviderSourceRecord, listPublishedEndpointTools } from "./provider-store";
 import { toProviderSourceView } from "./provider-model";
 
-type ToolPriceRow = typeof toolPrices.$inferSelect;
+interface PaymentRequirementPrice {
+  amount: string;
+  asset: string;
+  extra: unknown;
+  maxTimeoutSeconds: number;
+  network: string;
+  payTo: string;
+  scheme: string;
+}
 
 export async function getHostedEndpoint(sourceId: string) {
   const source = await getProviderSourceRecord(sourceId);
@@ -23,7 +30,7 @@ export async function getHostedEndpoint(sourceId: string) {
   };
 }
 
-export function paymentRequirementsFromPrice(price: ToolPriceRow) {
+export function paymentRequirementsFromPrice(price: PaymentRequirementPrice) {
   return {
     amount: price.amount,
     asset: price.asset,
