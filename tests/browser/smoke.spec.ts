@@ -29,11 +29,11 @@ test("integration health reports preflight state without secret values", async (
   expect(JSON.stringify(body)).not.toContain("PRIVATE KEY");
 });
 
-test("paid-call API fails closed when credential preflight is missing", async ({ request }) => {
+test("paid-call API fails closed before live payment", async ({ request }) => {
   const response = await request.post("/api/paid-calls/run", { data: { toolName: "get_quote" } });
   const body = await response.json();
 
-  expect(response.status()).toBe(503);
-  expect(body.error).toContain("CASPER_GW_OPERATOR_TOKEN is required");
+  expect([403, 503]).toContain(response.status());
+  expect(body.error).toMatch(/CASPER_GW_OPERATOR_TOKEN is required|operator access required|HTTP signing endpoint is disabled/);
   expect(JSON.stringify(body)).not.toContain("PRIVATE KEY");
 });

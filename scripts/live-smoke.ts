@@ -1,4 +1,8 @@
+import { loadEnvConfig } from "@next/env";
+
 import { runLivePaidToolCall } from "../src/server/live-paid-call";
+
+loadEnvConfig(process.cwd());
 
 async function main() {
   const result = await runLivePaidToolCall();

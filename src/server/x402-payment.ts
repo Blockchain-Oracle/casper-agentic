@@ -1,7 +1,8 @@
 import type { PaymentPayload, PaymentRequired, PaymentRequirements } from "@x402/core/types";
 import { KeyAlgorithm, PrivateKey } from "casper-js-sdk";
+import { readFileSync } from "node:fs";
 
-import type { RuntimeConfig } from "./env";
+import type { IntegrationRuntimeConfig, RuntimeConfig } from "./env";
 
 export function buildPaymentRequirements(config: RuntimeConfig): PaymentRequirements {
   return {
@@ -21,7 +22,7 @@ export function buildPaymentRequirements(config: RuntimeConfig): PaymentRequirem
 }
 
 export async function createCasperPaymentPayload(
-  config: RuntimeConfig & { signerPrivateKeyPem: string },
+  config: IntegrationRuntimeConfig,
   resourceUrl: string,
 ) {
   const requirements = buildPaymentRequirements(config);
@@ -50,13 +51,13 @@ export async function createCasperPaymentPayload(
   };
 }
 
-export function getConfiguredSignerAddress(config: RuntimeConfig & { signerPrivateKeyPem: string }) {
+export function getConfiguredSignerAddress(config: IntegrationRuntimeConfig) {
   return createSigner(config).accountAddress();
 }
 
-function createSigner(config: RuntimeConfig & { signerPrivateKeyPem: string }) {
+function createSigner(config: IntegrationRuntimeConfig) {
   const algorithm = config.signerKeyAlgo === "ed25519" ? KeyAlgorithm.ED25519 : KeyAlgorithm.SECP256K1;
-  const privateKey = PrivateKey.fromPem(config.signerPrivateKeyPem, algorithm);
+  const privateKey = PrivateKey.fromPem(readSignerPem(config), algorithm);
   const accountAddress = `00${privateKey.publicKey.accountHash().toHex()}`;
   const publicKey = privateKey.publicKey.toHex();
   return {
@@ -64,4 +65,10 @@ function createSigner(config: RuntimeConfig & { signerPrivateKeyPem: string }) {
     publicKey: () => publicKey,
     signEIP712: async (digest: Uint8Array) => privateKey.signAndAddAlgorithmBytes(digest),
   };
+}
+
+function readSignerPem(config: IntegrationRuntimeConfig) {
+  if (config.signerPrivateKeyPem) return config.signerPrivateKeyPem;
+  if (config.signerPrivateKeyPemPath) return readFileSync(config.signerPrivateKeyPemPath, "utf8");
+  throw new Error("Missing Casper Testnet signer PEM");
 }

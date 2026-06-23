@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 
@@ -36,11 +37,22 @@ function shouldSkipPath(path) {
   return [...excludedDirs].some((dir) => rel === dir || rel.startsWith(`${dir}/`));
 }
 
+function isIgnoredByGit(path) {
+  const rel = relative(root, path);
+  try {
+    execFileSync("git", ["check-ignore", "-q", "--", rel], { cwd: root, stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function collectFiles(dir, files = []) {
   for (const entry of readdirSync(dir)) {
     const path = join(dir, entry);
     if (shouldSkipPath(path)) continue;
     const stat = statSync(path);
+    if (isIgnoredByGit(path)) continue;
     if (stat.isDirectory()) collectFiles(path, files);
     else if (stat.isFile()) files.push(path);
   }

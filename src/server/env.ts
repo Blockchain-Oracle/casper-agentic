@@ -19,7 +19,13 @@ export interface RuntimeConfig {
   payeeAccountHash?: string;
   signerKeyAlgo: "ed25519" | "secp256k1";
   signerPrivateKeyPem?: string;
+  signerPrivateKeyPemPath?: string;
 }
+
+export type IntegrationRuntimeConfig = RuntimeConfig & {
+  csprCloudApiKey: string;
+  payeeAccountHash: string;
+} & ({ signerPrivateKeyPem: string } | { signerPrivateKeyPemPath: string });
 
 export function getRuntimeConfig(): RuntimeConfig {
   return {
@@ -37,31 +43,28 @@ export function getRuntimeConfig(): RuntimeConfig {
     payeeAccountHash: optional(process.env.CASPER_PAYEE_ACCOUNT_HASH),
     signerKeyAlgo: signerAlgo(process.env.CASPER_TESTNET_SIGNER_KEY_ALGO),
     signerPrivateKeyPem: optional(process.env.CASPER_TESTNET_SIGNER_PRIVATE_KEY_PEM),
+    signerPrivateKeyPemPath: optional(process.env.CASPER_TESTNET_SIGNER_PRIVATE_KEY_PEM_PATH),
   };
 }
 
-export function requireIntegrationConfig() {
+export function requireIntegrationConfig(): IntegrationRuntimeConfig {
   const config = getRuntimeConfig();
   const missing = getIntegrationConfigStatus(config).missing;
 
   if (missing.length) {
     throw new Error(`Missing integration configuration: ${missing.join(", ")}`);
   }
-  return config as RuntimeConfig & {
-    csprCloudApiKey: string;
-    payeeAccountHash: string;
-    signerPrivateKeyPem: string;
-  };
+  return config as IntegrationRuntimeConfig;
 }
 
 export function getIntegrationConfigStatus(config = getRuntimeConfig()) {
-  const entries = [
-    ["CSPR_CLOUD_API_KEY", config.csprCloudApiKey],
-    ["DATABASE_URL", process.env.DATABASE_URL],
-    ["CASPER_PAYEE_ACCOUNT_HASH", config.payeeAccountHash],
-    ["CASPER_TESTNET_SIGNER_PRIVATE_KEY_PEM", config.signerPrivateKeyPem],
-  ] as const;
-  const missing = entries.filter(([, value]) => !value).map(([name]) => name);
+  const missing = [];
+  if (!config.csprCloudApiKey) missing.push("CSPR_CLOUD_API_KEY");
+  if (!process.env.DATABASE_URL) missing.push("DATABASE_URL");
+  if (!config.payeeAccountHash) missing.push("CASPER_PAYEE_ACCOUNT_HASH");
+  if (!config.signerPrivateKeyPem && !config.signerPrivateKeyPemPath) {
+    missing.push("CASPER_TESTNET_SIGNER_PRIVATE_KEY_PEM or CASPER_TESTNET_SIGNER_PRIVATE_KEY_PEM_PATH");
+  }
   return { configured: missing.length === 0, missing };
 }
 

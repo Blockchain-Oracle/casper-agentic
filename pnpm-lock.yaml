@@ -17,6 +17,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@4.4.3)
+      '@next/env':
+        specifier: 16.2.9
+        version: 16.2.9
       '@x402/core':
         specifier: ^2.16.0
         version: 2.16.0
