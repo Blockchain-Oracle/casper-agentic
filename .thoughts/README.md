@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, and Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy. Do not jump into broad UI redesign or production custody.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, and Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified. Do not jump into broad UI redesign or production custody.
 
 The current product shape:
 
@@ -157,9 +157,32 @@ Phase 3 paid-tool console settlement was completed locally on 2026-06-23. Initia
 
 No GitHub PR was opened because no remote is configured in this checkout.
 
+## Completed Phase 4 Gate
+
+Phase 4 public explorer proof lookup was completed locally on 2026-06-23.
+
+- Plan: `.thoughts/plans/2026-06-23-casper-gw-phase-4-public-explorer-proof-lookup.md`
+- Verification audit: `.thoughts/verification/2026-06-23-casper-gw-phase-4-public-explorer-proof-lookup.md`
+- Plan commit: `a61193b docs: plan public explorer proof lookup`
+- Implementation commit: `92b611c feat: add public explorer proof lookup`
+- Reviewer-fix commit: `50f9aa9 fix: harden explorer proof boundaries`
+- Audit update commit: `13c6787 docs: record explorer review fixes`
+- `/api/explorer/search` now searches Casper GW receipt id first, Casper GW deploy hash second, and CSPR.cloud external deploy proof third.
+- External deploy proof is labeled `External Casper proof` and keeps gateway, policy, and x402 context explicitly unavailable.
+- Casper GW deploy hashes still resolve to the rich four-layer receipt before external lookup.
+- External FT action rows are filtered by deploy hash and configured payment asset package before payer/payee/amount are rendered.
+- Fixture fallback remains visibly labeled as `Sample receipts`.
+- Non-spending CSPR.cloud external lookup resolved wrap transaction `1f415ea5a10128cbc2ecc3061078bf64824d64dbea8fcfa42518a769415f6de4`.
+- Casper GW deploy-hash lookup resolved Phase 3 deploy `8ed4569fd13c26e28d2b1826d833e88ed821bb74aeec175980992a3ba6af0810` to attempt `dfb14079-44e0-4006-b66f-99e1f22f0fc0`.
+- Chrome inspection passed for public explorer search, external proof labeling, gateway receipt lookup, and no authenticated app nav.
+- Independent review initially found two blockers and one should-fix; all were fixed and focused re-review passed.
+- `pnpm run ci` passed after reviewer fixes with 90 unit tests, 10 browser tests, 2 intentional mobile skips, and `next build`.
+
+No GitHub PR was opened because no remote is configured in this checkout.
+
 ## Current Build Gate
 
-The next likely engineering slice is Phase 4 public explorer + receipt-detail hardening: join datastore receipt layers with CSPR.cloud proof, improve search/filter/detail states, preserve redaction, and keep `/explorer` public/no app shell.
+The next likely engineering slice is Phase 5 public explorer account/search hardening or hosted endpoint payment-enforcement hardening, depending on Abu's priority. Account-hash chain-wide search is intentionally not part of Phase 4 and needs its own plan because it requires pagination, filtering, and clearer UX semantics.
 
 Do not start broad design work, production custody, CSPR.click signing, Mainnet, generic send policy, registry/private tools, or new simulated product modes unless Abu explicitly changes scope through the Context Engineering flow.
 

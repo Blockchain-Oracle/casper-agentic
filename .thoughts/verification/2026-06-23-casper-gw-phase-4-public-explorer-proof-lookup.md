@@ -2,18 +2,18 @@
 
 Date: 2026-06-23
 Branch: `feat/casper-gw-phase-0`
-Commits audited: `a61193b`, `92b611c`, `50f9aa9`
+Commits audited: `a61193b`, `92b611c`, `50f9aa9`, `13c6787`
 
 ## Verdict
 
-Conditional pass, pending focused re-review.
+Pass.
 
 The public explorer now supports two proof paths without mixing their trust boundaries:
 
 - Casper GW receipt/deploy lookup resolves rich four-layer gateway receipts from the local datastore.
 - Unknown deploy-hash lookup falls back to CSPR.cloud and renders limited external Casper proof with gateway, policy, and x402 context explicitly unavailable.
 
-Local verification, browser smoke, production build, Chrome inspection, and non-spending CSPR.cloud lookup evidence all passed. Independent review found two blockers and one should-fix; all were accepted and fixed. Final completion still requires focused re-review.
+Local verification, browser smoke, production build, Chrome inspection, and non-spending CSPR.cloud lookup evidence all passed. Independent review found two blockers and one should-fix; all were accepted and fixed. Focused re-review passed.
 
 ## Artifacts Checked
 
@@ -104,7 +104,7 @@ Gateway receipt precedence lookup:
 
 ## Gaps And Risks
 
-- Focused independent re-review is pending.
+- Account-hash chain-wide search is deferred.
 - External lookup depends on `CSPR_CLOUD_API_KEY`; without it, the API returns `unconfigured` and does not claim external proof.
 - CSPR.cloud response latency can make first external lookup slower than DB-backed receipt lookup.
 - The external proof status is a new receipt status used for public display, not a paid-call attempt status in Postgres.
@@ -126,3 +126,4 @@ Gateway receipt precedence lookup:
 - `pnpm run ci`: passed.
 - Chrome inspection: passed for external proof and Casper GW receipt search paths.
 - Independent review returned FAIL with two blockers and one should-fix; all accepted and fixed in `50f9aa9`.
+- Focused independent re-review returned PASS.
