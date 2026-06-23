@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is now proven on Casper Testnet; continue with Phase 1 provider-gateway work from the current plan before broad UI redesign.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, and Phase 1 provider-gateway work is locally implemented and verified. Continue with Phase 2 wallet readiness/policy work before broad UI redesign.
 
 The current product shape:
 
@@ -97,21 +97,39 @@ Phase 0 proof was completed on 2026-06-23.
 
 No GitHub PR was opened because no remote is configured.
 
+## Completed Phase 1 Gate
+
+Phase 1 provider gateway was completed locally on 2026-06-23.
+
+- Plan: `.thoughts/plans/2026-06-23-casper-gw-phase-1-provider-gateway.md`
+- Verification audit: `.thoughts/verification/2026-06-23-casper-gw-phase-1-provider-gateway.md`
+- Provider foundation commit: `57bce54 feat: add provider gateway foundation`
+- Hosted endpoint commit: `dd3f5df feat: add hosted endpoint skeleton`
+- UI wiring commit: `119f948 feat: wire provider gateway ui`
+- Reviewer-fix commit: `abeb955 fix: enforce provider endpoint scopes`
+- Real Remote MCP non-payment smoke discovered 23 tools from `https://mcp.cspr.trade/mcp`, priced/published `get_quote`, and generated scoped endpoint metadata without printing the client token.
+- Independent review found two blockers; both are fixed:
+  - endpoint access scopes now enforce limited `toolIds`,
+  - pricing uses server-side Casper Testnet/WCSPR/payee defaults and rejects client-supplied payment fields.
+- `pnpm verify` and `pnpm run ci` passed after the reviewer fixes.
+
+No GitHub PR was opened because no remote is configured in this checkout.
+
 ## Current Build Gate
 
 Current implementation plan:
 
-- `.thoughts/plans/2026-06-23-casper-gw-phase-1-provider-gateway.md`
+- `.thoughts/plans/2026-06-23-casper-gw-phase-2-wallet-readiness-policy.md`
 
-Phase 1 should build the provider-gateway path:
+Phase 2 should build the wallet readiness and policy path:
 
-- provider source/tool/price/access-key store,
-- real Remote MCP source discovery, starting with `https://mcp.cspr.trade/mcp`,
-- tool selection, pricing, and publish state,
-- hosted MCP/x402 endpoint metadata and payment requirements,
-- minimal UI wiring for source discovery, tool pricing, and endpoint config.
+- persisted wallet profiles,
+- real CSPR.cloud readiness evidence for CSPR gas + WCSPR balance,
+- spend policy persistence and fail-closed evaluation,
+- minimal UI wiring for wallet registration, readiness refresh, and policy saving,
+- no fake funded state and no production custody claim.
 
-Do not start broad design work or wallet production UX as part of Phase 1 unless Abu explicitly changes scope.
+Do not start broad design work, production custody, CSPR.click signing, or paid-console settlement work as part of Phase 2 unless Abu explicitly changes scope.
 
 Historical Phase 0 gate, now satisfied:
 
