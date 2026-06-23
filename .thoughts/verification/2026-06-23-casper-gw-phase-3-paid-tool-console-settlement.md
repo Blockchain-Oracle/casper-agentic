@@ -2,13 +2,13 @@
 
 Date: 2026-06-23
 Branch: `feat/casper-gw-phase-0`
-Commits audited: `8cecc37`, `cd8579d`, `14082be`, `2bd95eb`, review-fix worktree before final commit
+Commits audited: `8cecc37`, `cd8579d`, `14082be`, `2bd95eb`, `3d02ac5`, `1763382`
 
 ## Verdict
 
-Conditional pass for the Phase 3 implementation evidence, pending re-review.
+Pass.
 
-The selected-wallet paid-console path is implemented, local CI passes, the initial independent review findings were accepted and fixed, and the approved live smoke produced a new real Casper Testnet settlement after those fixes. The live attempt persisted all four receipt layers: gateway attempt, policy decision, x402 verify/settle records, and Casper proof. Final Phase 3 completion still requires independent re-review of the fixes.
+The selected-wallet paid-console path is implemented, local CI passes, the independent review findings were accepted and fixed, and the approved live smoke produced a new real Casper Testnet settlement after those fixes. The live attempt persisted all four receipt layers: gateway attempt, policy decision, x402 verify/settle records, and Casper proof. The focused independent re-review passed after the final verify-failed receipt rendering fix.
 
 ## Artifacts Checked
 
@@ -29,6 +29,7 @@ The selected-wallet paid-console path is implemented, local CI passes, the initi
 - `tests/unit/x402-facilitator.test.ts`
 - `tests/browser/smoke.spec.ts`
 - Local command output from `pnpm verify`, `pnpm test:browser`, `pnpm build`, `pnpm run ci`, and `pnpm smoke:live`.
+- Independent reviewer response from `Sagan`.
 
 ## Requirement Traceability
 
@@ -41,7 +42,7 @@ The selected-wallet paid-console path is implemented, local CI passes, the initi
 - Policy-before-payment: `live-paid-call.ts` persists `policy_pending`, evaluates the effective policy, and only creates x402 payment payloads after policy allows.
 - x402 verify/settle: `live-paid-call.ts` persists facilitator verify and settle records separately and branches on response bodies; the facilitator client preserves structured verify/settle failure bodies even when HTTP status is non-2xx.
 - Casper proof: `resolveCasperProof` is called after settlement; successful proof writes deploy hash, deploy body, FT action, proof status, and explorer URL.
-- Receipt detail: DB-backed receipts now build detail rows from persisted `policy_decisions`, `x402_records`, and `casper_proofs` instead of fixture-derived payer/payee/policy strings.
+- Receipt detail: DB-backed receipts now build detail rows from persisted `policy_decisions`, `x402_records`, and `casper_proofs` instead of fixture-derived payer/payee/policy strings, and verify-failed receipts render settlement as `not attempted` rather than `settled`.
 - Public receipt/explorer access: unchanged public `/explorer` browser smoke continues to pass without app shell or wallet connection.
 - Live smoke selected-wallet path: `scripts/live-smoke.ts` now resolves or creates the signer wallet profile, ensures an allow policy, and calls `runLivePaidToolCall` with `walletId`, endpoint, tool, and args.
 
@@ -59,19 +60,19 @@ The selected-wallet paid-console path is implemented, local CI passes, the initi
 
 - `pnpm verify`: passed.
   - File guard: passed with warnings only:
-    - `src/components/screens/test-console-screen.tsx`: 224 lines.
-    - `src/server/live-paid-call.ts`: 218 lines.
-    - `tests/unit/live-paid-call.test.ts`: 265 lines.
+    - `src/components/screens/test-console-screen.tsx`: 232 lines.
+    - `src/server/live-paid-call.ts`: 238 lines.
+    - `tests/unit/live-paid-call.test.ts`: 290 lines.
   - Product guard: passed.
   - Secret guard: passed.
-  - Vitest: 21 test files, 83 tests passed.
+  - Vitest: 21 test files, 84 tests passed.
   - Typecheck: passed.
   - Lint: passed.
 - `pnpm test:browser`: passed.
   - 10 browser tests passed.
   - 2 mobile-only tests intentionally skipped.
 - `pnpm build`: passed.
-- `pnpm run ci`: passed after the review fixes.
+- `pnpm run ci`: passed after the review and re-review fixes.
 - `pnpm wrap:wcspr`: passed to replenish the Testnet signer WCSPR after earlier paid smokes.
 - `pnpm smoke:live`: passed after review fixes and spent one approved WCSPR payment.
 
@@ -93,7 +94,16 @@ All five findings were accepted and fixed:
 - `X402FacilitatorClient` preserves structured verify/settle failure bodies for body-level failure handling.
 - `TestConsoleScreen` renders an empty state when real discovery returns no tools.
 
-Re-review is pending.
+Focused re-review initially found one remaining blocker:
+
+- Blocking: persisted `verify_failed` receipts with no settle response rendered settlement as completed.
+
+This finding was fixed in `1763382 fix: render verify-failed receipts honestly`:
+
+- `buildPersistedReceiptDetail` now treats verify failure or missing settle response as `settle: not attempted` with neutral tone.
+- A regression test covers a persisted verify-failed receipt and confirms no Casper proof rows are rendered.
+
+Reviewer `Sagan` returned **PASS** on the focused re-review and confirmed the prior blocker is resolved. The reviewer ran `tests/unit/receipt-detail.test.ts`; it passed with 5 tests. No live smoke was rerun for the focused receipt-rendering re-review.
 
 ## Live Proof Evidence
 
@@ -126,7 +136,6 @@ Re-review is pending.
 
 ## Gaps And Risks
 
-- Independent re-review is still pending at the time this audit was updated.
 - Session-budget semantics are not fully modeled yet.
 - Browser tests verify UI framing and public/private separation, not a secret-backed browser run with a real operator token.
 - The live smoke auto-creates or updates a permissive `get_quote` policy for the signer wallet when needed. This is acceptable for the smoke script but should not be a normal user-facing action.
@@ -144,7 +153,10 @@ Re-review is pending.
 - Console UI wiring commit: `cd8579d feat: wire paid console request state`.
 - Product guard wording fix commit: `14082be fix: align signer gate wording`.
 - Selected-wallet live-smoke script commit: `2bd95eb test: exercise selected wallet in live smoke`.
-- Review-fix evidence: `pnpm run ci` passed with 83 unit tests, 10 browser tests, 2 intentional skips, and production build.
+- Review-fix commit: `3d02ac5 fix: close phase 3 review gaps`.
+- Final re-review fix commit: `1763382 fix: render verify-failed receipts honestly`.
+- Final `pnpm run ci` evidence: passed with 84 unit tests, 10 browser tests, 2 intentional skips, and production build.
+- Focused re-review evidence: reviewer `Sagan` returned PASS and confirmed the prior blocker was resolved.
 - Post-fix WCSPR wrap transaction: `1f415ea5a10128cbc2ecc3061078bf64824d64dbea8fcfa42518a769415f6de4`.
 - Post-fix real deploy hash: `8ed4569fd13c26e28d2b1826d833e88ed821bb74aeec175980992a3ba6af0810`.
 - Post-fix real attempt id: `dfb14079-44e0-4006-b66f-99e1f22f0fc0`.
