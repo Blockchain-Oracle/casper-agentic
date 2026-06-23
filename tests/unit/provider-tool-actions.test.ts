@@ -38,9 +38,8 @@ describe("provider tool action routes", () => {
     expect(await response.json()).toEqual({ tool: { id: "tool-1", status: "selected" } });
   });
 
-  it("saves Casper x402 tool pricing", async () => {
+  it("rejects client-supplied Casper payment fields", async () => {
     const { POST } = await import("@/app/api/provider/tools/[id]/price/route");
-    mocks.saveToolPrice.mockResolvedValue({ amount: "7500000000", toolId: "tool-1" });
 
     const response = await POST(
       request("https://gw.test/api/provider/tools/tool-1/price", {
@@ -54,11 +53,11 @@ describe("provider tool action routes", () => {
       }),
       { params: Promise.resolve({ id: "tool-1" }) },
     );
+    const body = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(mocks.saveToolPrice).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: "7500000000", network: "casper:casper-test", toolId: "tool-1" }),
-    );
+    expect(response.status).toBe(400);
+    expect(body.error).toContain("payment fields are server-side only");
+    expect(mocks.saveToolPrice).not.toHaveBeenCalled();
   });
 
   it("uses server-side Casper payment defaults when UI pricing omits public payment fields", async () => {
@@ -84,6 +83,24 @@ describe("provider tool action routes", () => {
       scheme: "exact",
       toolId: "tool-1",
     });
+  });
+
+  it("rejects provider pricing outside Phase 1 Casper Testnet WCSPR defaults", async () => {
+    const { POST } = await import("@/app/api/provider/tools/[id]/price/route");
+    process.env.CASPER_NETWORK = "casper:casper-main";
+    process.env.CASPER_PAYEE_ACCOUNT_HASH = "009accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d";
+
+    const response = await POST(
+      request("https://gw.test/api/provider/tools/tool-1/price", {
+        body: { amount: "7500000000" },
+        token: "operator-token",
+      }),
+      { params: Promise.resolve({ id: "tool-1" }) },
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "provider pricing requires Casper Testnet" });
+    expect(mocks.saveToolPrice).not.toHaveBeenCalled();
   });
 
   it("publishes provider tools through the store guard", async () => {

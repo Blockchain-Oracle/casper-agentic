@@ -3,20 +3,30 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { getDb } from "@/db/client";
 import { endpointAccessKeys } from "@/db/schema";
-import { logProviderEvent } from "./provider-store";
+import { listPublishedEndpointTools, logProviderEvent } from "./provider-store";
 
 export interface EndpointAccessScope {
   sourceId: string;
   toolIds?: string[];
 }
 
-export async function createEndpointAccessKey(input: { label: string; scope: EndpointAccessScope; sourceId: string }) {
+interface EndpointAccessScopeInput {
+  sourceId: string;
+  toolIds?: unknown;
+}
+
+export async function createEndpointAccessKey(input: {
+  label: string;
+  scope: EndpointAccessScopeInput;
+  sourceId: string;
+}) {
   const token = `cgw_test_${randomBytes(24).toString("base64url")}`;
+  const scope = await validateEndpointAccessScope(input.sourceId, input.scope);
   const [row] = await getDb()
     .insert(endpointAccessKeys)
     .values({
       label: requiredText(input.label, "access key label"),
-      scope: input.scope,
+      scope,
       sourceId: input.sourceId,
       tokenHash: hashClientAccessToken(token),
     })
@@ -61,13 +71,44 @@ export function isEndpointAccessError(error: unknown): error is EndpointAccessEr
 }
 
 export function toEndpointAccessKeyView(row: typeof endpointAccessKeys.$inferSelect) {
+  const sourceId = requiredText(row.sourceId ?? undefined, "endpoint access source id");
   return {
     id: row.id,
     label: row.label,
     revoked: row.revoked,
-    scope: row.scope,
-    sourceId: row.sourceId,
+    scope: normalizeEndpointAccessScope(sourceId, row.scope),
+    sourceId,
   };
+}
+
+export function normalizeEndpointAccessScope(
+  sourceId: string,
+  scope: unknown,
+  publishedToolIds?: string[],
+): EndpointAccessScope {
+  const record = isRecord(scope) ? scope : {};
+  const scopeSourceId = requiredText(
+    typeof record.sourceId === "string" ? record.sourceId : sourceId,
+    "access scope source id",
+  );
+  if (scopeSourceId !== sourceId) throw new Error("access scope source id must match endpoint source");
+
+  const rawToolIds = record.toolIds;
+  if (rawToolIds === undefined) return { sourceId };
+  if (!Array.isArray(rawToolIds) || rawToolIds.length === 0) {
+    throw new Error("access scope toolIds must be a non-empty string array");
+  }
+
+  const toolIds = [...new Set(rawToolIds.map((value) => requiredText(
+    typeof value === "string" ? value : undefined,
+    "access scope tool id",
+  )))];
+  if (publishedToolIds) {
+    const published = new Set(publishedToolIds);
+    const unknown = toolIds.find((toolId) => !published.has(toolId));
+    if (unknown) throw new Error("access scope toolIds must reference published tools");
+  }
+  return { sourceId, toolIds };
 }
 
 function bearerToken(header: string | null) {
@@ -81,8 +122,24 @@ function safeEqual(a: string, b: string) {
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
-function requiredText(value: string, label: string) {
-  const text = value.trim();
+function requiredText(value: string | undefined, label: string) {
+  const text = value?.trim();
   if (!text) throw new Error(`${label} is required`);
   return text;
+}
+
+async function validateEndpointAccessScope(sourceId: string, scope: EndpointAccessScopeInput) {
+  const normalized = normalizeEndpointAccessScope(sourceId, scope);
+  if (!normalized.toolIds) return normalized;
+
+  const publishedTools = await listPublishedEndpointTools(sourceId);
+  return normalizeEndpointAccessScope(
+    sourceId,
+    normalized,
+    publishedTools.map((tool) => tool.id),
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

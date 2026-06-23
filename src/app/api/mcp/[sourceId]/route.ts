@@ -9,7 +9,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ sou
   const { sourceId } = await context.params;
   try {
     const access = await requireEndpointAccess(sourceId, request.headers.get("authorization"));
-    const endpoint = await getHostedEndpoint(sourceId);
+    const endpoint = await getHostedEndpoint(sourceId, access.scope.toolIds);
     return NextResponse.json({
       access,
       endpoint: {

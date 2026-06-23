@@ -41,7 +41,7 @@ describe("endpoint access-key route", () => {
 
     const response = await POST(
       request("https://gw.test/api/provider/sources/source-1/access-keys", {
-        body: { label: "Cursor" },
+        body: { label: "Cursor", toolIds: ["tool-1"] },
         token: "operator-token",
       }),
       { params: Promise.resolve({ id: "source-1" }) },
@@ -50,7 +50,7 @@ describe("endpoint access-key route", () => {
     expect(response.status).toBe(201);
     expect(mocks.createEndpointAccessKey).toHaveBeenCalledWith({
       label: "Cursor",
-      scope: { sourceId: "source-1", toolIds: undefined },
+      scope: { sourceId: "source-1", toolIds: ["tool-1"] },
       sourceId: "source-1",
     });
     expect(await response.json()).toEqual({
@@ -79,7 +79,7 @@ describe("hosted endpoint route", () => {
 
   it("returns published tools and payment requirements without provider credentials", async () => {
     const { GET } = await import("@/app/api/mcp/[sourceId]/route");
-    mocks.requireEndpointAccess.mockResolvedValue({ id: "key-1", sourceId: "source-1" });
+    mocks.requireEndpointAccess.mockResolvedValue({ id: "key-1", scope: { sourceId: "source-1" }, sourceId: "source-1" });
     mocks.getHostedEndpoint.mockResolvedValue({
       source: {
         authMode: "bearer",
@@ -106,6 +106,7 @@ describe("hosted endpoint route", () => {
 
     expect(response.status).toBe(200);
     expect(mocks.requireEndpointAccess).toHaveBeenCalledWith("source-1", "Bearer cgw_test_once");
+    expect(mocks.getHostedEndpoint).toHaveBeenCalledWith("source-1", undefined);
     expect(JSON.stringify(body)).not.toContain("credentialRef");
     expect(JSON.stringify(body)).not.toContain("tokenHash");
     expect(body.endpoint.tools[0].paymentRequirements).toMatchObject({
@@ -113,6 +114,24 @@ describe("hosted endpoint route", () => {
       network: "casper:casper-test",
       scheme: "exact",
     });
+  });
+
+  it("passes limited tool scopes to hosted endpoint metadata", async () => {
+    const { GET } = await import("@/app/api/mcp/[sourceId]/route");
+    mocks.requireEndpointAccess.mockResolvedValue({
+      id: "key-1",
+      scope: { sourceId: "source-1", toolIds: ["tool-allowed"] },
+      sourceId: "source-1",
+    });
+    mocks.getHostedEndpoint.mockResolvedValue({ source: { id: "source-1" }, tools: [] });
+
+    const response = await GET(
+      request("https://gw.test/api/mcp/source-1", { bearer: "cgw_test_limited" }),
+      { params: Promise.resolve({ sourceId: "source-1" }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.getHostedEndpoint).toHaveBeenCalledWith("source-1", ["tool-allowed"]);
   });
 });
 

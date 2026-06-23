@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getRuntimeConfig } from "@/server/env";
+import { DEFAULT_CASPER_NETWORK, DEFAULT_WCSPR_PACKAGE, getRuntimeConfig } from "@/server/env";
 import { isOperatorAccessError, requireOperatorRequest } from "@/server/operator-access";
 import { saveToolPrice } from "@/server/provider-store";
 
@@ -12,13 +12,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     requireOperatorRequest(request);
     const { id } = await context.params;
     const config = getRuntimeConfig();
+    const payeeAccountHash = assertServerPaymentDefaults(body, config);
     const price = await saveToolPrice({
       amount: body.amount ?? config.paymentAmount,
-      asset: body.asset ?? config.paymentAsset,
-      maxTimeoutSeconds: body.maxTimeoutSeconds ?? config.paymentTimeoutSeconds,
-      network: body.network ?? config.casperNetwork,
-      payTo: body.payTo ?? config.payeeAccountHash,
-      scheme: body.scheme ?? "exact",
+      asset: config.paymentAsset,
+      maxTimeoutSeconds: config.paymentTimeoutSeconds,
+      network: config.casperNetwork,
+      payTo: payeeAccountHash,
+      scheme: "exact",
       toolId: id,
     });
     return NextResponse.json({ price });
@@ -27,6 +28,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     return NextResponse.json(
       { error: message },
       { status: isOperatorAccessError(error) ? error.status : 400 },
-    );
+  );
+}
+
+function assertServerPaymentDefaults(body: Record<string, unknown>, config: ReturnType<typeof getRuntimeConfig>) {
+  const clientPaymentFields = ["asset", "network", "payTo", "scheme", "maxTimeoutSeconds"].filter(
+    (key) => body[key] !== undefined,
+  );
+  if (clientPaymentFields.length) {
+    throw new Error(`payment fields are server-side only: ${clientPaymentFields.join(", ")}`);
   }
+  if (config.casperNetwork !== DEFAULT_CASPER_NETWORK) throw new Error("provider pricing requires Casper Testnet");
+  if (config.paymentAsset !== DEFAULT_WCSPR_PACKAGE) throw new Error("provider pricing requires WCSPR");
+  if (!config.payeeAccountHash) throw new Error("CASPER_PAYEE_ACCOUNT_HASH is required");
+  return config.payeeAccountHash;
+}
 }

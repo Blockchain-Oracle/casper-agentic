@@ -2,7 +2,6 @@ import type { ProviderTool, Tool } from "@/lib/types";
 
 export const DEFAULT_PROVIDER_MCP_URL = "https://mcp.cspr.trade/mcp";
 export const DEFAULT_PROVIDER_PRICE_AMOUNT = "7500000000";
-export const OPERATOR_TOKEN_STORAGE = "casper-gw-operator-token";
 
 export async function providerRequest<T>(
   path: string,

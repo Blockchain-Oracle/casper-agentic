@@ -11,11 +11,14 @@ interface PaymentRequirementPrice {
   scheme: string;
 }
 
-export async function getHostedEndpoint(sourceId: string) {
+export async function getHostedEndpoint(sourceId: string, allowedToolIds?: string[]) {
   const source = await getProviderSourceRecord(sourceId);
   if (!source) throw new Error("hosted endpoint not found");
 
-  const tools = await listPublishedEndpointTools(sourceId);
+  const allowed = allowedToolIds ? new Set(allowedToolIds) : null;
+  const tools = (await listPublishedEndpointTools(sourceId)).filter((tool) =>
+    allowed ? allowed.has(tool.id) : true,
+  );
   return {
     source: toProviderSourceView(source),
     tools: tools.map((tool) => ({

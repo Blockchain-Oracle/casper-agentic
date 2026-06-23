@@ -12,7 +12,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const { id } = await context.params;
     const result = await createEndpointAccessKey({
       label: typeof body.label === "string" ? body.label : "Default client access",
-      scope: { sourceId: id, toolIds: Array.isArray(body.toolIds) ? body.toolIds : undefined },
+      scope: { sourceId: id, toolIds: body.toolIds },
       sourceId: id,
     });
     return NextResponse.json(result, { status: 201 });

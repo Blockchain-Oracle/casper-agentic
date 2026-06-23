@@ -4,7 +4,6 @@ import { useCallback, useMemo, useState } from "react";
 import {
   DEFAULT_PROVIDER_MCP_URL,
   DEFAULT_PROVIDER_PRICE_AMOUNT,
-  OPERATOR_TOKEN_STORAGE,
   providerRequest,
   toToolRow,
 } from "@/lib/provider-gateway-client";
@@ -18,9 +17,7 @@ import type {
 } from "@/lib/types";
 
 export function useProviderGateway() {
-  const [operatorToken, setOperatorTokenState] = useState(() =>
-    typeof window === "undefined" ? "" : window.localStorage.getItem(OPERATOR_TOKEN_STORAGE) ?? "",
-  );
+  const [operatorToken, setOperatorTokenState] = useState("");
   const [sourceName, setSourceName] = useState("CSPR Trade");
   const [sourceUrl, setSourceUrl] = useState(DEFAULT_PROVIDER_MCP_URL);
   const [sourceType, setSourceType] = useState<SourceType>("mcp");
@@ -79,8 +76,6 @@ export function useProviderGateway() {
   function setOperatorToken(value: string) {
     const token = value.trim();
     setOperatorTokenState(token);
-    if (token) window.localStorage.setItem(OPERATOR_TOKEN_STORAGE, token);
-    else window.localStorage.removeItem(OPERATOR_TOKEN_STORAGE);
   }
 
   async function discoverSource() {
