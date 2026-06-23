@@ -2,18 +2,18 @@
 
 Date: 2026-06-23
 Branch: `feat/casper-gw-phase-0`
-Commits audited: `a61193b`, `92b611c`
+Commits audited: `a61193b`, `92b611c`, `50f9aa9`
 
 ## Verdict
 
-Conditional pass, pending independent review.
+Conditional pass, pending focused re-review.
 
 The public explorer now supports two proof paths without mixing their trust boundaries:
 
 - Casper GW receipt/deploy lookup resolves rich four-layer gateway receipts from the local datastore.
 - Unknown deploy-hash lookup falls back to CSPR.cloud and renders limited external Casper proof with gateway, policy, and x402 context explicitly unavailable.
 
-Local verification, browser smoke, production build, Chrome inspection, and non-spending CSPR.cloud lookup evidence all passed. Final completion still requires independent review.
+Local verification, browser smoke, production build, Chrome inspection, and non-spending CSPR.cloud lookup evidence all passed. Independent review found two blockers and one should-fix; all were accepted and fixed. Final completion still requires focused re-review.
 
 ## Artifacts Checked
 
@@ -31,6 +31,7 @@ Local verification, browser smoke, production build, Chrome inspection, and non-
 - `src/components/public-explorer-app.tsx`
 - `src/components/screens/explorer-screen.tsx`
 - `tests/unit/explorer-search.test.ts`
+- `tests/unit/receipt-store.test.ts`
 - `tests/browser/smoke.spec.ts`
 - CSPR.cloud docs for deploy and FT action lookup.
 
@@ -43,6 +44,9 @@ Local verification, browser smoke, production build, Chrome inspection, and non-
 - RQ-53: Casper proof includes deploy hash, network, status, raw proof link, and token-action payer/payee/amount when available. Evidence: `buildExternalProofDetail` and live external lookup rows.
 - RQ-54: Explorer states Casper proof covers payment/deploy facts only, not full gateway context. Evidence: external x402/policy notes explicitly say unavailable/not attached.
 - RQ-55: Real deploy links point to `testnet.cspr.live`. Evidence: external and gateway proof paths render raw proof links only from real hashes.
+- Review fix: external token-action rows are filtered by both deploy hash and configured package hash before rendering payer/payee/amount.
+- Review fix: deploy-hash search normalizes hash case before Casper GW DB lookup, so uppercase input still resolves rich gateway receipts first.
+- Review fix: `/api/receipts` returns `source`, and the public explorer labels fixture fallback as `Sample receipts`.
 
 ## Acceptance Criteria Coverage
 
@@ -60,7 +64,7 @@ Local verification, browser smoke, production build, Chrome inspection, and non-
     - `tests/unit/live-paid-call.test.ts`: 290 lines.
   - Product guard: passed.
   - Secret guard: passed.
-  - Vitest: 22 files, 88 tests passed.
+  - Vitest: 22 files, 90 tests passed.
   - Typecheck: passed.
   - Lint: passed.
 - `pnpm test:browser`: passed.
@@ -68,7 +72,7 @@ Local verification, browser smoke, production build, Chrome inspection, and non-
   - 2 intentional mobile skips.
 - `pnpm build`: passed.
 - `pnpm run ci`: passed.
-  - frozen install, guards, 88 tests, typecheck, lint, browser smoke, and production build.
+  - frozen install, guards, 90 tests, typecheck, lint, browser smoke, and production build.
 - Chrome inspection: passed.
   - `/explorer` showed search controls and no authenticated primary nav.
   - External hash search showed `External Casper proof`, raw proof link, and unavailable x402 context.
@@ -100,7 +104,7 @@ Gateway receipt precedence lookup:
 
 ## Gaps And Risks
 
-- Independent review is pending.
+- Focused independent re-review is pending.
 - External lookup depends on `CSPR_CLOUD_API_KEY`; without it, the API returns `unconfigured` and does not claim external proof.
 - CSPR.cloud response latency can make first external lookup slower than DB-backed receipt lookup.
 - The external proof status is a new receipt status used for public display, not a paid-call attempt status in Postgres.
@@ -115,8 +119,10 @@ Gateway receipt precedence lookup:
 
 - Plan commit: `a61193b docs: plan public explorer proof lookup`.
 - Implementation commit: `92b611c feat: add public explorer proof lookup`.
-- `pnpm verify`: passed with 88 tests.
+- Review-fix commit: `50f9aa9 fix: harden explorer proof boundaries`.
+- `pnpm verify`: passed with 90 tests.
 - `pnpm test:browser`: passed with 10 tests and 2 intentional skips.
 - `pnpm build`: passed.
 - `pnpm run ci`: passed.
 - Chrome inspection: passed for external proof and Casper GW receipt search paths.
+- Independent review returned FAIL with two blockers and one should-fix; all accepted and fixed in `50f9aa9`.
