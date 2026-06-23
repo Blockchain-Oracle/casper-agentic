@@ -34,6 +34,19 @@ test("provider wiring avoids fake hosted credentials", async ({ page }, testInfo
   await expect(page.getByText("gw.casper-gateway.io")).toHaveCount(0);
 });
 
+test("wallet screen exposes real readiness and policy controls", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.includes("mobile"), "desktop wallet controls are the Phase 2 smoke target");
+
+  await page.goto("/app");
+  await page.getByRole("button", { name: "Wallets" }).click();
+  await expect(page.getByRole("heading", { name: "Wallet Control Plane" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Load wallet records" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save wallet profile" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save spend policy" })).toBeVisible();
+  await expect(page.getByText("ready fixture")).toHaveCount(0);
+  await expect(page.getByText("Hosted encrypted signer")).toHaveCount(0);
+});
+
 test("integration health reports preflight state without secret values", async ({ request }) => {
   const response = await request.get("/api/health/integrations");
   expect(response.ok()).toBeTruthy();

@@ -29,8 +29,10 @@ export function TestConsoleScreen({
   const [selectedWalletId, setSelectedWalletId] = useState(wallets[0]?.id ?? "");
   const { apiMessage, apiReceiptId, apiTools, busy, discover, run } = usePaidCallConsole();
 
-  const selectedTool = tools.find((tool) => tool.id === selectedToolId) ?? tools[0];
-  const selectedWallet = wallets.find((wallet) => wallet.id === selectedWalletId) ?? wallets[0];
+  const activeToolId = selectedToolId || tools[0]?.id || "";
+  const activeWalletId = selectedWalletId || wallets[0]?.id || "";
+  const selectedTool = tools.find((tool) => tool.id === activeToolId) ?? tools[0];
+  const selectedWallet = wallets.find((wallet) => wallet.id === activeWalletId) ?? wallets[0];
   const discovered = phase !== "idle";
   const completed = phase === "complete";
   const toolNeedsInput = selectedTool?.id !== "list_pairs";
@@ -41,7 +43,7 @@ export function TestConsoleScreen({
   }
 
   async function runPaidCall() {
-    if (await run(selectedToolId)) setPhase("complete");
+    if (await run(activeToolId)) setPhase("complete");
   }
 
   return (
@@ -144,7 +146,7 @@ export function TestConsoleScreen({
                 <select
                   className="input"
                   onChange={(event) => setSelectedWalletId(event.target.value)}
-                  value={selectedWalletId}
+                value={activeWalletId}
                 >
                   {wallets.map((wallet) => (
                     <option key={wallet.id} value={wallet.id}>

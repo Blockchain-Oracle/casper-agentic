@@ -176,6 +176,18 @@ AC-05, AC-06, AC-08, AC-10, AC-13.
 
 The operator can register/load a Testnet wallet, refresh real CSPR.cloud readiness, save spend policy, and see truthful blockers without fake funding/proof claims.
 
+### Checkpoint Evidence
+
+Completed on 2026-06-23:
+
+- Added a wallet-control client hook for wallet profile loading, creation, readiness refresh, and spend policy saving.
+- Rewired the wallet screen from fixture readiness/policy state to real wallet/readiness/policy APIs.
+- Passed real wallet profiles into the paid-tool console wallet selector.
+- Kept sample receipt history visibly labeled and removed old fixture readiness/signing language from the wallet screen.
+- Added browser smoke coverage for the wallet control surface.
+- `pnpm verify` passed with 20 test files and 69 tests.
+- `pnpm test:browser` passed with 10 browser tests and 2 intended mobile skips; Playwright built and started the app.
+
 ## Verification Checkpoint
 
 Before claiming Phase 2 complete:

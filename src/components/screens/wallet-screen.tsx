@@ -1,79 +1,118 @@
 import { Panel } from "@/components/screen-primitives";
 import { Chip, Field, KeyValueList, StatusChip } from "@/components/ui";
-import { receipts, wallets } from "@/lib/fixtures";
-import type { Receipt, Tool, WalletProfile } from "@/lib/types";
+import { receipts } from "@/lib/fixtures";
+import {
+  getToolOptions,
+  policyRows,
+  shortHash,
+  type WalletScreenProps,
+  walletRows,
+} from "./wallet-screen-model";
 
 export function WalletScreen({
-  allowlist,
   copied,
-  manualApproval,
+  dailyLimit,
+  errorMessage,
+  loading,
   onCopy,
-  onManualApproval,
+  onCreateWallet,
+  onDailyLimit,
+  onLoadWallets,
   onOpenReceipt,
   onPolicyAmount,
+  onPolicyDisabled,
   onPolicyTool,
-  onWallet,
-  policyAllowed,
+  onRefreshReadiness,
+  onSavePolicy,
+  onSelectWallet,
+  onSessionLimit,
+  onWalletAccountHash,
+  onWalletLabel,
+  onWalletSigningMode,
+  operatorConnected,
+  policy,
   policyAmount,
+  policyDisabled,
   policyTool,
   policyTools,
+  readiness,
   selectedWallet,
   selectedWalletId,
-}: {
-  allowlist: string[];
-  copied: string | null;
-  manualApproval: boolean;
-  onCopy: (value: string) => void;
-  onManualApproval: (enabled: boolean) => void;
-  onOpenReceipt: (receipt: Receipt) => void;
-  onPolicyAmount: (amount: string) => void;
-  onPolicyTool: (tool: string) => void;
-  onWallet: (walletId: string) => void;
-  policyAllowed: boolean;
-  policyAmount: string;
-  policyTool: string;
-  policyTools: Tool[];
-  selectedWallet: WalletProfile;
-  selectedWalletId: string;
-}) {
-  const walletReceipts = receipts.filter((receipt) => receipt.wallet === selectedWallet.id).slice(0, 4);
+  sessionLimit,
+  statusMessage,
+  walletAccountHash,
+  walletLabel,
+  wallets,
+  walletSigningMode,
+}: WalletScreenProps) {
+  const toolOptions = getToolOptions(policyTools, policyTool);
+  const walletReceipts = selectedWallet
+    ? receipts.filter((receipt) => receipt.wallet === selectedWallet.id).slice(0, 4)
+    : [];
 
   return (
     <div className="grid two">
       <div className="stack">
         <Panel title="Wallet profiles">
-          {wallets.map((wallet) => (
+          {!operatorConnected ? <div className="notice">Enter operator access before loading wallet records.</div> : null}
+          <div className="buttonRow" style={{ marginBottom: 12 }}>
+            <button className="secondaryButton" disabled={loading || !operatorConnected} onClick={onLoadWallets} type="button">
+              Load wallet records
+            </button>
+          </div>
+          {wallets.length ? wallets.map((wallet) => (
             <button
               className="walletRow"
               data-active={wallet.id === selectedWalletId}
               key={wallet.id}
-              onClick={() => onWallet(wallet.id)}
+              onClick={() => onSelectWallet(wallet.id)}
               type="button"
             >
               <div className="receiptMeta">
-                <strong className="mono">{wallet.id}</strong>
-                <Chip tone={wallet.funded ? "signal" : "warn"}>{wallet.status}</Chip>
+                <strong>{wallet.label}</strong>
+                <Chip tone={readiness?.ready && wallet.id === selectedWalletId ? "signal" : "warn"}>
+                  {readiness?.ready && wallet.id === selectedWalletId ? "ready" : "registered"}
+                </Chip>
               </div>
               <div className="miniMeta">
-                <span>{wallet.account}</span>
+                <span className="mono">{shortHash(wallet.accountHash)}</span>
                 <span>{wallet.signingMode}</span>
               </div>
             </button>
-          ))}
+          )) : <div className="emptyState">No wallet profiles saved yet.</div>}
+        </Panel>
+
+        <Panel title="Add wallet">
+          <div className="stack">
+            <div className="formGrid">
+              <Field label="label">
+                <input className="input" onChange={(event) => onWalletLabel(event.target.value)} value={walletLabel} />
+              </Field>
+              <Field label="signing mode">
+                <select className="input" onChange={(event) => onWalletSigningMode(event.target.value)} value={walletSigningMode}>
+                  <option value="external">external</option>
+                  <option value="test-signer">test-signer</option>
+                  <option value="browser-wallet">browser-wallet</option>
+                </select>
+              </Field>
+            </div>
+            <Field label="account hash">
+              <input className="input" onChange={(event) => onWalletAccountHash(event.target.value)} value={walletAccountHash} />
+            </Field>
+            <button className="primaryButton" disabled={loading || !operatorConnected} onClick={onCreateWallet} type="button">
+              Save wallet profile
+            </button>
+          </div>
         </Panel>
 
         <Panel title="Selected wallet">
-          <KeyValueList
-            rows={[
-              { key: "account", value: selectedWallet.fullAccount, mono: true },
-              { key: "network", value: selectedWallet.network, mono: true },
-              { key: "signing mode", value: selectedWallet.signingMode },
-              { key: "balance", value: `${selectedWallet.balance} WCSPR`, mono: true },
-              { key: "custody note", value: "MVP signing mode - no production custody claim" },
-            ]}
-            copiedKey={copied}
-            onCopy={onCopy}
-          />
+          <KeyValueList rows={walletRows(selectedWallet, readiness)} copiedKey={copied} onCopy={onCopy} />
+          <div className="buttonRow" style={{ marginTop: 12 }}>
+            <button className="secondaryButton" disabled={!selectedWallet || loading} onClick={onRefreshReadiness} type="button">
+              Refresh readiness
+            </button>
+          </div>
+          <div className={`notice ${readiness?.ready ? "signal" : "warn"}`}>{errorMessage ?? statusMessage}</div>
         </Panel>
       </div>
 
@@ -82,49 +121,36 @@ export function WalletScreen({
           <div className="stack">
             <div className="formGrid">
               <Field label="max per call">
-                <input
-                  className="input"
-                  onChange={(event) => onPolicyAmount(event.target.value)}
-                  value={policyAmount}
-                />
+                <input className="input" onChange={(event) => onPolicyAmount(event.target.value)} value={policyAmount} />
               </Field>
-              <Field label="tool to evaluate">
+              <Field label="allowed tool">
                 <select className="input" onChange={(event) => onPolicyTool(event.target.value)} value={policyTool}>
-                  {policyTools.map((tool) => (
-                    <option key={tool.id} value={tool.id}>
-                      {tool.id}
-                    </option>
-                  ))}
+                  {toolOptions.map((tool) => <option key={tool} value={tool}>{tool}</option>)}
                 </select>
+              </Field>
+              <Field label="day limit">
+                <input className="input" onChange={(event) => onDailyLimit(event.target.value)} value={dailyLimit} />
+              </Field>
+              <Field label="session limit">
+                <input className="input" onChange={(event) => onSessionLimit(event.target.value)} value={sessionLimit} />
               </Field>
             </div>
             <label className="toggle">
-              <input
-                checked={manualApproval}
-                onChange={(event) => onManualApproval(event.target.checked)}
-                type="checkbox"
-              />
-              Require manual approval before wallet signing
+              <input checked={policyDisabled} onChange={(event) => onPolicyDisabled(event.target.checked)} type="checkbox" />
+              Disable policy
             </label>
-            <KeyValueList
-              rows={[
-                { key: "daily limit", value: "2.00 WCSPR" },
-                { key: "allowed providers", value: "Make Software Labs, Weather Risk Desk" },
-                { key: "allowed tools", value: allowlist.join(", ") },
-                { key: "allowed network", value: "casper:casper-test", mono: true },
-                { key: "allowed asset", value: "CEP-18 WCSPR", mono: true },
-              ]}
-            />
-            <div className={`notice ${policyAllowed ? "signal" : "danger"}`}>
-              {policyAllowed
-                ? "Policy would allow this call before creating an x402 payment payload."
-                : "Policy would block before wallet signing. No Casper transaction should be created."}
+            <KeyValueList rows={policyRows(policy)} />
+            <button className="primaryButton" disabled={!selectedWallet || loading} onClick={onSavePolicy} type="button">
+              Save spend policy
+            </button>
+            <div className={`notice ${policy && !policy.disabled ? "signal" : "warn"}`}>
+              {policy ? "Saved policy will block before x402 signing when limits fail." : "Save a policy before running paid calls."}
             </div>
           </div>
         </Panel>
 
-        <Panel title="Wallet activity">
-          {walletReceipts.map((receipt) => (
+        <Panel title="Wallet activity" action={<Chip tone="warn">Sample history</Chip>}>
+          {walletReceipts.length ? walletReceipts.map((receipt) => (
             <button className="receiptRow" key={receipt.id} onClick={() => onOpenReceipt(receipt)} type="button">
               <div className="receiptMeta">
                 <strong className="mono">{receipt.id}</strong>
@@ -132,12 +158,10 @@ export function WalletScreen({
               </div>
               <div className="miniMeta">
                 <span>{receipt.tool}</span>
-                <span>
-                  {receipt.amount} {receipt.asset}
-                </span>
+                <span>{receipt.amount} {receipt.asset}</span>
               </div>
             </button>
-          ))}
+          )) : <div className="emptyState">No sample receipt history for this wallet.</div>}
         </Panel>
       </div>
     </div>

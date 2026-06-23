@@ -11,9 +11,10 @@ import { PricingScreen } from "@/components/screens/pricing-screen";
 import { SettingsScreen } from "@/components/screens/settings-screen";
 import { TestConsoleScreen } from "@/components/screens/test-console-screen";
 import { defaultProviderPriceAmount, useProviderGateway } from "@/components/screens/use-provider-gateway";
+import { useWalletControl } from "@/components/screens/use-wallet-control";
 import { WalletScreen } from "@/components/screens/wallet-screen";
 import { endpointUrl, type ConfigTab } from "@/lib/client-config";
-import { consoleReceiptId, screens, wallets } from "@/lib/fixtures";
+import { consoleReceiptId, screens } from "@/lib/fixtures";
 import { receiptById } from "@/lib/receipt-detail";
 import type { Receipt, Screen, Tool } from "@/lib/types";
 
@@ -23,23 +24,13 @@ export function GatewayApp() {
   const [pricingToolId, setPricingToolId] = useState<string | null>(null);
   const [amount, setAmount] = useState(defaultProviderPriceAmount);
   const [configTab, setConfigTab] = useState<ConfigTab>("cursor");
-  const [selectedWalletId, setSelectedWalletId] = useState(wallets[0].id);
-  const [policyAmount, setPolicyAmount] = useState("0.05");
-  const [policyTool, setPolicyTool] = useState("get_cspr_quote");
-  const [manualApproval, setManualApproval] = useState(false);
-  const [allowlist] = useState<string[]>(["get_cspr_quote"]);
   const [copied, setCopied] = useState<string | null>(null);
   const provider = useProviderGateway();
+  const wallet = useWalletControl(provider.operatorToken);
 
   const activeScreen = screens.find((item) => item.id === screen) ?? screens[0];
-  const selectedWallet = wallets.find((wallet) => wallet.id === selectedWalletId) ?? wallets[0];
   const pricingTool = provider.toolRows.find((tool) => tool.id === pricingToolId) ?? null;
   const consoleReceipt = receiptById(consoleReceiptId);
-  const policyAllowed =
-    Number(policyAmount) <= 0.08 &&
-    allowlist.includes(policyTool) &&
-    selectedWallet.funded &&
-    !manualApproval;
 
   function go(next: Screen) {
     setScreen(next);
@@ -141,21 +132,40 @@ export function GatewayApp() {
         ) : null}
         {screen === "wallet" ? (
           <WalletScreen
-            allowlist={allowlist}
             copied={copied}
-            manualApproval={manualApproval}
+            dailyLimit={wallet.dailyLimit}
+            errorMessage={wallet.errorMessage}
+            loading={wallet.loading}
             onCopy={copy}
-            onManualApproval={setManualApproval}
+            onCreateWallet={wallet.createWallet}
+            onDailyLimit={wallet.setDailyLimit}
+            onLoadWallets={() => wallet.loadWallets()}
             onOpenReceipt={openReceipt}
-            onPolicyAmount={setPolicyAmount}
-            onPolicyTool={setPolicyTool}
-            onWallet={setSelectedWalletId}
-            policyAllowed={policyAllowed}
-            policyAmount={policyAmount}
-            policyTool={policyTool}
-            policyTools={provider.toolRows}
-            selectedWallet={selectedWallet}
-            selectedWalletId={selectedWalletId}
+            onPolicyAmount={wallet.setPolicyAmount}
+            onPolicyDisabled={wallet.setPolicyDisabled}
+            onPolicyTool={wallet.setPolicyTool}
+            onRefreshReadiness={() => wallet.refreshReadiness()}
+            onSavePolicy={wallet.savePolicy}
+            onSelectWallet={wallet.selectWallet}
+            onSessionLimit={wallet.setSessionLimit}
+            onWalletAccountHash={wallet.setWalletAccountHash}
+            onWalletLabel={wallet.setWalletLabel}
+            onWalletSigningMode={wallet.setWalletSigningMode}
+            operatorConnected={Boolean(provider.operatorToken)}
+            policy={wallet.policy}
+            policyAmount={wallet.policyAmount}
+            policyDisabled={wallet.policyDisabled}
+            policyTool={wallet.policyTool}
+            policyTools={provider.publishedTools}
+            readiness={wallet.readiness}
+            selectedWallet={wallet.selectedWallet}
+            selectedWalletId={wallet.selectedWalletId}
+            sessionLimit={wallet.sessionLimit}
+            statusMessage={wallet.statusMessage}
+            walletAccountHash={wallet.walletAccountHash}
+            walletLabel={wallet.walletLabel}
+            wallets={wallet.wallets}
+            walletSigningMode={wallet.walletSigningMode}
           />
         ) : null}
         {screen === "console" ? (
@@ -164,7 +174,7 @@ export function GatewayApp() {
             fixtureReceipt={consoleReceipt}
             onOpenReceipt={openReceipt}
             tools={provider.publishedTools}
-            wallets={wallets}
+            wallets={wallet.walletProfiles}
           />
         ) : null}
         {screen === "settings" ? <SettingsScreen /> : null}
