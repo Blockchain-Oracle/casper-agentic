@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, and Phase 1 provider-gateway work is locally implemented and verified. Continue with Phase 2 wallet readiness/policy work before broad UI redesign.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, and Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified. The next engineering gate should be a Phase 3 paid-tool console plan, not broad UI redesign or production custody.
 
 The current product shape:
 
@@ -115,21 +115,39 @@ Phase 1 provider gateway was completed locally on 2026-06-23.
 
 No GitHub PR was opened because no remote is configured in this checkout.
 
+## Completed Phase 2 Gate
+
+Phase 2 wallet readiness and policy was completed locally on 2026-06-23.
+
+- Plan: `.thoughts/plans/2026-06-23-casper-gw-phase-2-wallet-readiness-policy.md`
+- Verification audit: `.thoughts/verification/2026-06-23-casper-gw-phase-2-wallet-readiness-policy.md`
+- Wallet readiness commit: `be179cc feat: add wallet readiness checkpoint`
+- Spend policy commit: `b1fdfff feat: add wallet spend policy gate`
+- Wallet UI commit: `c05875a feat: wire wallet control ui`
+- Reviewer-fix commit: `5c0d997 fix: close wallet policy review gaps`
+- Persisted wallet profiles, CSPR.cloud readiness checks, persisted spend policy, fail-closed paid-call policy evaluation, and minimal wallet UI wiring are in place.
+- Real non-payment readiness smoke detected CSPR gas and WCSPR for the configured Testnet signer wallet.
+- Real no-payment policy-block smoke created blocked attempt `7200a0f5-72e4-48c1-b0b1-8dea7acf9e48` and no payment/deploy claim.
+- Independent review initially found two blockers and one should-fix; all were fixed and re-review passed.
+- `pnpm run ci` passed after the reviewer fixes with 72 unit tests, 10 browser tests, 2 intentional mobile skips, and `next build`.
+
+No GitHub PR was opened because no remote is configured in this checkout.
+
 ## Current Build Gate
 
-Current implementation plan:
+The next implementation plan should be Phase 3 paid-tool console settlement. Write/accept that plan before coding it.
 
-- `.thoughts/plans/2026-06-23-casper-gw-phase-2-wallet-readiness-policy.md`
+Phase 3 should likely connect:
 
-Phase 2 should build the wallet readiness and policy path:
+- endpoint-first tool discovery,
+- selected persisted wallet profile and effective spend policy,
+- fail-closed policy pre-check,
+- x402 payment payload signing with the current Testnet signer path only where explicitly allowed,
+- CSPR.cloud facilitator verify/settle,
+- four-layer receipt persistence,
+- public explorer proof display.
 
-- persisted wallet profiles,
-- real CSPR.cloud readiness evidence for CSPR gas + WCSPR balance,
-- spend policy persistence and fail-closed evaluation,
-- minimal UI wiring for wallet registration, readiness refresh, and policy saving,
-- no fake funded state and no production custody claim.
-
-Do not start broad design work, production custody, CSPR.click signing, or paid-console settlement work as part of Phase 2 unless Abu explicitly changes scope.
+Do not start broad design work, production custody, CSPR.click signing, Mainnet, generic send policy, registry/private tools, or new simulated product modes unless Abu explicitly changes scope through the Context Engineering flow.
 
 Historical Phase 0 gate, now satisfied:
 
