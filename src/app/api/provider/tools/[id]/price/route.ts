@@ -31,7 +31,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     return NextResponse.json(
       { error: message },
       { status: isOperatorAccessError(error) ? error.status : 400 },
-  );
+    );
+  }
 }
 
 function assertServerPaymentDefaults(body: Record<string, unknown>, config: ReturnType<typeof getRuntimeConfig>) {
@@ -45,5 +46,4 @@ function assertServerPaymentDefaults(body: Record<string, unknown>, config: Retu
   if (config.paymentAsset !== DEFAULT_WCSPR_PACKAGE) throw new Error("provider pricing requires WCSPR");
   if (!config.payeeAccountHash) throw new Error("CASPER_PAYEE_ACCOUNT_HASH is required");
   return config.payeeAccountHash;
-}
 }
