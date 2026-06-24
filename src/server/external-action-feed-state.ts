@@ -15,6 +15,13 @@ export interface StoredExternalActionFeedCacheEntry {
   staleUntil: number;
 }
 
+export interface ExternalActionFeedPruneResult {
+  cacheEntriesDeleted: number;
+  databaseConfigured: boolean;
+  prunedAt: Date;
+  rateBucketsDeleted: number;
+}
+
 export function externalActionFeedCacheKey(input: ExternalActionFeedInput) {
   const normalized = normalizeExternalActionFeedInput(input);
   const config = getRuntimeConfig();
@@ -86,11 +93,31 @@ export async function deleteSharedExternalActionFeedCache(input: ExternalActionF
     .where(eq(externalActionFeedCacheEntries.cacheKey, externalActionFeedCacheKey(input)));
 }
 
-export async function pruneSharedExternalActionFeedState(now = Date.now()) {
-  if (!hasDatabaseUrl()) return;
+export async function pruneSharedExternalActionFeedState(now = Date.now()): Promise<ExternalActionFeedPruneResult> {
+  if (!hasDatabaseUrl()) {
+    return {
+      cacheEntriesDeleted: 0,
+      databaseConfigured: false,
+      prunedAt: new Date(now),
+      rateBucketsDeleted: 0,
+    };
+  }
   const cutoff = new Date(now);
-  await getDb().delete(externalActionFeedCacheEntries).where(lt(externalActionFeedCacheEntries.staleUntil, cutoff));
-  await getDb().delete(externalActionFeedRateBuckets).where(lt(externalActionFeedRateBuckets.resetAt, cutoff));
+  const cacheRows = await getDb()
+    .delete(externalActionFeedCacheEntries)
+    .where(lt(externalActionFeedCacheEntries.staleUntil, cutoff))
+    .returning({ cacheKey: externalActionFeedCacheEntries.cacheKey });
+  const bucketRows = await getDb()
+    .delete(externalActionFeedRateBuckets)
+    .where(lt(externalActionFeedRateBuckets.resetAt, cutoff))
+    .returning({ identityHash: externalActionFeedRateBuckets.identityHash });
+
+  return {
+    cacheEntriesDeleted: cacheRows.length,
+    databaseConfigured: true,
+    prunedAt: cutoff,
+    rateBucketsDeleted: bucketRows.length,
+  };
 }
 
 export async function checkSharedExternalActionFeedRateLimit(
