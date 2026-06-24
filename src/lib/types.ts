@@ -165,14 +165,18 @@ export interface ExternalAccountHistoryResult {
   source: ExternalAccountHistorySource;
 }
 
-export type ExternalActionFeedSource = "cspr_cloud" | "unconfigured" | "upstream_error";
+export type ExternalActionFeedSource = "cspr_cloud" | "rate_limited" | "unconfigured" | "upstream_error";
+export interface ExternalActionFeedCacheMeta { generatedAt: string; status: "hit" | "miss" | "stale"; ttlSeconds: number; }
+export interface ExternalActionFeedRateLimitMeta { limited: boolean; remaining: number; resetAt: string; }
 
 export interface ExternalActionFeedResult {
+  cache?: ExternalActionFeedCacheMeta;
   detail?: ReceiptDetail;
   matches: ReceiptDetail[];
   message: string;
   network: string;
   pagination: ReceiptHistoryPagination;
+  rateLimit?: ExternalActionFeedRateLimitMeta;
   source: ExternalActionFeedSource;
 }
 

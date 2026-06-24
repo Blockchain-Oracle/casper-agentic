@@ -15,6 +15,12 @@ vi.mock("@/server/cspr-cloud", () => ({
   }),
 }));
 
+import {
+  buildRateLimitedFeed,
+  checkExternalActionFeedRateLimit,
+  getCachedExternalActionFeed,
+  resetExternalActionFeedRuntimeState,
+} from "@/server/external-action-feed-cache";
 import { getExternalActionFeed, normalizeExternalActionFeedInput } from "@/server/external-action-feed";
 
 const deployHash = "a27e519e06c56b9132768683b3eeae0fdda5f5b2e85a8a4034adbfb67b16352e";
@@ -22,6 +28,7 @@ const paymentAsset = "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetExternalActionFeedRuntimeState();
   mocks.getRuntimeConfig.mockReturnValue({
     casperNetwork: "casper:casper-test",
     csprCloudApiKey: "test-key",
@@ -93,6 +100,48 @@ describe("external action feed", () => {
     expect(result.source).toBe("unconfigured");
     expect(result.message).toContain("CSPR_CLOUD_API_KEY");
     expect(mocks.getTokenActionsPage).not.toHaveBeenCalled();
+  });
+
+  it("serves repeated public feed reads from cache", async () => {
+    const first = await getCachedExternalActionFeed({ page: 1, pageSize: 4 }, { now: 1_000 });
+    const second = await getCachedExternalActionFeed({ page: 1, pageSize: 4 }, { now: 2_000 });
+
+    expect(mocks.getTokenActionsPage).toHaveBeenCalledTimes(1);
+    expect(first.cache).toMatchObject({ status: "miss", ttlSeconds: 30 });
+    expect(second.cache).toMatchObject({ generatedAt: first.cache?.generatedAt, status: "hit" });
+    expect(second.matches[0]?.receipt.hash).toBe(deployHash);
+  });
+
+  it("serves stale cached proof when CSPR.cloud becomes unavailable", async () => {
+    await getCachedExternalActionFeed({ page: 1, pageSize: 4 }, { now: 1_000 });
+    mocks.getTokenActionsPage.mockRejectedValue(new Error("upstream down"));
+
+    const result = await getCachedExternalActionFeed({ page: 1, pageSize: 4 }, { now: 32_000 });
+
+    expect(mocks.getTokenActionsPage).toHaveBeenCalledTimes(2);
+    expect(result.source).toBe("cspr_cloud");
+    expect(result.cache?.status).toBe("stale");
+    expect(result.message).toContain("Cached because CSPR.cloud is currently unavailable");
+  });
+
+  it("tracks in-process rate limits without exposing client identity", () => {
+    const first = checkExternalActionFeedRateLimit("203.0.113.10", { limit: 1, now: 1_000, windowMs: 60_000 });
+    const second = checkExternalActionFeedRateLimit("203.0.113.10", { limit: 1, now: 2_000, windowMs: 60_000 });
+    const other = checkExternalActionFeedRateLimit("203.0.113.11", { limit: 1, now: 2_000, windowMs: 60_000 });
+
+    expect(first).toMatchObject({ allowed: true, remaining: 0 });
+    expect(second).toMatchObject({ allowed: false, remaining: 0 });
+    expect(other).toMatchObject({ allowed: true, remaining: 0 });
+    expect(JSON.stringify(second)).not.toContain("203.0.113.10");
+  });
+
+  it("builds an explicit rate-limited feed when no cached proof is available", () => {
+    const result = buildRateLimitedFeed({ page: 2, pageSize: 4 });
+
+    expect(result.source).toBe("rate_limited");
+    expect(result.matches).toEqual([]);
+    expect(result.pagination).toMatchObject({ page: 2, pageSize: 4 });
+    expect(result.message).toContain("rate limit");
   });
 });
 

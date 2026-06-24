@@ -13,6 +13,7 @@ interface ExternalActionFeedBarProps {
 export function ExternalActionFeedBar({ active, feed, loading, onOpen, onNext, onPrevious }: ExternalActionFeedBarProps) {
   const pagination = feed?.pagination;
   const isConfigured = feed?.source === "cspr_cloud";
+  const cacheLabel = feed?.cache ? `cache ${feed.cache.status}` : null;
   const label = isConfigured && pagination
     ? `${pagination.totalCount} WCSPR actions - page ${pagination.page} of ${pagination.totalPages}`
     : feed?.message ?? "Browse configured WCSPR token actions from CSPR.cloud.";
@@ -22,6 +23,8 @@ export function ExternalActionFeedBar({ active, feed, loading, onOpen, onNext, o
       <div className="buttonRow">
         <Chip tone={active && isConfigured ? "primary" : "neutral"}>External WCSPR feed</Chip>
         <Chip tone={feed && !isConfigured ? "warn" : "neutral"}>{loading ? "Loading external feed" : label}</Chip>
+        {cacheLabel ? <Chip tone={feed?.cache?.status === "stale" ? "warn" : "neutral"}>{cacheLabel}</Chip> : null}
+        {feed?.rateLimit?.limited ? <Chip tone="warn">rate limited</Chip> : null}
         {!active ? (
           <button className="secondaryButton" disabled={loading} onClick={onOpen} type="button">
             Open external WCSPR feed

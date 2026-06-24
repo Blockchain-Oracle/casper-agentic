@@ -14,6 +14,7 @@ test("public explorer browses external WCSPR feed as proof-only", async ({ page 
   await page.getByRole("button", { name: "Open external WCSPR feed" }).click();
 
   await expect(page.getByText("6 WCSPR actions - page 1 of 2")).toBeVisible();
+  await expect(page.getByText("cache hit")).toBeVisible();
   await expect(page.getByText("External WCSPR action", { exact: true })).toBeVisible();
   await expect(page.getByText("External WCSPR action feed")).toBeVisible();
   await expect(page.getByText("The chain/indexer row proves a configured-token action only.")).toBeVisible();
@@ -55,11 +56,13 @@ function externalFeedResult(page: number) {
     x402Note: "The chain/indexer row proves a configured-token action only.",
   };
   return {
+    cache: { generatedAt: "2026-06-24T10:00:00.000Z", status: "hit", ttlSeconds: 30 },
     detail,
     matches: [detail],
     message: "Resolved 6 external WCSPR actions for the configured payment asset through CSPR.cloud.",
     network: "casper:casper-test",
     pagination: { hasNextPage: page < 2, hasPreviousPage: page > 1, page, pageSize: 4, totalCount: 6, totalPages: 2 },
+    rateLimit: { limited: false, remaining: 29, resetAt: "2026-06-24T10:00:00.000Z" },
     source: "cspr_cloud",
   };
 }

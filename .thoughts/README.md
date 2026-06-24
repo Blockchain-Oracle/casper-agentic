@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified, Phase 7 hosted endpoint settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 8 public explorer history pagination is locally implemented, reviewed, and verified, Phase 9 external account-history pagination is locally implemented, reviewed, and CI-verified, Phase 10 public WCSPR action feed browsing is locally implemented and CI-verified, Phase 11 public-key/CSPR.name account search is locally implemented and CI-verified, and Phase 12 hosted endpoint connection-pack polish is locally implemented, reviewed, and CI-verified. Do not jump into broad UI redesign or production custody.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified, Phase 7 hosted endpoint settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 8 public explorer history pagination is locally implemented, reviewed, and verified, Phase 9 external account-history pagination is locally implemented, reviewed, and CI-verified, Phase 10 public WCSPR action feed browsing is locally implemented and CI-verified, Phase 11 public-key/CSPR.name account search is locally implemented and CI-verified, Phase 12 hosted endpoint connection-pack polish is locally implemented, reviewed, and CI-verified, and Phase 13 public feed cache/rate-limit polish is locally implemented and CI-verified. Do not jump into broad UI redesign or production custody.
 
 The current product shape:
 
@@ -328,9 +328,25 @@ Phase 12 hosted endpoint connection-pack polish was completed locally on 2026-06
 
 No GitHub PR was opened because no remote is configured in this checkout.
 
+## Completed Phase 13 Gate
+
+Phase 13 public WCSPR feed cache/rate-limit polish was completed locally on 2026-06-24.
+
+- Plan: `.thoughts/plans/2026-06-24-casper-gw-phase-13-public-feed-cache-rate-limit.md`
+- Verification audit: `.thoughts/verification/2026-06-24-casper-gw-phase-13-public-feed-cache-rate-limit.md`
+- `/api/explorer/actions` now uses a server-only in-process cache keyed by network, configured payment asset, page, and page size.
+- Fresh cache hits avoid repeated CSPR.cloud calls; stale cached proof can be served when CSPR.cloud is unavailable.
+- The route applies a small in-process per-client rate limit. Rate-limited requests return cached proof when available, otherwise `429` with `source: "rate_limited"`.
+- The route emits `Cache-Control`, `x-casper-gw-feed-cache`, `x-casper-gw-rate-limit-remaining`, and `x-casper-gw-rate-limit-reset` headers.
+- The public feed UI shows cache state as metadata only. External rows remain `external_proof` and do not claim gateway/policy/x402 context.
+- Non-spending live smoke returned `cspr_cloud` cache `miss` followed by cache `hit` for the same feed page.
+- `pnpm run ci` passed with 142 unit tests, 18 browser tests, 2 intentional mobile skips, and `next build`.
+
+No GitHub PR was opened because no remote is configured in this checkout.
+
 ## Current Build Gate
 
-The next likely engineering slice is CSPR.click/browser signing planning, static hosted endpoint discovery planning, feed rate-limit/streaming planning, or another Abu-approved Context Engineering slice. Broader explorer indexing beyond the configured WCSPR feed, feed streaming, static x402 discovery, OAuth, and CSPR.click signing still need their own accepted plans.
+The next likely engineering slice is CSPR.click/browser signing planning, static hosted endpoint discovery planning, feed streaming planning, production shared cache/rate-limit hardening, or another Abu-approved Context Engineering slice. Broader explorer indexing beyond the configured WCSPR feed, feed streaming, static x402 discovery, OAuth, production distributed limiting, and CSPR.click signing still need their own accepted plans.
 
 Do not start broad design work, production custody, CSPR.click signing, Mainnet, generic send policy, registry/private tools, or new simulated product modes unless Abu explicitly changes scope through the Context Engineering flow.
 
