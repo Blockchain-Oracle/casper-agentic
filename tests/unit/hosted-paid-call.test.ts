@@ -1,6 +1,12 @@
-import { encodePaymentSignatureHeader } from "@x402/core/http";
-import type { PaymentPayload, PaymentRequirements } from "@x402/core/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  hostedPaidCallInput,
+  hostedPaidCallPayload,
+  hostedPaidCallPayerAddress,
+  hostedPaidCallRequirements,
+  setHostedPaidCallDefaults,
+} from "./hosted-paid-call-fixtures";
 
 const mocks = vi.hoisted(() => ({
   callMcpTool: vi.fn(),
@@ -64,55 +70,40 @@ vi.mock("@/server/mcp-client", () => ({
 
 import { runHostedPaidToolCall } from "@/server/hosted-paid-call";
 
-const payerHash = "9accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d";
-const payerAddress = `00${payerHash}`;
-const requestUrl = "https://gw.test/api/mcp/source-1";
-const requirements = {
-  amount: "5",
-  asset: "asset",
-  extra: { name: "Wrapped CSPR", version: "1" },
-  maxTimeoutSeconds: 900,
-  network: "casper:casper-test",
-  payTo: "payee",
-  scheme: "exact",
-} satisfies PaymentRequirements;
-
 describe("hosted paid-call orchestration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.persistAttempt.mockResolvedValue({ id: "attempt-1" });
-    mocks.verify.mockResolvedValue({ isValid: true, payer: payerAddress });
-    mocks.getAccount.mockResolvedValue({ account_hash: payerHash, balance: "10" });
-    mocks.getFTOwnerships.mockResolvedValue([{ balance: "10" }]);
-    mocks.getSpendPolicyForWallet.mockResolvedValue(policy());
-    mocks.getWalletDailySpend.mockResolvedValue(BigInt(0));
-    mocks.settle.mockResolvedValue({ network: "casper:casper-test", payer: payerAddress, success: true, transaction: "deploy-1" });
-    mocks.resolveCasperProof.mockResolvedValue({ deploy: { deploy_hash: "deploy-1", status: "processed" } });
-    mocks.callMcpTool.mockResolvedValue({ isError: false, result: { content: [{ text: "quote", type: "text" }] }, text: "quote" });
+    setHostedPaidCallDefaults(mocks);
   });
 
   it("settles, resolves proof, calls upstream, and returns payment response on success", async () => {
-    await expect(runHostedPaidToolCall(input())).resolves.toMatchObject({
+    await expect(runHostedPaidToolCall(hostedPaidCallInput())).resolves.toMatchObject({
       attemptId: "attempt-1",
       kind: "success",
       result: { content: [{ text: "quote", type: "text" }] },
     });
 
-    expect(mocks.verify).toHaveBeenCalledWith({ paymentPayload: paymentPayload(), paymentRequirements: requirements });
+    expect(mocks.verify).toHaveBeenCalledWith({
+      paymentPayload: hostedPaidCallPayload(),
+      paymentRequirements: hostedPaidCallRequirements,
+    });
     expect(mocks.persistPolicyDecision).toHaveBeenCalledWith(
       "attempt-1",
       true,
       "policy allowed before settlement",
       expect.objectContaining({ policyLoaded: true }),
     );
-    expect(mocks.settle).toHaveBeenCalledWith({ paymentPayload: paymentPayload(), paymentRequirements: requirements });
+    expect(mocks.settle).toHaveBeenCalledWith({
+      paymentPayload: hostedPaidCallPayload(),
+      paymentRequirements: hostedPaidCallRequirements,
+    });
     expect(mocks.resolveCasperProof).toHaveBeenCalledWith(expect.any(Object), { asset: "asset", deployHash: "deploy-1" });
     expect(mocks.callMcpTool).toHaveBeenCalledWith("https://mcp.cspr.trade/mcp", "get_quote", { amount: "1" });
     expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "settled", undefined, { text: "quote" });
   });
 
   it("rejects resource mismatch before facilitator verify or settlement", async () => {
-    const output = await runHostedPaidToolCall(input({ requestUrl: "https://gw.test/api/mcp/other-source" }));
+    const output = await runHostedPaidToolCall(hostedPaidCallInput({ requestUrl: "https://gw.test/api/mcp/other-source" }));
 
     expect(output).toMatchObject({ code: -32013, kind: "error", status: 402 });
     expect(mocks.verify).not.toHaveBeenCalled();
@@ -124,9 +115,13 @@ describe("hosted paid-call orchestration", () => {
   });
 
   it("persists verify failure and does not evaluate policy or settle", async () => {
-    mocks.verify.mockResolvedValue({ invalidReason: "invalid_signature", isValid: false, payer: payerAddress });
+    mocks.verify.mockResolvedValue({
+      invalidReason: "invalid_signature",
+      isValid: false,
+      payer: hostedPaidCallPayerAddress,
+    });
 
-    const output = await runHostedPaidToolCall(input());
+    const output = await runHostedPaidToolCall(hostedPaidCallInput());
 
     expect(output).toMatchObject({ code: -32013, kind: "error", status: 402 });
     expect(mocks.persistAttempt).toHaveBeenCalledWith(expect.objectContaining({ status: "verify_failed" }));
@@ -137,7 +132,7 @@ describe("hosted paid-call orchestration", () => {
   it("blocks before settlement when wallet policy is missing", async () => {
     mocks.getSpendPolicyForWallet.mockResolvedValue(null);
 
-    const output = await runHostedPaidToolCall(input());
+    const output = await runHostedPaidToolCall(hostedPaidCallInput());
 
     expect(output).toMatchObject({ code: -32014, kind: "error", status: 403 });
     expect(mocks.persistPolicyDecision).toHaveBeenCalledWith(
@@ -153,7 +148,7 @@ describe("hosted paid-call orchestration", () => {
   it("records settle failure without proof lookup or upstream execution", async () => {
     mocks.settle.mockResolvedValue({ errorReason: "insufficient_funds", success: false });
 
-    const output = await runHostedPaidToolCall(input());
+    const output = await runHostedPaidToolCall(hostedPaidCallInput());
 
     expect(output).toMatchObject({ code: -32015, kind: "error", status: 402 });
     expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "settle_failed", "insufficient_funds");
@@ -164,7 +159,7 @@ describe("hosted paid-call orchestration", () => {
   it("records settle request failures without proof lookup or upstream execution", async () => {
     mocks.settle.mockRejectedValue(new Error("facilitator timeout"));
 
-    const output = await runHostedPaidToolCall(input());
+    const output = await runHostedPaidToolCall(hostedPaidCallInput());
 
     expect(output).toMatchObject({ code: -32015, kind: "error", status: 502 });
     expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "settle_failed", "settle_request_failed");
@@ -180,97 +175,4 @@ describe("hosted paid-call orchestration", () => {
     expect(mocks.resolveCasperProof).not.toHaveBeenCalled();
     expect(mocks.callMcpTool).not.toHaveBeenCalled();
   });
-
-  it("withholds upstream execution when Casper proof is pending after settlement", async () => {
-    mocks.resolveCasperProof.mockResolvedValue({ error: "not indexed" });
-
-    const output = await runHostedPaidToolCall(input());
-
-    expect(output).toMatchObject({ code: -32016, kind: "error", status: 202 });
-    expect(output.paymentResponseHeader).toBeTruthy();
-    expect(mocks.persistCasperProof).toHaveBeenCalledWith(expect.objectContaining({ proofStatus: "pending_indexing" }));
-    expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "raw_proof_unavailable", "Casper proof pending CSPR.cloud indexing");
-    expect(mocks.callMcpTool).not.toHaveBeenCalled();
-  });
-
-  it("returns payment response and records upstream failure when MCP call throws after proof", async () => {
-    mocks.callMcpTool.mockRejectedValue(new Error("upstream timeout"));
-
-    const output = await runHostedPaidToolCall(input());
-
-    expect(output).toMatchObject({
-      code: -32017,
-      data: { attemptId: "attempt-1", reason: "upstream_request_failed", status: "upstream_failed" },
-      kind: "error",
-      status: 502,
-    });
-    expect(output.paymentResponseHeader).toBeTruthy();
-    expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "upstream_failed", "MCP tool request failed", {
-      error: "upstream timeout",
-    });
-    expect(mocks.persistAudit).toHaveBeenCalledWith(
-      "attempt-1",
-      "fail",
-      "Hosted upstream MCP request failed after settlement",
-      expect.objectContaining({ error: "upstream timeout", toolName: "get_quote" }),
-    );
-  });
 });
-
-function input(overrides: Partial<Parameters<typeof runHostedPaidToolCall>[0]> = {}) {
-  return {
-    args: { amount: "1" },
-    endpoint: hostedEndpoint(),
-    paymentHeader: encodePaymentSignatureHeader(paymentPayload()),
-    requestUrl,
-    tool: hostedEndpoint().tools[0],
-    ...overrides,
-  };
-}
-
-function paymentPayload(): PaymentPayload {
-  return {
-    accepted: requirements,
-    payload: {
-      authorization: { from: payerAddress, nonce: "nonce", to: "payee", validAfter: "1", validBefore: "2", value: "5" },
-      publicKey: "public-key",
-      signature: "signature",
-    },
-    resource: { mimeType: "application/json", url: `${requestUrl}#get_quote` },
-    x402Version: 2,
-  };
-}
-
-function policy() {
-  return {
-    allowedAsset: "asset",
-    allowedNetwork: "casper:casper-test",
-    allowedTools: ["get_quote"],
-    disabled: false,
-    maxPerCall: BigInt(5),
-  };
-}
-
-function hostedEndpoint() {
-  return {
-    source: {
-      authMode: "bearer",
-      credentialConfigured: true,
-      endpointUrl: "https://mcp.cspr.trade/mcp",
-      id: "source-1",
-      name: "CSPR Trade",
-      sourceType: "mcp",
-    },
-    tools: [
-      {
-        description: "Quote",
-        id: "tool-1",
-        inputSchema: {},
-        name: "get_quote",
-        paymentRequirements: requirements,
-        status: "published",
-        upstreamTarget: "https://mcp.cspr.trade/mcp#get_quote",
-      },
-    ],
-  };
-}

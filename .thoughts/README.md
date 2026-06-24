@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified, Phase 7 hosted endpoint settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 8 public explorer history pagination is locally implemented, reviewed, and verified, Phase 9 external account-history pagination is locally implemented, reviewed, and CI-verified, Phase 10 public WCSPR action feed browsing is locally implemented and CI-verified, Phase 11 public-key/CSPR.name account search is locally implemented and CI-verified, Phase 12 hosted endpoint connection-pack polish is locally implemented, reviewed, and CI-verified, Phase 13 public feed cache/rate-limit polish is locally implemented and CI-verified, Phase 14 authorized hosted endpoint discovery is locally implemented, reviewed, and CI-verified, Phase 15 shared public feed state is locally implemented, reviewed, and CI-verified, Phase 16 feed-state pruning is locally implemented, reviewed, and CI-verified, Phase 17 maintenance failure hardening is locally implemented, reviewed, and CI-verified, and Phase 18 active source size cleanup is locally implemented, reviewed, and CI-verified. Do not jump into broad UI redesign or production custody.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified, Phase 7 hosted endpoint settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 8 public explorer history pagination is locally implemented, reviewed, and verified, Phase 9 external account-history pagination is locally implemented, reviewed, and CI-verified, Phase 10 public WCSPR action feed browsing is locally implemented and CI-verified, Phase 11 public-key/CSPR.name account search is locally implemented and CI-verified, Phase 12 hosted endpoint connection-pack polish is locally implemented, reviewed, and CI-verified, Phase 13 public feed cache/rate-limit polish is locally implemented and CI-verified, Phase 14 authorized hosted endpoint discovery is locally implemented, reviewed, and CI-verified, Phase 15 shared public feed state is locally implemented, reviewed, and CI-verified, Phase 16 feed-state pruning is locally implemented, reviewed, and CI-verified, Phase 17 maintenance failure hardening is locally implemented, reviewed, and CI-verified, Phase 18 active source size cleanup is locally implemented, reviewed, and CI-verified, and Phase 19 test file size cleanup is locally implemented, reviewed, and CI-verified. Do not jump into broad UI redesign or production custody.
 
 The current product shape:
 
@@ -434,9 +434,27 @@ Phase 18 active source size cleanup was completed locally on 2026-06-24.
 
 No GitHub PR was opened because no remote is configured in this checkout.
 
+## Completed Phase 19 Gate
+
+Phase 19 test file size cleanup was completed locally on 2026-06-24.
+
+- Plan: `.thoughts/plans/2026-06-24-casper-gw-phase-19-test-file-size-cleanup.md`
+- Verification audit: `.thoughts/verification/2026-06-24-casper-gw-phase-19-test-file-size-cleanup.md`
+- Oversized unit tests were split into focused test files and fixture helpers:
+  - explorer deploy/account search tests,
+  - hosted endpoint POST fixtures,
+  - hosted paid-call orchestration/post-settlement tests,
+  - live paid-call orchestration/success/policy tests.
+- `pnpm run guard:files` now passes with no warnings.
+- No production source, public route, UI, explorer behavior, receipt behavior, wallet behavior, provider behavior, x402 settlement, registry, sandbox, OAuth, CSPR.click, Mainnet, or custody behavior changed.
+- Independent reviewer `Locke` initially found two coverage-preservation blockers in the moved live paid-call success/proof tests; both were fixed and focused re-review passed with no Blocking or Should-fix findings.
+- `pnpm run ci` passed after reviewer fixes with 153 unit tests, 18 browser tests, 2 intentional mobile skips, and `next build`.
+
+No GitHub PR was opened because no remote is configured in this checkout.
+
 ## Current Build Gate
 
-The next likely engineering slice is CSPR.click/browser signing planning, feed streaming planning, public x402 scanner compatibility planning, deployment scheduler verification, remaining test-file size cleanup, or another Abu-approved Context Engineering slice. Broader explorer indexing beyond the configured WCSPR feed, feed streaming, public x402 scanner compatibility, OAuth, remote deployment scheduling, and CSPR.click signing still need their own accepted plans.
+The next likely engineering slice is CSPR.click/browser signing planning, feed streaming planning, public x402 scanner compatibility planning, deployment scheduler verification, or another Abu-approved Context Engineering slice. Broader explorer indexing beyond the configured WCSPR feed, feed streaming, public x402 scanner compatibility, OAuth, remote deployment scheduling, and CSPR.click signing still need their own accepted plans.
 
 Do not start broad design work, production custody, CSPR.click signing, Mainnet, generic send policy, registry/private tools, or new simulated product modes unless Abu explicitly changes scope through the Context Engineering flow.
 

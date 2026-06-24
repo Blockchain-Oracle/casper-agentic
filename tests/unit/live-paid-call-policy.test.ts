@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   expectNoLivePayment,
   livePaidCallInput,
+  livePaidCallPayerHash,
+  livePaidCallStoredPolicy,
   setLivePaidCallDefaults,
 } from "./live-paid-call-fixtures";
 
@@ -51,11 +53,7 @@ vi.mock("@/server/env", () => ({
 
 vi.mock("@/server/x402-facilitator", () => ({
   X402FacilitatorClient: vi.fn().mockImplementation(function X402FacilitatorClient() {
-    return {
-      settle: mocks.settle,
-      supported: mocks.supported,
-      verify: mocks.verify,
-    };
+    return { settle: mocks.settle, supported: mocks.supported, verify: mocks.verify };
   }),
 }));
 
@@ -101,55 +99,63 @@ vi.mock("@/server/x402-payment", () => ({
 
 import { runLivePaidToolCall } from "@/server/live-paid-call";
 
-describe("live paid-call orchestration", () => {
+describe("live paid-call policy guards", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
     setLivePaidCallDefaults(mocks);
   });
 
-  it("blocks before payment when no persisted spend policy exists", async () => {
-    mocks.getSpendPolicyForWallet.mockResolvedValue(null);
+  it("requires a selected wallet and args before payment", async () => {
+    await expect(runLivePaidToolCall(livePaidCallInput({ walletId: "" }))).rejects.toThrow("walletId is required");
+    await expect(
+      runLivePaidToolCall(livePaidCallInput({ args: undefined as unknown as Record<string, unknown> })),
+    ).rejects.toThrow("args object is required");
 
-    await expect(runLivePaidToolCall(livePaidCallInput())).resolves.toMatchObject({ attemptId: "attempt-1", status: "blocked" });
+    expect(mocks.persistAttempt).not.toHaveBeenCalled();
     expectNoLivePayment(mocks);
-    expect(mocks.persistAttempt).toHaveBeenCalledWith(expect.objectContaining({ status: "policy_pending" }));
-    expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "blocked", "no active spend policy for wallet");
   });
 
-  it("fails closed when the selected wallet is not the configured signer", async () => {
-    const otherHash = "1accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d";
-    mocks.getAgentWalletRecord.mockResolvedValue({
-      accountHash: otherHash,
-      id: "wallet-2",
-      label: "Browser wallet",
-      signingMode: "browser-wallet",
-    });
-
-    await expect(
-      runLivePaidToolCall({
-        ...livePaidCallInput(),
-        walletId: "wallet-2",
-      }),
-    ).resolves.toMatchObject({
-      attemptId: "attempt-1",
-      status: "blocked",
-    });
-
-    expect(mocks.persistAttempt).toHaveBeenCalledWith(
-      expect.objectContaining({
-        redactedInput: { amount: "10", token_in: "CSPR", token_out: "WCSPR", type: "exact_in" },
-        status: "policy_pending",
-        walletAccountHash: otherHash,
-      }),
+  it("rejects custom paid endpoints before payment requirements are built", async () => {
+    await expect(runLivePaidToolCall(livePaidCallInput({ endpointUrl: "https://example.com/mcp" }))).rejects.toThrow(
+      "Phase 3 paid execution is limited to the configured MCP endpoint",
     );
-    expect(mocks.persistPolicyDecision).toHaveBeenCalledWith(
-      "attempt-1",
-      false,
-      "selected wallet is not the configured Testnet signer",
-      expect.objectContaining({ selectedWalletId: "wallet-2", signingMode: "browser-wallet" }),
-    );
+
+    expect(mocks.discoverMcpTools).not.toHaveBeenCalled();
+    expect(mocks.persistAttempt).not.toHaveBeenCalled();
     expectNoLivePayment(mocks);
-    expect(mocks.getAccount).not.toHaveBeenCalled();
+  });
+
+  it("blocks before payment when persisted max-per-call is exceeded", async () => {
+    mocks.getSpendPolicyForWallet.mockResolvedValue(livePaidCallStoredPolicy({ maxPerCall: BigInt(4) }));
+
+    await expect(runLivePaidToolCall(livePaidCallInput())).resolves.toMatchObject({ status: "blocked" });
+
+    expectNoLivePayment(mocks);
+    expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "blocked", "payment amount exceeds max per call");
+  });
+
+  it("blocks before payment when daily policy headroom is exceeded", async () => {
+    mocks.getSpendPolicyForWallet.mockResolvedValue(livePaidCallStoredPolicy({ dailyLimit: BigInt(5) }));
+    mocks.getWalletDailySpend.mockResolvedValue(BigInt(1));
+
+    await expect(runLivePaidToolCall(livePaidCallInput())).resolves.toMatchObject({ status: "blocked" });
+
+    expect(mocks.getWalletDailySpend).toHaveBeenCalledWith(livePaidCallPayerHash, "asset", "casper:casper-test");
+    expectNoLivePayment(mocks);
+    expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "blocked", "daily limit exceeded");
+  });
+
+  it("does not create a proof-pending receipt if policy evaluation fails after attempt insert", async () => {
+    mocks.getSpendPolicyForWallet.mockResolvedValue(livePaidCallStoredPolicy({ dailyLimit: BigInt(5) }));
+    mocks.getWalletDailySpend.mockRejectedValue(new Error("daily spend unavailable"));
+
+    await expect(runLivePaidToolCall(livePaidCallInput())).rejects.toThrow("daily spend unavailable");
+
+    expect(mocks.persistAttempt).toHaveBeenCalledWith(expect.objectContaining({ status: "policy_pending" }));
+    expect(mocks.persistAttempt).not.toHaveBeenCalledWith(expect.objectContaining({ status: "raw_proof_unavailable" }));
+    expect(mocks.persistPolicyDecision).not.toHaveBeenCalled();
+    expect(mocks.updateAttemptStatus).not.toHaveBeenCalled();
+    expectNoLivePayment(mocks);
   });
 });

@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  expectNoLivePayment,
+  livePaidCallEndpointUrl,
   livePaidCallInput,
+  livePaidCallPayerHash,
   setLivePaidCallDefaults,
 } from "./live-paid-call-fixtures";
 
@@ -51,11 +52,7 @@ vi.mock("@/server/env", () => ({
 
 vi.mock("@/server/x402-facilitator", () => ({
   X402FacilitatorClient: vi.fn().mockImplementation(function X402FacilitatorClient() {
-    return {
-      settle: mocks.settle,
-      supported: mocks.supported,
-      verify: mocks.verify,
-    };
+    return { settle: mocks.settle, supported: mocks.supported, verify: mocks.verify };
   }),
 }));
 
@@ -101,55 +98,50 @@ vi.mock("@/server/x402-payment", () => ({
 
 import { runLivePaidToolCall } from "@/server/live-paid-call";
 
-describe("live paid-call orchestration", () => {
+describe("live paid-call success and proof handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
     setLivePaidCallDefaults(mocks);
   });
 
-  it("blocks before payment when no persisted spend policy exists", async () => {
-    mocks.getSpendPolicyForWallet.mockResolvedValue(null);
+  it("uses selected endpoint, wallet, tool, and args for an allowed paid call", async () => {
+    await expect(runLivePaidToolCall(livePaidCallInput())).resolves.toMatchObject({ attemptId: "attempt-1", status: "settled" });
 
-    await expect(runLivePaidToolCall(livePaidCallInput())).resolves.toMatchObject({ attemptId: "attempt-1", status: "blocked" });
-    expectNoLivePayment(mocks);
-    expect(mocks.persistAttempt).toHaveBeenCalledWith(expect.objectContaining({ status: "policy_pending" }));
-    expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "blocked", "no active spend policy for wallet");
+    expect(mocks.getAgentWalletRecord).toHaveBeenCalledWith("wallet-1");
+    expect(mocks.discoverMcpTools).toHaveBeenCalledWith(livePaidCallEndpointUrl);
+    expect(mocks.getSpendPolicyForWallet).toHaveBeenCalledWith(livePaidCallPayerHash);
+    expect(mocks.getWalletDailySpend).not.toHaveBeenCalled();
+    expect(mocks.createCasperPaymentPayload).toHaveBeenCalledWith(expect.any(Object), `${livePaidCallEndpointUrl}#get_quote`);
+    expect(mocks.callMcpTool).toHaveBeenCalledWith(livePaidCallEndpointUrl, "get_quote", {
+      amount: "10",
+      token_in: "CSPR",
+      token_out: "WCSPR",
+      type: "exact_in",
+    });
   });
 
-  it("fails closed when the selected wallet is not the configured signer", async () => {
-    const otherHash = "1accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d";
-    mocks.getAgentWalletRecord.mockResolvedValue({
-      accountHash: otherHash,
-      id: "wallet-2",
-      label: "Browser wallet",
-      signingMode: "browser-wallet",
-    });
+  it("records proof-pending when CSPR.cloud deploy indexing lags after settlement", async () => {
+    vi.stubEnv("CASPER_PROOF_LOOKUP_ATTEMPTS", "1");
+    mocks.getDeploy.mockRejectedValue(new Error("CSPR.cloud /deploys/deploy-1 failed with 404"));
 
-    await expect(
-      runLivePaidToolCall({
-        ...livePaidCallInput(),
-        walletId: "wallet-2",
-      }),
-    ).resolves.toMatchObject({
+    await expect(runLivePaidToolCall(livePaidCallInput())).resolves.toMatchObject({ attemptId: "attempt-1", status: "raw_proof_unavailable" });
+
+    expect(mocks.persistCasperProof).toHaveBeenCalledWith({
       attemptId: "attempt-1",
-      status: "blocked",
+      deployHash: "deploy-1",
+      explorerUrl: "https://testnet.cspr.live/deploy/deploy-1",
+      proofStatus: "pending_indexing",
     });
-
-    expect(mocks.persistAttempt).toHaveBeenCalledWith(
-      expect.objectContaining({
-        redactedInput: { amount: "10", token_in: "CSPR", token_out: "WCSPR", type: "exact_in" },
-        status: "policy_pending",
-        walletAccountHash: otherHash,
-      }),
-    );
-    expect(mocks.persistPolicyDecision).toHaveBeenCalledWith(
+    expect(mocks.updateAttemptStatus).toHaveBeenCalledWith(
       "attempt-1",
-      false,
-      "selected wallet is not the configured Testnet signer",
-      expect.objectContaining({ selectedWalletId: "wallet-2", signingMode: "browser-wallet" }),
+      "raw_proof_unavailable",
+      "Casper proof pending CSPR.cloud indexing",
     );
-    expectNoLivePayment(mocks);
-    expect(mocks.getAccount).not.toHaveBeenCalled();
+    expect(mocks.persistAudit).toHaveBeenCalledWith("attempt-1", "warn", "Casper proof pending after settlement", {
+      deployHash: "deploy-1",
+      reason: expect.stringContaining("/deploys/deploy-1"),
+    });
+    expect(mocks.callMcpTool).not.toHaveBeenCalled();
   });
 });

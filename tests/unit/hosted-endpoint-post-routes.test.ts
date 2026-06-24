@@ -1,5 +1,6 @@
-import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { hostedEndpointPostRequest, hostedEndpointPostView } from "./hosted-endpoint-post-fixtures";
 
 const mocks = vi.hoisted(() => ({
   getHostedEndpoint: vi.fn(),
@@ -45,10 +46,10 @@ describe("hosted MCP endpoint POST route", () => {
   it("returns MCP tools/list metadata with x402 payment requirements", async () => {
     const { POST } = await import("@/app/api/mcp/[sourceId]/route");
     mockScopedAccess();
-    mocks.getHostedEndpoint.mockResolvedValue(hostedEndpoint());
+    mocks.getHostedEndpoint.mockResolvedValue(hostedEndpointPostView());
 
     const response = await POST(
-      request({ body: { id: 1, jsonrpc: "2.0", method: "tools/list" } }),
+      hostedEndpointPostRequest({ body: { id: 1, jsonrpc: "2.0", method: "tools/list" } }),
       { params: Promise.resolve({ sourceId: "source-1" }) },
     );
     const body = await response.json();
@@ -72,10 +73,10 @@ describe("hosted MCP endpoint POST route", () => {
     const { decodePaymentRequiredHeader } = await import("@x402/core/http");
     const { POST } = await import("@/app/api/mcp/[sourceId]/route");
     mockScopedAccess();
-    mocks.getHostedEndpoint.mockResolvedValue(hostedEndpoint());
+    mocks.getHostedEndpoint.mockResolvedValue(hostedEndpointPostView());
 
     const response = await POST(
-      request({
+      hostedEndpointPostRequest({
         body: {
           id: "call-1",
           jsonrpc: "2.0",
@@ -115,7 +116,7 @@ describe("hosted MCP endpoint POST route", () => {
   it("delegates signed payment calls and returns payment response headers on success", async () => {
     const { POST } = await import("@/app/api/mcp/[sourceId]/route");
     mockScopedAccess();
-    mocks.getHostedEndpoint.mockResolvedValue(hostedEndpoint());
+    mocks.getHostedEndpoint.mockResolvedValue(hostedEndpointPostView());
     mocks.runHostedPaidToolCall.mockResolvedValue({
       attemptId: "attempt-1",
       kind: "success",
@@ -124,7 +125,7 @@ describe("hosted MCP endpoint POST route", () => {
     });
 
     const response = await POST(
-      request({
+      hostedEndpointPostRequest({
         body: {
           id: "call-1",
           jsonrpc: "2.0",
@@ -147,10 +148,10 @@ describe("hosted MCP endpoint POST route", () => {
     });
     expect(mocks.runHostedPaidToolCall).toHaveBeenCalledWith({
       args: {},
-      endpoint: hostedEndpoint(),
+      endpoint: hostedEndpointPostView(),
       paymentHeader: "base64-payment-payload",
       requestUrl: "https://gw.test/api/mcp/source-1",
-      tool: hostedEndpoint().tools[0],
+      tool: hostedEndpointPostView().tools[0],
     });
   });
 
@@ -158,11 +159,11 @@ describe("hosted MCP endpoint POST route", () => {
     const { HostedPaidCallInputError } = await import("@/server/hosted-paid-call");
     const { POST } = await import("@/app/api/mcp/[sourceId]/route");
     mockScopedAccess();
-    mocks.getHostedEndpoint.mockResolvedValue(hostedEndpoint());
+    mocks.getHostedEndpoint.mockResolvedValue(hostedEndpointPostView());
     mocks.runHostedPaidToolCall.mockRejectedValue(new HostedPaidCallInputError("invalid payment signature header"));
 
     const response = await POST(
-      request({
+      hostedEndpointPostRequest({
         body: {
           id: "call-1",
           jsonrpc: "2.0",
@@ -194,53 +195,4 @@ function mockScopedAccess() {
     scope: { sourceId: "source-1", toolIds: ["tool-1"] },
     sourceId: "source-1",
   });
-}
-
-function request(init: { body: unknown; paymentSignature?: string }) {
-  const headers = new Headers({
-    authorization: "Bearer cgw_test_limited",
-    "content-type": "application/json",
-  });
-  if (init.paymentSignature) headers.set("payment-signature", init.paymentSignature);
-
-  return new NextRequest("https://gw.test/api/mcp/source-1", {
-    body: JSON.stringify(init.body),
-    headers,
-    method: "POST",
-  });
-}
-
-function hostedEndpoint() {
-  return {
-    source: {
-      authMode: "bearer",
-      credentialConfigured: true,
-      endpointUrl: "https://mcp.cspr.trade/mcp",
-      id: "source-1",
-      name: "CSPR Trade",
-      sourceType: "mcp",
-    },
-    tools: [
-      {
-        description: "Quote WCSPR swaps",
-        id: "tool-1",
-        inputSchema: {
-          properties: { amount: { type: "string" } },
-          type: "object",
-        },
-        name: "get_quote",
-        paymentRequirements: {
-          amount: "7500000000",
-          asset: "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e",
-          extra: { decimals: "9", name: "Wrapped CSPR", symbol: "WCSPR", version: "1" },
-          maxTimeoutSeconds: 900,
-          network: "casper:casper-test",
-          payTo: "009accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d",
-          scheme: "exact",
-        },
-        status: "published",
-        upstreamTarget: "https://mcp.cspr.trade/mcp#get_quote",
-      },
-    ],
-  };
 }
