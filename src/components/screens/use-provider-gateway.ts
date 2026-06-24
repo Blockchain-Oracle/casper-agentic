@@ -1,5 +1,4 @@
 "use client";
-
 import { useCallback, useMemo, useState } from "react";
 import {
   DEFAULT_PROVIDER_MCP_URL,
@@ -30,8 +29,8 @@ export function useProviderGateway() {
   const [loading, setLoading] = useState(false);
   const [endpointClientToken, setEndpointClientToken] = useState<string | null>(null);
   const [endpointConnectionUrl, setEndpointConnectionUrl] = useState<string | null>(null);
+  const [endpointDiscoveryUrl, setEndpointDiscoveryUrl] = useState<string | null>(null);
   const [endpointToolCount, setEndpointToolCount] = useState(0);
-
   const publishedTools = useMemo(() => toolRows.filter((tool) => tool.published), [toolRows]);
   const pricedTools = useMemo(() => toolRows.filter((tool) => tool.price !== null), [toolRows]);
   const hostedEndpointPath = providerSource ? `/api/mcp/${providerSource.id}` : "/api/mcp/{sourceId}";
@@ -61,6 +60,7 @@ export function useProviderGateway() {
       setProviderSource(source);
       setEndpointConnectionUrl(null);
       setEndpointClientToken(null);
+      setEndpointDiscoveryUrl(null);
       setEndpointToolCount(0);
       if (source) {
         setSourceName(source.name);
@@ -103,6 +103,7 @@ export function useProviderGateway() {
       );
       setEndpointConnectionUrl(null);
       setEndpointClientToken(null);
+      setEndpointDiscoveryUrl(null);
       setEndpointToolCount(0);
       setProviderSource(discovered.source);
       setToolRows(discovered.tools.map((tool) => toToolRow(tool, discovered.source.name)));
@@ -148,7 +149,7 @@ export function useProviderGateway() {
         { body: { label: "App client config" }, method: "POST", operatorToken },
       );
       const endpoint = await providerRequest<{
-        client: { endpointUrl: string };
+        client: { discovery?: { manifestUrl: string }; endpointUrl: string };
         endpoint: { tools: ProviderTool[] };
       }>(
         `/api/mcp/${providerSource.id}`,
@@ -156,6 +157,7 @@ export function useProviderGateway() {
       );
       setEndpointClientToken(created.token);
       setEndpointConnectionUrl(endpoint.client.endpointUrl);
+      setEndpointDiscoveryUrl(endpoint.client.discovery?.manifestUrl ?? null);
       setEndpointToolCount(endpoint.endpoint.tools.length);
       setStatusMessage(`Generated scoped client access for ${endpoint.endpoint.tools.length} published tools.`);
     } catch (error) {
@@ -169,6 +171,7 @@ export function useProviderGateway() {
     createClientAccess,
     discoverSource,
     endpointClientToken,
+    endpointDiscoveryUrl,
     endpointToolCount,
     errorMessage,
     hostedEndpointUrl,
@@ -193,5 +196,4 @@ export function useProviderGateway() {
     upstreamAuth,
   };
 }
-
 export const defaultProviderPriceAmount = DEFAULT_PROVIDER_PRICE_AMOUNT;

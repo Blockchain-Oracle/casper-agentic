@@ -1,50 +1,56 @@
 import type { EndpointAccessScope } from "./endpoint-access";
-import { discoveryManifestUrl } from "./hosted-discovery";
 import type { HostedEndpointView } from "./hosted-endpoint";
 
-export interface HostedEndpointClientMetadata {
+export interface HostedDiscoveryManifest {
   auth: {
     header: "Authorization";
     scheme: "Bearer";
     tokenPresented: false;
     valueFormat: "Bearer <client-access-token>";
   };
-  discovery: {
-    manifestUrl: string;
+  endpointUrl: string;
+  manifest: {
     scope: "authorized-source";
     visibility: "authorized-source";
+    version: 1;
   };
-  endpointUrl: string;
   payment: {
     challengeHeader: "PAYMENT-REQUIRED";
-    protected: true;
     requestHeader: "PAYMENT-SIGNATURE";
     responseHeader: "PAYMENT-RESPONSE";
     x402Version: 2;
   };
   scope: EndpointAccessScope;
-  tools: Array<{
-    amount: string | null;
-    asset: string | null;
+  source: {
     id: string;
     name: string;
-    network: string | null;
-    payTo: string | null;
-    scheme: string | null;
+    sourceType: string;
+  };
+  tools: Array<{
+    description: string | null;
+    id: string;
+    inputSchema: unknown;
+    name: string;
+    paymentRequirements: unknown;
+    resource: {
+      mimeType: "application/json";
+      serviceName: "Casper GW";
+      url: string;
+    };
   }>;
   transport: {
     jsonRpc: "2.0";
     methods: ["initialize", "tools/list", "tools/call"];
-    strategy: "http-first";
     type: "streamable-http";
   };
 }
 
-export function buildHostedClientMetadata(input: {
+export function buildHostedDiscoveryManifest(input: {
   endpoint: HostedEndpointView;
   requestUrl: string;
   scope: EndpointAccessScope;
-}): HostedEndpointClientMetadata {
+}): HostedDiscoveryManifest {
+  const endpointUrl = hostedEndpointUrl(input.requestUrl);
   return {
     auth: {
       header: "Authorization",
@@ -52,41 +58,52 @@ export function buildHostedClientMetadata(input: {
       tokenPresented: false,
       valueFormat: "Bearer <client-access-token>",
     },
-    discovery: {
-      manifestUrl: discoveryManifestUrl(input.requestUrl),
+    endpointUrl,
+    manifest: {
       scope: "authorized-source",
       visibility: "authorized-source",
+      version: 1,
     },
-    endpointUrl: normalizeAbsoluteUrl(input.requestUrl),
     payment: {
       challengeHeader: "PAYMENT-REQUIRED",
-      protected: true,
       requestHeader: "PAYMENT-SIGNATURE",
       responseHeader: "PAYMENT-RESPONSE",
       x402Version: 2,
     },
     scope: input.scope,
+    source: {
+      id: input.endpoint.source.id,
+      name: input.endpoint.source.name,
+      sourceType: input.endpoint.source.sourceType,
+    },
     tools: input.endpoint.tools.map((tool) => ({
-      amount: tool.paymentRequirements?.amount ?? null,
-      asset: tool.paymentRequirements?.asset ?? null,
+      description: tool.description,
       id: tool.id,
+      inputSchema: tool.inputSchema,
       name: tool.name,
-      network: tool.paymentRequirements?.network ?? null,
-      payTo: tool.paymentRequirements?.payTo ?? null,
-      scheme: tool.paymentRequirements?.scheme ?? null,
+      paymentRequirements: tool.paymentRequirements,
+      resource: {
+        mimeType: "application/json",
+        serviceName: "Casper GW",
+        url: `${endpointUrl}#${tool.name}`,
+      },
     })),
     transport: {
       jsonRpc: "2.0",
       methods: ["initialize", "tools/list", "tools/call"],
-      strategy: "http-first",
       type: "streamable-http",
     },
   };
 }
 
-function normalizeAbsoluteUrl(value: string) {
+export function discoveryManifestUrl(endpointRequestUrl: string) {
+  return `${hostedEndpointUrl(endpointRequestUrl)}/discovery`;
+}
+
+function hostedEndpointUrl(value: string) {
   const url = new URL(value);
   url.hash = "";
   url.search = "";
-  return url.toString();
+  url.pathname = url.pathname.replace(/\/discovery\/?$/, "");
+  return url.toString().replace(/\/$/, "");
 }

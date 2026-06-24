@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { buildHostedDiscoveryManifest } from "@/server/hosted-discovery";
 import { buildHostedClientMetadata } from "@/server/hosted-client-metadata";
 import { paymentRequirementsFromPrice } from "@/server/hosted-endpoint";
 
@@ -62,6 +63,11 @@ describe("hosted endpoint model", () => {
     });
 
     expect(metadata.endpointUrl).toBe("https://gw.test/api/mcp/source-1");
+    expect(metadata.discovery).toEqual({
+      manifestUrl: "https://gw.test/api/mcp/source-1/discovery",
+      scope: "authorized-source",
+      visibility: "authorized-source",
+    });
     expect(metadata.transport).toEqual({
       jsonRpc: "2.0",
       methods: ["initialize", "tools/list", "tools/call"],
@@ -91,4 +97,70 @@ describe("hosted endpoint model", () => {
     expect(JSON.stringify(metadata)).not.toContain("credentialRef");
     expect(JSON.stringify(metadata)).not.toContain("tokenHash");
   });
+
+  it("builds authorized source-specific discovery without upstream credential leakage", () => {
+    const manifest = buildHostedDiscoveryManifest({
+      endpoint: hostedEndpointFixture(),
+      requestUrl: "https://gw.test/api/mcp/source-1/discovery?debug=1",
+      scope: { sourceId: "source-1", toolIds: ["tool-1"] },
+    });
+
+    expect(manifest).toMatchObject({
+      endpointUrl: "https://gw.test/api/mcp/source-1",
+      manifest: { scope: "authorized-source", visibility: "authorized-source", version: 1 },
+      payment: {
+        challengeHeader: "PAYMENT-REQUIRED",
+        requestHeader: "PAYMENT-SIGNATURE",
+        responseHeader: "PAYMENT-RESPONSE",
+        x402Version: 2,
+      },
+      source: { id: "source-1", name: "CSPR Trade" },
+    });
+    expect(manifest.tools[0]).toMatchObject({
+      id: "tool-1",
+      name: "get_quote",
+      resource: {
+        mimeType: "application/json",
+        serviceName: "Casper GW",
+        url: "https://gw.test/api/mcp/source-1#get_quote",
+      },
+    });
+    expect(JSON.stringify(manifest)).not.toContain("credentialRef");
+    expect(JSON.stringify(manifest)).not.toContain("tokenHash");
+    expect(JSON.stringify(manifest)).not.toContain("cgw_test_");
+    expect(JSON.stringify(manifest)).not.toContain("https://mcp.cspr.trade/mcp");
+    expect(JSON.stringify(manifest)).not.toContain("https://mcp.cspr.trade/mcp#get_quote");
+  });
 });
+
+function hostedEndpointFixture() {
+  return {
+    source: {
+      authMode: "bearer",
+      credentialConfigured: true,
+      endpointUrl: "https://mcp.cspr.trade/mcp",
+      id: "source-1",
+      name: "CSPR Trade",
+      sourceType: "mcp",
+    },
+    tools: [
+      {
+        description: "Quote WCSPR swaps",
+        id: "tool-1",
+        inputSchema: { type: "object" },
+        name: "get_quote",
+        paymentRequirements: paymentRequirementsFromPrice({
+          amount: "7500000000",
+          asset: "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e",
+          extra: { decimals: "9", symbol: "WCSPR" },
+          maxTimeoutSeconds: 900,
+          network: "casper:casper-test",
+          payTo: "009accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d",
+          scheme: "exact",
+        }),
+        status: "published",
+        upstreamTarget: "https://mcp.cspr.trade/mcp#get_quote",
+      },
+    ],
+  };
+}

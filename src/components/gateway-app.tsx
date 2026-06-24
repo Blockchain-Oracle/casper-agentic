@@ -121,6 +121,7 @@ export function GatewayApp() {
             clientToken={provider.endpointClientToken}
             configTab={configTab}
             copied={copied}
+            discoveryUrl={provider.endpointDiscoveryUrl}
             endpointToolCount={provider.endpointToolCount}
             endpointUrl={provider.hostedEndpointUrl}
             loading={provider.loading}

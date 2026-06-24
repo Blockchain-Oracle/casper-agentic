@@ -7,6 +7,7 @@ export function EndpointScreen({
   clientToken,
   configTab,
   copied,
+  discoveryUrl,
   endpointToolCount,
   endpointUrl,
   loading,
@@ -18,6 +19,7 @@ export function EndpointScreen({
   clientToken: string | null;
   configTab: ConfigTab;
   copied: string | null;
+  discoveryUrl: string | null;
   endpointToolCount: number;
   endpointUrl: string;
   loading: boolean;
@@ -51,6 +53,7 @@ export function EndpointScreen({
               },
               { key: "transport", value: "Streamable HTTP / JSON-RPC" },
               { key: "payment auth", value: "PAYMENT-SIGNATURE after x402 challenge" },
+              { key: "discovery", value: discoveryUrl ?? "authorized manifest after client access", mono: Boolean(discoveryUrl) },
               { key: "endpoint tools", value: `${endpointToolCount || publishedTools.length} published` },
             ]}
             copiedKey={copied}

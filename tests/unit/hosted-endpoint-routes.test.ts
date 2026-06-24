@@ -121,6 +121,11 @@ describe("hosted endpoint route", () => {
         tokenPresented: false,
         valueFormat: "Bearer <client-access-token>",
       },
+      discovery: {
+        manifestUrl: "https://gw.test/api/mcp/source-1/discovery",
+        scope: "authorized-source",
+        visibility: "authorized-source",
+      },
       endpointUrl: "https://gw.test/api/mcp/source-1",
       payment: {
         challengeHeader: "PAYMENT-REQUIRED",
