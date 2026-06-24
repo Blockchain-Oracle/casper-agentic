@@ -13,7 +13,12 @@ vi.mock("@/server/external-action-feed-state", () => ({
   pruneSharedExternalActionFeedState: mocks.pruneSharedExternalActionFeedState,
 }));
 
-import { formatFeedStatePruneResult, runFeedStatePrune } from "@/server/external-action-feed-maintenance";
+import {
+  FeedStatePruneMaintenanceError,
+  formatFeedStatePruneError,
+  formatFeedStatePruneResult,
+  runFeedStatePrune,
+} from "@/server/external-action-feed-maintenance";
 
 describe("external action feed maintenance", () => {
   beforeEach(() => {
@@ -31,6 +36,10 @@ describe("external action feed maintenance", () => {
     mocks.hasDatabaseUrl.mockReturnValue(false);
 
     await expect(runFeedStatePrune()).rejects.toThrow("DATABASE_URL is required");
+    await expect(runFeedStatePrune()).rejects.toMatchObject({
+      code: "database_url_required",
+      name: "FeedStatePruneMaintenanceError",
+    });
     expect(mocks.pruneSharedExternalActionFeedState).not.toHaveBeenCalled();
   });
 
@@ -79,5 +88,26 @@ describe("external action feed maintenance", () => {
       prunedAt: "2026-06-24T12:00:00.000Z",
       rateBucketsDeleted: 0,
     });
+  });
+
+  it("formats maintenance errors without raw database details", () => {
+    expect(formatFeedStatePruneError(new FeedStatePruneMaintenanceError(
+      "database_url_required",
+      "DATABASE_URL is required to prune shared public feed state.",
+    ))).toEqual({
+      error: "database_url_required",
+      message: "DATABASE_URL is required to prune shared public feed state.",
+    });
+
+    const output = JSON.stringify(formatFeedStatePruneError(new Error(
+      "delete from external_action_feed_cache_entries failed for postgres://user:secret@localhost/db and 203.0.113.10",
+    )));
+
+    expect(output).toContain("feed_state_prune_failed");
+    expect(output).toContain("Failed to prune shared public feed state.");
+    expect(output).not.toContain("delete from");
+    expect(output).not.toContain("postgres://");
+    expect(output).not.toContain("secret");
+    expect(output).not.toContain("203.0.113.10");
   });
 });

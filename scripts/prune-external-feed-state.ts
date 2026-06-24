@@ -1,7 +1,7 @@
 import { loadEnvConfig } from "@next/env";
 
 import { closeDb } from "../src/db/client";
-import { runFeedStatePrune } from "../src/server/external-action-feed-maintenance";
+import { formatFeedStatePruneError, runFeedStatePrune } from "../src/server/external-action-feed-maintenance";
 
 loadEnvConfig(process.cwd());
 
@@ -12,7 +12,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : "feed_state_prune_failed");
+  console.error(JSON.stringify(formatFeedStatePruneError(error), null, 2));
   process.exitCode = 1;
 }).finally(async () => {
   await closeDb();

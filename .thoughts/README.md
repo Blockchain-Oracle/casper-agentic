@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified, Phase 7 hosted endpoint settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 8 public explorer history pagination is locally implemented, reviewed, and verified, Phase 9 external account-history pagination is locally implemented, reviewed, and CI-verified, Phase 10 public WCSPR action feed browsing is locally implemented and CI-verified, Phase 11 public-key/CSPR.name account search is locally implemented and CI-verified, Phase 12 hosted endpoint connection-pack polish is locally implemented, reviewed, and CI-verified, Phase 13 public feed cache/rate-limit polish is locally implemented and CI-verified, Phase 14 authorized hosted endpoint discovery is locally implemented, reviewed, and CI-verified, Phase 15 shared public feed state is locally implemented, reviewed, and CI-verified, and Phase 16 feed-state pruning is locally implemented, reviewed, and CI-verified. Do not jump into broad UI redesign or production custody.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified, Phase 7 hosted endpoint settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 8 public explorer history pagination is locally implemented, reviewed, and verified, Phase 9 external account-history pagination is locally implemented, reviewed, and CI-verified, Phase 10 public WCSPR action feed browsing is locally implemented and CI-verified, Phase 11 public-key/CSPR.name account search is locally implemented and CI-verified, Phase 12 hosted endpoint connection-pack polish is locally implemented, reviewed, and CI-verified, Phase 13 public feed cache/rate-limit polish is locally implemented and CI-verified, Phase 14 authorized hosted endpoint discovery is locally implemented, reviewed, and CI-verified, Phase 15 shared public feed state is locally implemented, reviewed, and CI-verified, Phase 16 feed-state pruning is locally implemented, reviewed, and CI-verified, and Phase 17 maintenance failure hardening is locally implemented, reviewed, and CI-verified. Do not jump into broad UI redesign or production custody.
 
 The current product shape:
 
@@ -397,9 +397,24 @@ Phase 16 feed-state pruning was completed locally on 2026-06-24.
 
 No GitHub PR was opened because no remote is configured in this checkout.
 
+## Completed Phase 17 Gate
+
+Phase 17 maintenance failure hardening was completed locally on 2026-06-24.
+
+- Plan: `.thoughts/plans/2026-06-24-casper-gw-phase-17-maintenance-failure-hardening.md`
+- Verification audit: `.thoughts/verification/2026-06-24-casper-gw-phase-17-maintenance-failure-hardening.md`
+- `pnpm maintenance:prune-feed` still prints aggregate success output only.
+- Missing `DATABASE_URL` still fails loudly, now as structured JSON with `error: "database_url_required"`.
+- Unexpected prune failures are normalized to `error: "feed_state_prune_failed"` and do not print SQL text, connection strings, raw identities, deploy payloads, or secret-looking values.
+- No scheduler semantics, public routes, UI, explorer, receipt, provider, wallet, payment, x402 settlement, registry, sandbox, OAuth, CSPR.click, Mainnet, or custody behavior changed.
+- Independent reviewer `Wegener` reported no Blocking or Should-fix findings.
+- `pnpm run ci` passed with 153 unit tests, 18 browser tests, 2 intentional mobile skips, and `next build`.
+
+No GitHub PR was opened because no remote is configured in this checkout.
+
 ## Current Build Gate
 
-The next likely engineering slice is CSPR.click/browser signing planning, feed streaming planning, public x402 scanner compatibility planning, deployment scheduler verification, maintenance failure-output hardening, or another Abu-approved Context Engineering slice. Broader explorer indexing beyond the configured WCSPR feed, feed streaming, public x402 scanner compatibility, OAuth, remote deployment scheduling, and CSPR.click signing still need their own accepted plans.
+The next likely engineering slice is CSPR.click/browser signing planning, feed streaming planning, public x402 scanner compatibility planning, deployment scheduler verification, or another Abu-approved Context Engineering slice. Broader explorer indexing beyond the configured WCSPR feed, feed streaming, public x402 scanner compatibility, OAuth, remote deployment scheduling, and CSPR.click signing still need their own accepted plans.
 
 Do not start broad design work, production custody, CSPR.click signing, Mainnet, generic send policy, registry/private tools, or new simulated product modes unless Abu explicitly changes scope through the Context Engineering flow.
 
