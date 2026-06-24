@@ -128,3 +128,21 @@ export const auditEvents = pgTable("audit_events", {
   metadata: jsonb("metadata").default({}).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const externalActionFeedCacheEntries = pgTable("external_action_feed_cache_entries", {
+  cacheKey: text("cache_key").primaryKey(),
+  network: text("network").notNull(),
+  paymentAsset: text("payment_asset").notNull(),
+  page: integer("page").notNull(),
+  pageSize: integer("page_size").notNull(),
+  result: jsonb("result").notNull(),
+  staleUntil: timestamp("stale_until", { withTimezone: true }).notNull(),
+  ...timestamps,
+});
+
+export const externalActionFeedRateBuckets = pgTable("external_action_feed_rate_buckets", {
+  identityHash: text("identity_hash").primaryKey(),
+  count: integer("count").default(0).notNull(),
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+  ...timestamps,
+});

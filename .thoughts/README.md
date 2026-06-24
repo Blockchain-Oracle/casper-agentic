@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified, Phase 7 hosted endpoint settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 8 public explorer history pagination is locally implemented, reviewed, and verified, Phase 9 external account-history pagination is locally implemented, reviewed, and CI-verified, Phase 10 public WCSPR action feed browsing is locally implemented and CI-verified, Phase 11 public-key/CSPR.name account search is locally implemented and CI-verified, Phase 12 hosted endpoint connection-pack polish is locally implemented, reviewed, and CI-verified, Phase 13 public feed cache/rate-limit polish is locally implemented and CI-verified, and Phase 14 authorized hosted endpoint discovery is locally implemented, reviewed, and CI-verified. Do not jump into broad UI redesign or production custody.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified, Phase 7 hosted endpoint settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 8 public explorer history pagination is locally implemented, reviewed, and verified, Phase 9 external account-history pagination is locally implemented, reviewed, and CI-verified, Phase 10 public WCSPR action feed browsing is locally implemented and CI-verified, Phase 11 public-key/CSPR.name account search is locally implemented and CI-verified, Phase 12 hosted endpoint connection-pack polish is locally implemented, reviewed, and CI-verified, Phase 13 public feed cache/rate-limit polish is locally implemented and CI-verified, Phase 14 authorized hosted endpoint discovery is locally implemented, reviewed, and CI-verified, and Phase 15 shared public feed state is locally implemented, reviewed, and CI-verified. Do not jump into broad UI redesign or production custody.
 
 The current product shape:
 
@@ -361,9 +361,29 @@ Phase 14 authorized hosted endpoint discovery was completed locally on 2026-06-2
 
 No GitHub PR was opened because no remote is configured in this checkout.
 
+## Completed Phase 15 Gate
+
+Phase 15 shared public feed state was completed locally on 2026-06-24.
+
+- Plan: `.thoughts/plans/2026-06-24-casper-gw-phase-15-shared-feed-state.md`
+- Verification audit: `.thoughts/verification/2026-06-24-casper-gw-phase-15-shared-feed-state.md`
+- Migration: `drizzle/0002_first_shatterstar.sql`
+- Public WCSPR feed cache entries are now persisted in Postgres when `DATABASE_URL` is available.
+- Public feed rate buckets are now persisted in Postgres by hashed client identity only; raw client IPs are not stored or exposed.
+- The existing in-process cache and limiter remain fallback behavior when Postgres is unavailable or errors.
+- Only successful CSPR.cloud feed results are persisted. Cached/stale responses remain metadata-labeled and do not create Casper GW/x402 proof claims.
+- `pnpm db:generate` and `pnpm db:migrate` passed locally.
+- Non-spending cross-process smoke returned `cache: "miss"` followed by `cache: "hit"` for the same WCSPR page.
+- Non-spending shared rate smoke allowed the first request, blocked the second, and did not expose the raw identity.
+- Independent reviewer `Nash` reported no Blocking or Should-fix findings.
+- `pnpm run ci` passed with 148 unit tests, 18 browser tests, 2 intentional mobile skips, and `next build`.
+- Follow-up: schedule `pruneSharedExternalActionFeedState()` once deployment/runtime scheduling is chosen.
+
+No GitHub PR was opened because no remote is configured in this checkout.
+
 ## Current Build Gate
 
-The next likely engineering slice is CSPR.click/browser signing planning, feed streaming planning, production shared cache/rate-limit hardening, public x402 scanner compatibility planning, or another Abu-approved Context Engineering slice. Broader explorer indexing beyond the configured WCSPR feed, feed streaming, public x402 scanner compatibility, OAuth, production distributed limiting, and CSPR.click signing still need their own accepted plans.
+The next likely engineering slice is CSPR.click/browser signing planning, feed streaming planning, public x402 scanner compatibility planning, scheduled operational pruning, or another Abu-approved Context Engineering slice. Broader explorer indexing beyond the configured WCSPR feed, feed streaming, public x402 scanner compatibility, OAuth, deployment scheduler setup, and CSPR.click signing still need their own accepted plans.
 
 Do not start broad design work, production custody, CSPR.click signing, Mainnet, generic send policy, registry/private tools, or new simulated product modes unless Abu explicitly changes scope through the Context Engineering flow.
 

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     page: request.nextUrl.searchParams.get("page"),
     pageSize: request.nextUrl.searchParams.get("pageSize"),
   };
-  const rateLimit = checkExternalActionFeedRateLimit(clientIdentity(request));
+  const rateLimit = await checkExternalActionFeedRateLimit(clientIdentity(request));
   const result = rateLimit.allowed
     ? await getCachedExternalActionFeed(input)
     : await getCachedExternalActionFeed(input, { fetchOnMiss: false }) ?? buildRateLimitedFeed(input);

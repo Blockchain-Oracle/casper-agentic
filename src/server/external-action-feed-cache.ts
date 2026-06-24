@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import type { ExternalActionFeedResult, ReceiptHistoryPagination } from "@/lib/types";
 
 import { getRuntimeConfig } from "./env";
@@ -8,6 +6,13 @@ import {
   normalizeExternalActionFeedInput,
   type ExternalActionFeedInput,
 } from "./external-action-feed";
+import {
+  checkSharedExternalActionFeedRateLimit,
+  externalActionFeedCacheKey,
+  externalActionFeedRateIdentity,
+  readSharedExternalActionFeedCache,
+  writeSharedExternalActionFeedCache,
+} from "./external-action-feed-state";
 
 const CACHE_TTL_MS = 30_000;
 const STALE_TTL_MS = 5 * 60_000;
@@ -47,43 +52,61 @@ export async function getCachedExternalActionFeed(
   options: { fetchOnMiss?: boolean; now?: number } = {},
 ): Promise<ExternalActionFeedResult | null> {
   const now = options.now ?? Date.now();
-  const key = actionFeedCacheKey(input);
+  const key = externalActionFeedCacheKey(input);
+  const shared = await readSharedCache(input, now);
+  if (shared && now - shared.createdAt <= CACHE_TTL_MS) {
+    return withCache(shared.result, "hit", shared.createdAt);
+  }
+
   const entry = cache.get(key);
   if (entry && now - entry.createdAt <= CACHE_TTL_MS) {
     return withCache(entry.result, "hit", entry.createdAt);
   }
   if (options.fetchOnMiss === false) {
-    return entry && now <= entry.staleUntil ? withCache(entry.result, "stale", entry.createdAt) : null;
+    const stale = staleEntry(shared, now) ?? staleEntry(entry, now);
+    return stale ? withCache(stale.result, "stale", stale.createdAt) : null;
   }
 
   const result = await getExternalActionFeed(input);
   if (result.source === "cspr_cloud") {
-    cache.set(key, { createdAt: now, result, staleUntil: now + STALE_TTL_MS });
+    const nextEntry = { createdAt: now, result, staleUntil: now + STALE_TTL_MS };
+    cache.set(key, nextEntry);
+    await writeSharedCache(input, nextEntry);
     return withCache(result, "miss", now);
   }
-  if (result.source === "upstream_error" && entry && now <= entry.staleUntil) {
+  const stale = staleEntry(shared, now) ?? staleEntry(entry, now);
+  if (result.source === "upstream_error" && stale) {
     return withCache(
       {
-        ...entry.result,
-        message: `${entry.result.message} Cached because CSPR.cloud is currently unavailable.`,
+        ...stale.result,
+        message: `${stale.result.message} Cached because CSPR.cloud is currently unavailable.`,
       },
       "stale",
-      entry.createdAt,
+      stale.createdAt,
     );
   }
   return withCache(result, "miss", now);
 }
 
-export function checkExternalActionFeedRateLimit(
+export async function checkExternalActionFeedRateLimit(
   identity: string,
   options: { limit?: number; now?: number; windowMs?: number } = {},
-): ExternalActionFeedRateLimit {
+): Promise<ExternalActionFeedRateLimit> {
+  const shared = await checkSharedRateLimit(identity, options);
+  if (shared) return shared;
+  return checkMemoryRateLimit(identity, options);
+}
+
+export function checkMemoryRateLimit(
+  identity: string,
+  options: { limit?: number; now?: number; windowMs?: number } = {},
+) {
   const limit = options.limit ?? RATE_LIMIT_MAX;
   const now = options.now ?? Date.now();
   const windowMs = options.windowMs ?? RATE_LIMIT_WINDOW_MS;
   if (limit <= 0) return { allowed: true, remaining: 0, resetAt: new Date(now + windowMs) };
 
-  const key = rateIdentity(identity);
+  const key = externalActionFeedRateIdentity(identity);
   const current = rateBuckets.get(key);
   const bucket = current && current.resetAt > now ? current : { count: 0, resetAt: now + windowMs };
   if (bucket.count >= limit) {
@@ -113,17 +136,6 @@ export function resetExternalActionFeedRuntimeState() {
   rateBuckets.clear();
 }
 
-function actionFeedCacheKey(input: ExternalActionFeedInput) {
-  const normalized = normalizeExternalActionFeedInput(input);
-  const config = getRuntimeConfig();
-  return [
-    config.casperNetwork,
-    config.paymentAsset.toLowerCase(),
-    normalized.page,
-    normalized.pageSize,
-  ].join(":");
-}
-
 function withCache(
   result: ExternalActionFeedResult,
   status: NonNullable<ExternalActionFeedResult["cache"]>["status"],
@@ -139,8 +151,35 @@ function withCache(
   };
 }
 
-function rateIdentity(identity: string) {
-  return createHash("sha256").update(identity || "anonymous").digest("hex");
+function staleEntry(entry: CacheEntry | null | undefined, now: number) {
+  return entry && now <= entry.staleUntil ? entry : null;
+}
+
+async function readSharedCache(input: ExternalActionFeedInput, now: number) {
+  try {
+    return await readSharedExternalActionFeedCache(input, now);
+  } catch {
+    return null;
+  }
+}
+
+async function writeSharedCache(input: ExternalActionFeedInput, entry: CacheEntry) {
+  try {
+    await writeSharedExternalActionFeedCache(input, entry);
+  } catch {
+    // In-process state remains the fallback when Postgres is unavailable.
+  }
+}
+
+async function checkSharedRateLimit(
+  identity: string,
+  options: { limit?: number; now?: number; windowMs?: number },
+) {
+  try {
+    return await checkSharedExternalActionFeedRateLimit(identity, options);
+  } catch {
+    return null;
+  }
 }
 
 function toPagination(page: number, pageSize: number): ReceiptHistoryPagination {

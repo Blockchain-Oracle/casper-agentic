@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getRuntimeConfig: vi.fn(),
   getTokenActionsPage: vi.fn(),
+  checkSharedExternalActionFeedRateLimit: vi.fn(),
+  readSharedExternalActionFeedCache: vi.fn(),
+  writeSharedExternalActionFeedCache: vi.fn(),
 }));
 
 vi.mock("@/server/env", () => ({
@@ -14,6 +17,18 @@ vi.mock("@/server/cspr-cloud", () => ({
     return { getTokenActionsPage: mocks.getTokenActionsPage };
   }),
 }));
+
+vi.mock("@/server/external-action-feed-state", async () => {
+  const actual = await vi.importActual<typeof import("@/server/external-action-feed-state")>(
+    "@/server/external-action-feed-state",
+  );
+  return {
+    ...actual,
+    checkSharedExternalActionFeedRateLimit: mocks.checkSharedExternalActionFeedRateLimit,
+    readSharedExternalActionFeedCache: mocks.readSharedExternalActionFeedCache,
+    writeSharedExternalActionFeedCache: mocks.writeSharedExternalActionFeedCache,
+  };
+});
 
 import {
   buildRateLimitedFeed,
@@ -43,6 +58,9 @@ beforeEach(() => {
     pageCount: 1218,
     pageSize: 4,
   });
+  mocks.checkSharedExternalActionFeedRateLimit.mockResolvedValue(null);
+  mocks.readSharedExternalActionFeedCache.mockResolvedValue(null);
+  mocks.writeSharedExternalActionFeedCache.mockResolvedValue(undefined);
 });
 
 describe("external action feed", () => {
@@ -107,6 +125,7 @@ describe("external action feed", () => {
     const second = await getCachedExternalActionFeed({ page: 1, pageSize: 4 }, { now: 2_000 });
 
     expect(mocks.getTokenActionsPage).toHaveBeenCalledTimes(1);
+    expect(mocks.writeSharedExternalActionFeedCache).toHaveBeenCalledTimes(1);
     expect(first.cache).toMatchObject({ status: "miss", ttlSeconds: 30 });
     expect(second.cache).toMatchObject({ generatedAt: first.cache?.generatedAt, status: "hit" });
     expect(second.matches[0]?.receipt.hash).toBe(deployHash);
@@ -124,10 +143,11 @@ describe("external action feed", () => {
     expect(result.message).toContain("Cached because CSPR.cloud is currently unavailable");
   });
 
-  it("tracks in-process rate limits without exposing client identity", () => {
-    const first = checkExternalActionFeedRateLimit("203.0.113.10", { limit: 1, now: 1_000, windowMs: 60_000 });
-    const second = checkExternalActionFeedRateLimit("203.0.113.10", { limit: 1, now: 2_000, windowMs: 60_000 });
-    const other = checkExternalActionFeedRateLimit("203.0.113.11", { limit: 1, now: 2_000, windowMs: 60_000 });
+  it("falls back to in-process rate limits without exposing client identity", async () => {
+    mocks.checkSharedExternalActionFeedRateLimit.mockRejectedValue(new Error("db down"));
+    const first = await checkExternalActionFeedRateLimit("203.0.113.10", { limit: 1, now: 1_000, windowMs: 60_000 });
+    const second = await checkExternalActionFeedRateLimit("203.0.113.10", { limit: 1, now: 2_000, windowMs: 60_000 });
+    const other = await checkExternalActionFeedRateLimit("203.0.113.11", { limit: 1, now: 2_000, windowMs: 60_000 });
 
     expect(first).toMatchObject({ allowed: true, remaining: 0 });
     expect(second).toMatchObject({ allowed: false, remaining: 0 });
