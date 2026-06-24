@@ -3,6 +3,7 @@ import type { ExternalAccountHistoryResult, ExplorerSearchResult, ExplorerSearch
 import { CsprCloudClient } from "./cspr-cloud";
 import { getRuntimeConfig } from "./env";
 import { getExternalAccountHistory } from "./external-account-history";
+import { isHexHash, parseExplorerQuery, resolveAccountIdentifier } from "./explorer-identifiers";
 import { getReceiptDetail, getReceiptDetailByDeployHash, listReceiptDetailsByWallet } from "./receipt-store";
 
 export interface ExplorerSearchOptions {
@@ -11,9 +12,21 @@ export interface ExplorerSearchOptions {
 }
 
 export async function searchExplorer(rawQuery: string, options: ExplorerSearchOptions = {}): Promise<ExplorerSearchResult> {
-  const parsed = parseQuery(rawQuery);
+  const parsed = parseExplorerQuery(rawQuery);
   const { query } = parsed;
   if (!query) return { message: "Enter a receipt id, deploy hash, or account hash.", query, source: "not_found" };
+
+  if (parsed.kind === "public_key" || parsed.kind === "cspr_name") {
+    const resolved = await resolveAccountIdentifier(parsed);
+    if (resolved.source !== "resolved") return { message: resolved.message, query, source: resolved.source };
+    return (
+      (await searchAccount(resolved.accountHash, options, resolved.message)) ?? {
+        message: `${resolved.message} No Casper GW receipt or external account proof matched that account hash.`,
+        query: resolved.accountHash,
+        source: "not_found",
+      }
+    );
+  }
 
   if (parsed.kind === "receipt" || parsed.kind === "unknown") {
     const receipt = await getReceiptDetail(query);
@@ -34,19 +47,8 @@ export async function searchExplorer(rawQuery: string, options: ExplorerSearchOp
   }
 
   if (parsed.kind !== "deploy") {
-    const accountReceipts = await listReceiptDetailsByWallet(query);
-    const externalAccount = parsed.kind === "account" ? await lookupExternalAccountHistory(query, options) : undefined;
-    if (accountReceipts.length) {
-      return {
-        detail: accountReceipts[0],
-        ...(externalAccount && externalAccount.source !== "not_found" ? { externalAccount } : {}),
-        matches: accountReceipts,
-        message: `Matched ${accountReceipts.length} Casper GW receipt${accountReceipts.length === 1 ? "" : "s"} for this account.`,
-        query,
-        source: "casper_gw_account",
-      };
-    }
-    if (externalAccount) return externalAccountResult(query, externalAccount);
+    const accountResult = await searchAccount(query, options, "", parsed.kind === "account");
+    if (accountResult) return accountResult;
   }
 
   if (parsed.kind !== "account") {
@@ -102,45 +104,57 @@ async function lookupExternalAccountHistory(accountHash: string, options: Explor
   });
 }
 
-function externalAccountResult(query: string, externalAccount: ExternalAccountHistoryResult): ExplorerSearchResult {
+async function searchAccount(
+  accountHash: string,
+  options: ExplorerSearchOptions,
+  messagePrefix = "",
+  includeExternal = true,
+): Promise<ExplorerSearchResult | undefined> {
+  const accountReceipts = await listReceiptDetailsByWallet(accountHash);
+  const externalAccount = includeExternal ? await lookupExternalAccountHistory(accountHash, options) : undefined;
+  const prefix = messagePrefix ? `${messagePrefix} ` : "";
+  if (accountReceipts.length) {
+    return {
+      detail: accountReceipts[0],
+      ...(externalAccount && externalAccount.source !== "not_found" ? { externalAccount } : {}),
+      matches: accountReceipts,
+      message: `${prefix}Matched ${accountReceipts.length} Casper GW receipt${
+        accountReceipts.length === 1 ? "" : "s"
+      } for this account.`,
+      query: accountHash,
+      source: "casper_gw_account",
+    };
+  }
+  if (externalAccount) return externalAccountResult(accountHash, externalAccount, messagePrefix);
+  return undefined;
+}
+
+function externalAccountResult(
+  query: string,
+  externalAccount: ExternalAccountHistoryResult,
+  messagePrefix = "",
+): ExplorerSearchResult {
+  const prefix = messagePrefix ? `${messagePrefix} ` : "";
   if (externalAccount.source === "cspr_cloud") {
     return {
       detail: externalAccount.detail,
       externalAccount,
       matches: externalAccount.matches,
-      message: externalAccount.message,
+      message: `${prefix}${externalAccount.message}`,
       query,
       source: "external_account_proof",
     };
   }
   if (externalAccount.source === "unconfigured") {
-    return { externalAccount, message: externalAccount.message, query, source: "unconfigured" };
+    return { externalAccount, message: `${prefix}${externalAccount.message}`, query, source: "unconfigured" };
   }
   if (externalAccount.source === "upstream_error") {
-    return { externalAccount, message: externalAccount.message, query, source: "upstream_error" };
+    return { externalAccount, message: `${prefix}${externalAccount.message}`, query, source: "upstream_error" };
   }
-  return { externalAccount, message: "No Casper GW receipt or external account proof matched that account hash.", query, source: "not_found" };
-}
-
-function parseQuery(rawQuery: string): { kind: "account" | "deploy" | "receipt" | "unknown"; query: string } {
-  const raw = rawQuery.trim();
-  const match = raw.match(/^(account|wallet|deploy|receipt):(.+)$/i);
-  const kind = match?.[1]?.toLowerCase();
-  const value = (match?.[2] ?? raw).trim();
-  const accountHash = normalizeAccountHash(value);
-  const query = accountHash ?? (isHexHash(value) ? value.toLowerCase() : value);
-  if (kind === "account" || kind === "wallet") return { kind: "account", query };
-  if (kind === "deploy") return { kind: "deploy", query };
-  if (kind === "receipt") return { kind: "receipt", query };
-  if (accountHash && /^account-hash-/i.test(value)) return { kind: "account", query };
-  return { kind: "unknown", query };
-}
-
-function isHexHash(query: string) {
-  return /^[0-9a-f]{64}$/i.test(query);
-}
-
-function normalizeAccountHash(query: string) {
-  const match = query.match(/^account-hash-([0-9a-f]{64})$/i);
-  return match ? match[1].toLowerCase() : undefined;
+  return {
+    externalAccount,
+    message: `${prefix}No Casper GW receipt or external account proof matched that account hash.`,
+    query,
+    source: "not_found",
+  };
 }

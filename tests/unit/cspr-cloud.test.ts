@@ -14,6 +14,24 @@ beforeEach(() => {
 });
 
 describe("CSPR.cloud client", () => {
+  it("uses the documented CSPR.name resolution endpoint", async () => {
+    fetchMock.mockResolvedValueOnce({
+      json: async () => ({ data: { is_primary: true, name: "faucet.cspr", resolved_hash: "account-hash" } }),
+      ok: true,
+    });
+    const client = new CsprCloudClient({
+      csprCloudApiKey: "test-key",
+      csprCloudRestBaseUrl: "https://api.testnet.cspr.cloud",
+    });
+
+    const result = await client.getCsprNameResolution("faucet.cspr");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(new URL(url).pathname).toBe("/cspr-name-resolutions/faucet.cspr");
+    expect(init.headers.authorization).toBe("test-key");
+    expect(result).toMatchObject({ name: "faucet.cspr", resolved_hash: "account-hash" });
+  });
+
   it("uses page_size for paginated token actions", async () => {
     const client = new CsprCloudClient({
       csprCloudApiKey: "test-key",

@@ -66,11 +66,11 @@ export function ExplorerScreen({
             }}
           >
             <label>
-              <div className="fieldLabel">Search receipt id, deploy hash, or account hash</div>
+              <div className="fieldLabel">Search receipt id, deploy hash, account hash, public key, or CSPR.name</div>
               <input
                 className="input"
                 onChange={(event) => onSearchQuery(event.target.value)}
-                placeholder="receipt uuid, deploy hash, account:hash, or wallet:hash"
+                placeholder="receipt uuid, deploy hash, account:hash, public-key:01..., or faucet.cspr"
                 value={searchQuery}
               />
             </label>

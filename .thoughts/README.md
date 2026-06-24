@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified, Phase 7 hosted endpoint settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 8 public explorer history pagination is locally implemented, reviewed, and verified, Phase 9 external account-history pagination is locally implemented, reviewed, and CI-verified, and Phase 10 public WCSPR action feed browsing is locally implemented and CI-verified. Do not jump into broad UI redesign or production custody.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified, Phase 7 hosted endpoint settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 8 public explorer history pagination is locally implemented, reviewed, and verified, Phase 9 external account-history pagination is locally implemented, reviewed, and CI-verified, Phase 10 public WCSPR action feed browsing is locally implemented and CI-verified, and Phase 11 public-key/CSPR.name account search is locally implemented and CI-verified. Do not jump into broad UI redesign or production custody.
 
 The current product shape:
 
@@ -296,9 +296,25 @@ Phase 10 public WCSPR action feed browsing was completed locally on 2026-06-24.
 
 No GitHub PR was opened because no remote is configured in this checkout.
 
+## Completed Phase 11 Gate
+
+Phase 11 account identifier search was completed locally on 2026-06-24.
+
+- Plan: `.thoughts/plans/2026-06-24-casper-gw-phase-11-account-identifier-search.md`
+- Verification audit: `.thoughts/verification/2026-06-24-casper-gw-phase-11-account-identifier-search.md`
+- `/api/explorer/search` now accepts Casper public keys and `.cspr` names in addition to receipt ids, deploy hashes, account hashes, and wallet/account prefixes.
+- Public-key search resolves full Casper public-key hex through CSPR.cloud `/accounts/{public_key}`.
+- CSPR.name search resolves `.cspr` names through CSPR.cloud `/cspr-name-resolutions/{name}` and then loads the resolved account.
+- Resolved accounts reuse existing Casper GW account receipt lookup and CSPR.cloud external account-history proof.
+- External-only identifier results remain `external_proof`; gateway/policy/x402 layers stay unavailable unless a Casper GW receipt exists.
+- Non-spending live smoke resolved the known Testnet payer public key to 5 local Casper GW receipts plus CSPR.cloud account history, and resolved `faucet.cspr` to account `b383c7cc23d18bc1b42406a1b2d29fc8dba86425197b6f553d7fd61375b5e446`.
+- `pnpm run ci` passed with 129 unit tests, 18 browser tests, 2 intentional mobile skips, and `next build`.
+
+No GitHub PR was opened because no remote is configured in this checkout.
+
 ## Current Build Gate
 
-The next likely engineering slice is hosted endpoint client polish, public-key/CSPR.name search planning, CSPR.click/browser signing planning, feed rate-limit/streaming planning, or another Abu-approved Context Engineering slice. Public-key/CSPR.name search, broader explorer indexing beyond the configured WCSPR feed, feed streaming, and CSPR.click signing still need their own accepted plans.
+The next likely engineering slice is hosted endpoint client polish, CSPR.click/browser signing planning, feed rate-limit/streaming planning, or another Abu-approved Context Engineering slice. Broader explorer indexing beyond the configured WCSPR feed, feed streaming, and CSPR.click signing still need their own accepted plans.
 
 Do not start broad design work, production custody, CSPR.click signing, Mainnet, generic send policy, registry/private tools, or new simulated product modes unless Abu explicitly changes scope through the Context Engineering flow.
 

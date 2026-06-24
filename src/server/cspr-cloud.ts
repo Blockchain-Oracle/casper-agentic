@@ -21,8 +21,15 @@ export interface CsprCloudPaginatedResult<T> {
 export interface CsprCloudAccount {
   account_hash: string;
   balance: string;
+  cspr_name?: string | null;
   main_purse_uref: string;
   public_key?: string;
+}
+
+export interface CsprCloudNameResolution {
+  is_primary?: boolean;
+  name: string;
+  resolved_hash: string;
 }
 
 export interface CsprCloudDeploy {
@@ -66,6 +73,10 @@ export class CsprCloudClient {
 
   async getDeploy(deployHash: string) {
     return this.request<CsprCloudDeploy>(`/deploys/${encodeURIComponent(deployHash)}`);
+  }
+
+  async getCsprNameResolution(name: string) {
+    return this.request<CsprCloudNameResolution>(`/cspr-name-resolutions/${encodeURIComponent(name)}`);
   }
 
   async getFTOwnerships(accountIdentifier: string, contractPackageHash: string) {
@@ -120,7 +131,7 @@ export class CsprCloudClient {
     const response = await fetch(`${this.config.csprCloudRestBaseUrl}${path}`, {
       headers: this.headers(),
     });
-    if (!response.ok) throw new Error(`CSPR.cloud ${path} failed with ${response.status}`);
+    if (!response.ok) throw new CsprCloudRequestError(path, response.status);
     const body = (await response.json()) as CsprCloudResponse<T>;
     return body.data;
   }
@@ -129,7 +140,7 @@ export class CsprCloudClient {
     const response = await fetch(`${this.config.csprCloudRestBaseUrl}${path}`, {
       headers: this.headers(),
     });
-    if (!response.ok) throw new Error(`CSPR.cloud ${path} failed with ${response.status}`);
+    if (!response.ok) throw new CsprCloudRequestError(path, response.status);
     const body = (await response.json()) as { data: T[] };
     return body.data;
   }
@@ -138,7 +149,7 @@ export class CsprCloudClient {
     const response = await fetch(`${this.config.csprCloudRestBaseUrl}${path}`, {
       headers: this.headers(),
     });
-    if (!response.ok) throw new Error(`CSPR.cloud ${path} failed with ${response.status}`);
+    if (!response.ok) throw new CsprCloudRequestError(path, response.status);
     return (await response.json()) as CsprCloudPaginatedResponse<T>;
   }
 
@@ -148,5 +159,14 @@ export class CsprCloudClient {
       accept: "application/json",
       authorization: this.config.csprCloudApiKey,
     };
+  }
+}
+
+export class CsprCloudRequestError extends Error {
+  constructor(
+    readonly path: string,
+    readonly status: number,
+  ) {
+    super(`CSPR.cloud ${path} failed with ${status}`);
   }
 }

@@ -26,6 +26,11 @@ vi.mock("@/server/env", () => ({
 }));
 
 vi.mock("@/server/cspr-cloud", () => ({
+  CsprCloudRequestError: class CsprCloudRequestError extends Error {
+    constructor(readonly path: string, readonly status: number) {
+      super(`CSPR.cloud ${path} failed with ${status}`);
+    }
+  },
   CsprCloudClient: vi.fn(function CsprCloudClient() {
     return {
       getAccount: mocks.getAccount,

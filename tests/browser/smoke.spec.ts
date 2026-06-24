@@ -9,7 +9,7 @@ test("public explorer is public and separate from the app shell", async ({ page 
   }
   await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
   await expect(page.getByText("No sign-in required")).toBeVisible();
-  await expect(page.getByLabel("Search receipt id, deploy hash, or account hash")).toBeVisible();
+  await expect(page.getByLabel(/Search receipt id, deploy hash, account hash, public key, or CSPR.name/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Search explorer" })).toBeVisible();
   await expect(page.getByLabel("Filter receipt history")).toBeVisible();
   await expect(page.getByRole("button", { name: "Previous" })).toBeVisible();
@@ -30,7 +30,7 @@ test("public explorer history browsing clears exact lookup state", async ({ page
   await page.goto(`/explorer?receipt=${encodeURIComponent(settledReceiptId)}`);
   await expect(page.getByText(`${settledReceiptId} receipt`)).toBeVisible();
 
-  await page.getByLabel("Search receipt id, deploy hash, or account hash").fill(`receipt:${settledReceiptId}`);
+  await page.getByLabel(/Search receipt id, deploy hash, account hash, public key, or CSPR.name/).fill(`receipt:${settledReceiptId}`);
   await page.getByRole("button", { name: "Search explorer" }).click();
   await expect(page.getByText(`${settledReceiptId} receipt`)).toBeVisible();
 
@@ -52,7 +52,7 @@ test("public explorer pages external account history controls", async ({ page })
   });
 
   await page.goto("/explorer");
-  await page.getByLabel("Search receipt id, deploy hash, or account hash").fill(`account:${accountHash}`);
+  await page.getByLabel(/Search receipt id, deploy hash, account hash, public key, or CSPR.name/).fill(`account:${accountHash}`);
   await page.getByRole("button", { name: "Search explorer" }).click();
 
   await expect(page.getByText("CSPR.cloud account history")).toBeVisible();
