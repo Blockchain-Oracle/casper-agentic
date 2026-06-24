@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Panel, Segmented } from "@/components/screen-primitives";
-import { Chip, Field, KeyValueList } from "@/components/ui";
+import { Panel } from "@/components/screen-primitives";
+import { Field, KeyValueList } from "@/components/ui";
 import { inputFieldsForTool } from "./console-schema";
+import {
+  TestConsoleDiscoveredToolsPanel,
+  TestConsoleEndpointTargetPanel,
+  type ConsoleTarget,
+} from "./test-console-target-panels";
 import { TestConsoleTimeline } from "./test-console-timeline";
 import { usePaidCallConsole } from "./use-paid-call-console";
 import type { ConsolePhase, Receipt, Tool, WalletProfile } from "@/lib/types";
-
-type ConsoleTarget = "hosted" | "custom";
 
 export function TestConsoleScreen({
   endpointUrl,
@@ -73,66 +76,23 @@ export function TestConsoleScreen({
   return (
     <div className="grid two">
       <div className="stack">
-        <Panel title="Endpoint target" action={<Chip tone="signal">Testnet signer gate</Chip>}>
-          <div className="stack">
-            <Segmented<ConsoleTarget>
-              options={[
-                ["hosted", "My hosted endpoint"],
-                ["custom", "Paste MCP/x402 URL"],
-              ]}
-              value={target}
-              onChange={setTarget}
-            />
-            <Field label={target === "hosted" ? "hosted endpoint" : "mcp/x402 endpoint url"}>
-              <input
-                className="input"
-                readOnly={target === "hosted"}
-                onChange={(event) => setEndpointInput(event.target.value)}
-                value={activeEndpointUrl}
-              />
-            </Field>
-            <div className="notice">
-              The selected wallet must match the configured Testnet signer until browser
-              signing is implemented. Mismatches stop before payment.
-            </div>
-            <button className="primaryButton" disabled={busy} onClick={discoverEndpointTools} type="button">
-              Discover endpoint tools
-            </button>
-            <div className="notice">{apiMessage}</div>
-          </div>
-        </Panel>
+        <TestConsoleEndpointTargetPanel
+          activeEndpointUrl={activeEndpointUrl}
+          apiMessage={apiMessage}
+          busy={busy}
+          onDiscover={discoverEndpointTools}
+          onEndpointInputChange={setEndpointInput}
+          onTargetChange={setTarget}
+          target={target}
+        />
 
-        <Panel title="Discovered tools">
-          {!discovered ? (
-            <div className="emptyState">Discover tools before selecting inputs.</div>
-          ) : (
-            <div className="stack tight">
-              {discoveredTools.length ? (
-                discoveredTools.map((tool) => (
-                  <button
-                    className="toolRow"
-                    data-active={tool.name === selectedToolId}
-                    key={tool.name}
-                    onClick={() => setSelectedToolId(tool.name)}
-                    type="button"
-                  >
-                    <div>
-                      <strong className="mono">{tool.name}</strong>
-                      <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
-                        {tool.description ?? "Remote MCP tool"}
-                      </div>
-                    </div>
-                    <Chip tone={apiTools.length ? "signal" : "neutral"}>
-                      {apiTools.length ? "discovered" : "fixture"}
-                    </Chip>
-                  </button>
-                ))
-              ) : (
-                <div className="emptyState">No tools were returned by this endpoint.</div>
-              )}
-            </div>
-          )}
-        </Panel>
+        <TestConsoleDiscoveredToolsPanel
+          discovered={discovered}
+          discoveredTools={discoveredTools}
+          hasApiTools={Boolean(apiTools.length)}
+          onToolSelect={setSelectedToolId}
+          selectedToolId={selectedToolId}
+        />
       </div>
 
       <div className="stack">

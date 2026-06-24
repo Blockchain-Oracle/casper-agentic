@@ -2,8 +2,14 @@ import { CsprCloudClient } from "./cspr-cloud";
 import { normalizeCasperAccountHash } from "./casper-account";
 import { resolveCasperProof } from "./casper-proof";
 import { requireIntegrationConfig } from "./env";
+import {
+  PaidCallInputError,
+  redactLiveInput,
+  requireLivePaidCallInput,
+  type PaidCallInput,
+} from "./live-paid-call-input";
+import { evaluateLivePaidCallPolicy } from "./live-paid-call-policy";
 import { callMcpTool, discoverMcpTools } from "./mcp-client";
-import { evaluateSpendPolicy } from "./policy";
 import {
   persistAttempt,
   persistAudit,
@@ -12,25 +18,12 @@ import {
   persistX402Record,
   updateAttemptStatus,
 } from "./receipt-store";
-import { getSpendPolicyForWallet, getWalletDailySpend } from "./spend-policy-store";
 import { getAgentWalletRecord } from "./wallet-store";
 import { X402FacilitatorClient } from "./x402-facilitator";
 import { buildPaymentRequirements, createCasperPaymentPayload, getConfiguredSignerAddress } from "./x402-payment";
 
-export interface PaidCallInput {
-  args: Record<string, unknown>;
-  endpointUrl: string;
-  toolName: string;
-  walletId: string;
-}
-
-export class PaidCallInputError extends Error {
-  readonly status = 400;
-}
-
-export function isPaidCallInputError(error: unknown): error is PaidCallInputError {
-  return error instanceof PaidCallInputError;
-}
+export { PaidCallInputError, isPaidCallInputError } from "./live-paid-call-input";
+export type { PaidCallInput } from "./live-paid-call-input";
 
 export async function runLivePaidToolCall(input: PaidCallInput) {
   const config = requireIntegrationConfig();
@@ -41,10 +34,7 @@ export async function runLivePaidToolCall(input: PaidCallInput) {
     throw new Error(`CSPR.cloud facilitator does not advertise ${config.casperNetwork} exact support`);
   }
 
-  const endpointUrl = requireText(input.endpointUrl, "endpointUrl");
-  const toolName = requireText(input.toolName, "toolName");
-  const walletId = requireText(input.walletId, "walletId");
-  const args = requireArgs(input.args);
+  const { args, endpointUrl, toolName, walletId } = requireLivePaidCallInput(input);
   if (endpointUrl !== config.mcpUrl) {
     throw new PaidCallInputError("Phase 3 paid execution is limited to the configured MCP endpoint");
   }
@@ -65,7 +55,7 @@ export async function runLivePaidToolCall(input: PaidCallInput) {
     client: "phase-3-console",
     network: paymentRequirements.network,
     providerName: "CSPR.trade MCP",
-    redactedInput: redactInput(args),
+    redactedInput: redactLiveInput(args),
     status: "policy_pending",
     toolName,
     walletAccountHash,
@@ -92,38 +82,14 @@ export async function runLivePaidToolCall(input: PaidCallInput) {
   const assetBalance = BigInt(ownerships[0]?.balance ?? "0");
   const gasBalance = BigInt(account.balance ?? "0");
 
-  const storedPolicy = await getSpendPolicyForWallet(walletAccountHash);
-  const dailySpent = storedPolicy?.dailyLimit
-    ? await getWalletDailySpend(walletAccountHash, config.paymentAsset, config.casperNetwork)
-    : BigInt(0);
-  const policy = storedPolicy
-    ? evaluateSpendPolicy({
-        allowedAsset: storedPolicy.allowedAsset,
-        allowedNetwork: storedPolicy.allowedNetwork,
-        allowedTools: storedPolicy.allowedTools,
-        assetBalance,
-        dailyLimit: storedPolicy.dailyLimit,
-        dailySpent,
-        disabled: storedPolicy.disabled,
-        gasBalance,
-        maxPerCall: storedPolicy.maxPerCall,
-        network: config.casperNetwork,
-        paymentAmount: BigInt(config.paymentAmount),
-        paymentAsset: config.paymentAsset,
-        sessionLimit: storedPolicy.sessionLimit,
-        sessionSpent: BigInt(0),
-        toolName,
-      })
-    : { allowed: false, reason: "no active spend policy for wallet" };
-  await persistPolicyDecision(attempt.id, policy.allowed, policy.reason, {
-    assetBalance: assetBalance.toString(),
-    dailyLimit: storedPolicy?.dailyLimit?.toString(),
-    dailySpent: dailySpent.toString(),
-    gasBalance: gasBalance.toString(),
-    policyLoaded: Boolean(storedPolicy),
-    sessionLimit: storedPolicy?.sessionLimit?.toString(),
+  const { evidence, policy } = await evaluateLivePaidCallPolicy({
+    assetBalance,
+    config,
+    gasBalance,
     toolName,
+    walletAccountHash,
   });
+  await persistPolicyDecision(attempt.id, policy.allowed, policy.reason, evidence);
 
   if (!policy.allowed) {
     await updateAttemptStatus(attempt.id, "blocked", policy.reason);
@@ -215,23 +181,4 @@ export async function runLivePaidToolCall(input: PaidCallInput) {
     toolName,
   });
   return { attemptId: attempt.id, explorerUrl, status: "settled" };
-}
-
-function redactInput(input: Record<string, unknown>) {
-  return Object.fromEntries(
-    Object.entries(input).map(([key, value]) => [key, typeof value === "string" ? value.slice(0, 80) : value]),
-  );
-}
-
-function requireText(value: string | undefined, label: string) {
-  const text = value?.trim();
-  if (!text) throw new PaidCallInputError(`${label} is required`);
-  return text;
-}
-
-function requireArgs(value: Record<string, unknown> | undefined) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new PaidCallInputError("args object is required");
-  }
-  return value;
 }
