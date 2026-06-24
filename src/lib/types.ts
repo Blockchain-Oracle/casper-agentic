@@ -165,6 +165,17 @@ export interface ExternalAccountHistoryResult {
   source: ExternalAccountHistorySource;
 }
 
+export type ExternalActionFeedSource = "cspr_cloud" | "unconfigured" | "upstream_error";
+
+export interface ExternalActionFeedResult {
+  detail?: ReceiptDetail;
+  matches: ReceiptDetail[];
+  message: string;
+  network: string;
+  pagination: ReceiptHistoryPagination;
+  source: ExternalActionFeedSource;
+}
+
 export type ExplorerSearchSource =
   | "casper_gw_account"
   | "casper_gw_receipt"

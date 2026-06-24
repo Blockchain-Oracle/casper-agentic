@@ -1,24 +1,26 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ExternalAccountHistoryBar } from "@/components/explorer/external-account-history-bar";
+import { ExternalActionFeedBar } from "@/components/explorer/external-action-feed-bar";
+import { PublicExplorerHeader } from "@/components/explorer/public-explorer-header";
+import { useExternalActionFeed } from "@/components/explorer/use-external-action-feed";
 import { useReceiptDeepLink } from "@/components/explorer/use-receipt-deep-link";
 import { useExplorerSearch } from "@/components/explorer/use-explorer-search";
 import { useReceiptHistory } from "@/components/explorer/use-receipt-history";
 import { ExplorerScreen, type ExplorerFilter } from "@/components/screens/explorer-screen";
-import { Chip } from "@/components/ui";
 import { receipts } from "@/lib/fixtures";
 import { buildReceiptDetail, receiptById } from "@/lib/receipt-detail";
 
-const RECEIPT_HISTORY_PAGE_SIZE = 4, EXTERNAL_ACCOUNT_PAGE_SIZE = 4;
-type ExplorerViewMode = "history" | "search";
+const RECEIPT_HISTORY_PAGE_SIZE = 4, EXTERNAL_ACCOUNT_PAGE_SIZE = 4, EXTERNAL_FEED_PAGE_SIZE = 4;
+type ExplorerViewMode = "history" | "search" | "external-feed";
 export function PublicExplorerApp() {
   const searchParams = useSearchParams();
   const receiptParam = searchParams.get("receipt");
   const deepLink = useReceiptDeepLink(receiptParam);
   const explorerSearch = useExplorerSearch(EXTERNAL_ACCOUNT_PAGE_SIZE);
+  const externalFeed = useExternalActionFeed(EXTERNAL_FEED_PAGE_SIZE);
   const [selectedReceiptOverride, setSelectedReceiptOverride] = useState<string | null>(null);
   const [explorerFilter, setExplorerFilter] = useState<ExplorerFilter>("all");
   const [historyPage, setHistoryPage] = useState(1);
@@ -40,10 +42,22 @@ export function PublicExplorerApp() {
   const localSearchDetails = searchResult?.matches ?? (searchResult?.detail ? [searchResult.detail] : []);
   const externalDetails =
     searchResult?.source === "casper_gw_account" ? searchResult.externalAccount?.matches ?? [] : [];
-  const activeDetails = searchResult ? [...localSearchDetails, ...externalDetails] : receiptHistory.receipts;
+  const feedResult = viewMode === "external-feed" ? externalFeed.result : null;
+  const feedDetails = feedResult?.matches ?? (feedResult?.detail ? [feedResult.detail] : []);
+  const activeDetails = searchResult
+    ? [...localSearchDetails, ...externalDetails]
+    : feedResult
+      ? feedDetails
+      : receiptHistory.receipts;
   const activeReceiptRows = activeDetails.map((detail) => detail.receipt);
   const selectedReceiptId =
-    selectedReceiptOverride ?? searchResult?.detail?.receipt.id ?? receiptParam ?? receiptRows[0]?.id ?? receipts[0].id;
+    selectedReceiptOverride ??
+    searchResult?.detail?.receipt.id ??
+    feedResult?.detail?.receipt.id ??
+    receiptParam ??
+    activeReceiptRows[0]?.id ??
+    receiptRows[0]?.id ??
+    receipts[0].id;
   const feedReceiptDetail =
     activeDetails.find((detail) => detail.receipt.id === selectedReceiptId) ??
     (deepLink.detail?.receipt.id === selectedReceiptId ? deepLink.detail : undefined) ??
@@ -51,10 +65,10 @@ export function PublicExplorerApp() {
     buildReceiptDetail(receiptById(selectedReceiptId));
   const receiptDetail = selectedReceiptOverride ? feedReceiptDetail : searchResult?.detail ?? feedReceiptDetail;
   const selectedReceipt = receiptDetail.receipt;
-  const filteredReceipts = useMemo(() => {
-    if (!searchResult || explorerFilter === "all") return activeReceiptRows;
-    return activeReceiptRows.filter((receipt) => receipt.status === explorerFilter);
-  }, [activeReceiptRows, explorerFilter, searchResult]);
+  const filteredReceipts =
+    !searchResult || explorerFilter === "all"
+      ? activeReceiptRows
+      : activeReceiptRows.filter((receipt) => receipt.status === explorerFilter);
 
   function selectReceipt(receiptId: string) {
     setSelectedReceiptOverride(receiptId);
@@ -63,18 +77,13 @@ export function PublicExplorerApp() {
   function searchExplorerFirstPage() {
     setViewMode("search");
     setSelectedReceiptOverride(null);
+    externalFeed.clear();
     explorerSearch.searchFirstPage();
   }
 
-  function nextExternalPage() {
-    setSelectedReceiptOverride(null);
-    explorerSearch.nextExternalPage();
-  }
+  function nextExternalPage() { setSelectedReceiptOverride(null); explorerSearch.nextExternalPage(); }
 
-  function previousExternalPage() {
-    setSelectedReceiptOverride(null);
-    explorerSearch.previousExternalPage();
-  }
+  function previousExternalPage() { setSelectedReceiptOverride(null); explorerSearch.previousExternalPage(); }
 
   function changeFilter(filter: ExplorerFilter) {
     beginHistoryBrowse();
@@ -103,6 +112,7 @@ export function PublicExplorerApp() {
   function beginHistoryBrowse() {
     setViewMode("history");
     explorerSearch.clear();
+    externalFeed.clear();
     deepLink.clear();
     setSelectedReceiptOverride(receiptRows[0]?.id ?? receipts[0].id);
   }
@@ -117,50 +127,36 @@ export function PublicExplorerApp() {
     setHistoryPage((page) => Math.max(1, page - 1));
   }
 
+  function openExternalFeed() {
+    setViewMode("external-feed");
+    setExplorerFilter("all");
+    setSelectedReceiptOverride(null);
+    explorerSearch.clear();
+    deepLink.clear();
+    externalFeed.loadFirstPage();
+  }
+
+  function nextExternalFeedPage() { setSelectedReceiptOverride(null); externalFeed.nextPage(); }
+
+  function previousExternalFeedPage() { setSelectedReceiptOverride(null); externalFeed.previousPage(); }
+
   return (
     <main className="app">
-      <header className="topbar">
-        <Link className="brand" href="/">
-          <span className="brandMark" />
-          <span>
-            casper<span className="brandHyphen">-</span>gw
-          </span>
-        </Link>
-        <nav className="nav" aria-label="Public">
-          <Link className="navButton" data-active="true" href="/explorer">
-            <span className="dot" />
-            Explorer
-          </Link>
-          <Link className="navButton" href="/app">
-            <span className="dot" />
-            App
-          </Link>
-        </nav>
-        <span className="networkPill">
-          <span className="dot" style={{ background: "var(--signal)", opacity: 1 }} />
-          Testnet
-        </span>
-      </header>
+      <PublicExplorerHeader receiptSource={receiptHistory.source} />
       <section className="page">
-        <header className="pageHeader">
-          <div className="eyebrow">Public infrastructure</div>
-          <h1>Casper x402 Explorer</h1>
-          <p className="subhead">
-            Public receipt inspection for rich Casper GW records plus external deploy and account proof lookup. External proofs show chain facts only.
-          </p>
-          <div className="buttonRow" style={{ marginTop: 14 }}>
-            <Chip tone={receiptHistory.source === "postgres" ? "primary" : "warn"}>
-              {receiptHistory.source === "postgres" ? "Gateway receipts" : "Sample receipts"}
-            </Chip>
-            <Chip tone="warn">External proof is limited</Chip>
-            <Chip tone="signal">No sign-in required</Chip>
-          </div>
-        </header>
         <ExternalAccountHistoryBar
           history={searchResult?.externalAccount}
           loading={explorerSearch.searching}
           onNext={nextExternalPage}
           onPrevious={previousExternalPage}
+        />
+        <ExternalActionFeedBar
+          active={viewMode === "external-feed"}
+          feed={feedResult}
+          loading={externalFeed.loading}
+          onNext={nextExternalFeedPage}
+          onOpen={openExternalFeed}
+          onPrevious={previousExternalFeedPage}
         />
         <ExplorerScreen
           explorerFilter={explorerFilter}
