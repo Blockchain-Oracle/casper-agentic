@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { buildHostedDiscoveryManifest } from "@/server/hosted-discovery";
 import { buildHostedClientMetadata } from "@/server/hosted-client-metadata";
-import { paymentRequirementsFromPrice } from "@/server/hosted-endpoint";
+import { paymentRequirementsFromPrice, toHostedEndpointPublicView } from "@/server/hosted-endpoint";
 
 describe("hosted endpoint model", () => {
   it("builds Casper x402 requirements from persisted tool pricing", () => {
@@ -130,6 +130,22 @@ describe("hosted endpoint model", () => {
     expect(JSON.stringify(manifest)).not.toContain("cgw_test_");
     expect(JSON.stringify(manifest)).not.toContain("https://mcp.cspr.trade/mcp");
     expect(JSON.stringify(manifest)).not.toContain("https://mcp.cspr.trade/mcp#get_quote");
+  });
+
+  it("redacts upstream source and tool targets from client-facing endpoint views", () => {
+    const view = toHostedEndpointPublicView(hostedEndpointFixture());
+
+    expect(view.source).toEqual({ id: "source-1", name: "CSPR Trade", sourceType: "mcp" });
+    expect(view.tools[0]).toMatchObject({
+      id: "tool-1",
+      name: "get_quote",
+      paymentRequirements: expect.objectContaining({ amount: "7500000000" }),
+    });
+    expect(JSON.stringify(view)).not.toContain("authMode");
+    expect(JSON.stringify(view)).not.toContain("credentialConfigured");
+    expect(JSON.stringify(view)).not.toContain("endpointUrl");
+    expect(JSON.stringify(view)).not.toContain("upstreamTarget");
+    expect(JSON.stringify(view)).not.toContain("https://mcp.cspr.trade/mcp");
   });
 });
 

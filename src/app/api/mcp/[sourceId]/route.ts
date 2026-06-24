@@ -8,6 +8,7 @@ import {
   getHostedEndpoint,
   hostedMcpTools,
   resolveHostedTool,
+  toHostedEndpointPublicView,
 } from "@/server/hosted-endpoint";
 import {
   HostedPaidCallInputError,
@@ -33,10 +34,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ sou
     const endpoint = await getHostedEndpoint(sourceId, access.scope.toolIds);
     return NextResponse.json({
       access,
-      endpoint: {
-        source: endpoint.source,
-        tools: endpoint.tools,
-      },
+      endpoint: toHostedEndpointPublicView(endpoint),
       client: buildHostedClientMetadata({
         endpoint,
         requestUrl: request.url,

@@ -1,5 +1,6 @@
 import type { EndpointAccessScope } from "./endpoint-access";
 import type { HostedEndpointView } from "./hosted-endpoint";
+import { buildX402ScannerCompatibility, type X402ScannerCompatibility } from "./x402-scanner-compat";
 
 export interface HostedDiscoveryManifest {
   auth: {
@@ -20,6 +21,7 @@ export interface HostedDiscoveryManifest {
     responseHeader: "PAYMENT-RESPONSE";
     x402Version: 2;
   };
+  scannerCompatibility: X402ScannerCompatibility;
   scope: EndpointAccessScope;
   source: {
     id: string;
@@ -70,6 +72,7 @@ export function buildHostedDiscoveryManifest(input: {
       responseHeader: "PAYMENT-RESPONSE",
       x402Version: 2,
     },
+    scannerCompatibility: buildX402ScannerCompatibility(input.endpoint),
     scope: input.scope,
     source: {
       id: input.endpoint.source.id,

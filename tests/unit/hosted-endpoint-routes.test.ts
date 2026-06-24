@@ -95,9 +95,13 @@ describe("hosted endpoint route", () => {
       },
       tools: [
         {
+          description: "Quote WCSPR swaps",
           id: "tool-1",
+          inputSchema: { type: "object" },
           name: "get_quote",
           paymentRequirements: { amount: "7500000000", network: "casper:casper-test", scheme: "exact" },
+          status: "published",
+          upstreamTarget: "https://mcp.cspr.trade/mcp#get_quote",
         },
       ],
     });
@@ -114,6 +118,10 @@ describe("hosted endpoint route", () => {
     expect(JSON.stringify(body)).not.toContain("credentialRef");
     expect(JSON.stringify(body)).not.toContain("tokenHash");
     expect(JSON.stringify(body)).not.toContain("cgw_test_once");
+    expect(JSON.stringify(body)).not.toContain("authMode");
+    expect(JSON.stringify(body)).not.toContain("credentialConfigured");
+    expect(JSON.stringify(body)).not.toContain("upstreamTarget");
+    expect(JSON.stringify(body)).not.toContain("https://mcp.cspr.trade/mcp");
     expect(body.client).toMatchObject({
       auth: {
         header: "Authorization",
@@ -145,6 +153,7 @@ describe("hosted endpoint route", () => {
       network: "casper:casper-test",
       scheme: "exact",
     });
+    expect(body.endpoint.source).toEqual({ id: "source-1", name: "CSPR Trade", sourceType: "mcp" });
   });
 
   it("passes limited tool scopes to hosted endpoint metadata", async () => {

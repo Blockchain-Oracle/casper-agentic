@@ -37,6 +37,11 @@ export interface HostedEndpointView {
   tools: HostedEndpointTool[];
 }
 
+export interface HostedEndpointPublicView {
+  source: Pick<HostedEndpointSource, "id" | "name" | "sourceType">;
+  tools: Array<Omit<HostedEndpointTool, "upstreamTarget">>;
+}
+
 export async function getHostedEndpoint(sourceId: string, allowedToolIds?: string[]) {
   const source = await getProviderSourceRecord(sourceId);
   if (!source) throw new Error("hosted endpoint not found");
@@ -81,6 +86,24 @@ export function hostedMcpTools(endpoint: HostedEndpointView) {
     inputSchema: tool.inputSchema,
     name: tool.name,
   }));
+}
+
+export function toHostedEndpointPublicView(endpoint: HostedEndpointView): HostedEndpointPublicView {
+  return {
+    source: {
+      id: endpoint.source.id,
+      name: endpoint.source.name,
+      sourceType: endpoint.source.sourceType,
+    },
+    tools: endpoint.tools.map((tool) => ({
+      description: tool.description,
+      id: tool.id,
+      inputSchema: tool.inputSchema,
+      name: tool.name,
+      paymentRequirements: tool.paymentRequirements,
+      status: tool.status,
+    })),
+  };
 }
 
 export function resolveHostedTool(endpoint: HostedEndpointView, nameOrId: string) {

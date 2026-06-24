@@ -83,6 +83,11 @@ describe("hosted discovery route", () => {
     expect(body).toMatchObject({
       endpointUrl: "https://gw.test/api/mcp/source-1",
       manifest: { scope: "authorized-source", visibility: "authorized-source", version: 1 },
+      scannerCompatibility: {
+        endpointOnlyProbe: "blocked_by_client_access",
+        publicDiscovery: "not_enabled",
+        status: "not_publicly_indexable",
+      },
       tools: [
         {
           id: "tool-1",
