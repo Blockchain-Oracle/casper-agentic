@@ -29,11 +29,13 @@ export function useProviderGateway() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [endpointClientToken, setEndpointClientToken] = useState<string | null>(null);
+  const [endpointConnectionUrl, setEndpointConnectionUrl] = useState<string | null>(null);
   const [endpointToolCount, setEndpointToolCount] = useState(0);
 
   const publishedTools = useMemo(() => toolRows.filter((tool) => tool.published), [toolRows]);
   const pricedTools = useMemo(() => toolRows.filter((tool) => tool.price !== null), [toolRows]);
-  const hostedEndpointUrl = providerSource ? `/api/mcp/${providerSource.id}` : "/api/mcp/{sourceId}";
+  const hostedEndpointPath = providerSource ? `/api/mcp/${providerSource.id}` : "/api/mcp/{sourceId}";
+  const hostedEndpointUrl = endpointConnectionUrl ?? hostedEndpointPath;
 
   const handleError = useCallback((error: unknown) => {
     setErrorMessage(error instanceof Error ? error.message : "provider_gateway_failed");
@@ -57,6 +59,9 @@ export function useProviderGateway() {
       });
       const source = sources.find((item) => item.sourceType === "mcp") ?? sources[0] ?? null;
       setProviderSource(source);
+      setEndpointConnectionUrl(null);
+      setEndpointClientToken(null);
+      setEndpointToolCount(0);
       if (source) {
         setSourceName(source.name);
         setSourceUrl(source.endpointUrl);
@@ -72,12 +77,10 @@ export function useProviderGateway() {
       setLoading(false);
     }
   }, [handleError, loadTools, operatorToken]);
-
   function setOperatorToken(value: string) {
     const token = value.trim();
     setOperatorTokenState(token);
   }
-
   async function discoverSource() {
     if (!operatorToken) return setErrorMessage("Operator access token is required.");
     if (sourceType !== "mcp") {
@@ -98,6 +101,9 @@ export function useProviderGateway() {
         `/api/provider/sources/${created.source.id}/discover`,
         { method: "POST", operatorToken },
       );
+      setEndpointConnectionUrl(null);
+      setEndpointClientToken(null);
+      setEndpointToolCount(0);
       setProviderSource(discovered.source);
       setToolRows(discovered.tools.map((tool) => toToolRow(tool, discovered.source.name)));
       setSourcePhase("success");
@@ -109,7 +115,6 @@ export function useProviderGateway() {
       setLoading(false);
     }
   }
-
   async function priceAndPublishTool(tool: Tool, amount: string) {
     if (!operatorToken) return setErrorMessage("Operator access token is required.");
     const toolId = tool.recordId ?? tool.id;
@@ -131,7 +136,6 @@ export function useProviderGateway() {
       setLoading(false);
     }
   }
-
   async function createClientAccess() {
     if (!operatorToken) return setErrorMessage("Operator access token is required.");
     if (!providerSource) return setErrorMessage("Create or load a provider source before generating client access.");
@@ -143,11 +147,15 @@ export function useProviderGateway() {
         `/api/provider/sources/${providerSource.id}/access-keys`,
         { body: { label: "App client config" }, method: "POST", operatorToken },
       );
-      const endpoint = await providerRequest<{ endpoint: { tools: ProviderTool[] } }>(
+      const endpoint = await providerRequest<{
+        client: { endpointUrl: string };
+        endpoint: { tools: ProviderTool[] };
+      }>(
         `/api/mcp/${providerSource.id}`,
         { bearerToken: created.token },
       );
       setEndpointClientToken(created.token);
+      setEndpointConnectionUrl(endpoint.client.endpointUrl);
       setEndpointToolCount(endpoint.endpoint.tools.length);
       setStatusMessage(`Generated scoped client access for ${endpoint.endpoint.tools.length} published tools.`);
     } catch (error) {

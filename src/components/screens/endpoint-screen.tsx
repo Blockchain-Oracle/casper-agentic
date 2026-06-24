@@ -49,7 +49,8 @@ export function EndpointScreen({
                 value: clientToken ? "scoped bearer token generated" : "generate scoped bearer token",
                 tone: clientToken ? "signal" : "warn",
               },
-              { key: "wallet auth", value: "separate x402 payment payload" },
+              { key: "transport", value: "Streamable HTTP / JSON-RPC" },
+              { key: "payment auth", value: "PAYMENT-SIGNATURE after x402 challenge" },
               { key: "endpoint tools", value: `${endpointToolCount || publishedTools.length} published` },
             ]}
             copiedKey={copied}
@@ -57,7 +58,8 @@ export function EndpointScreen({
           />
           <div className="notice">
             Client access tokens authenticate MCP clients only. They are not provider upstream
-            credentials and cannot authorize wallet spending.
+            credentials and cannot authorize wallet spending. x402 payment payloads are sent
+            separately after the endpoint returns a 402 challenge.
           </div>
           <button
             className="primaryButton"

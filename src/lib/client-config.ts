@@ -33,9 +33,16 @@ export function clientConfig(
         mcpServers: {
           "casper-gw": {
             command: "npx",
-            args: ["mcp-remote", url],
+            args: [
+              "mcp-remote@latest",
+              url,
+              "--transport",
+              "http-first",
+              "--header",
+              "Authorization:${CASPER_GW_MCP_AUTH_HEADER}",
+            ],
             env: {
-              MCP_ACCESS_TOKEN: token,
+              CASPER_GW_MCP_AUTH_HEADER: `Bearer ${token}`,
             },
           },
         },
@@ -47,5 +54,6 @@ export function clientConfig(
 
   return `curl ${url} \\
   -H "Authorization: Bearer ${token}" \\
-  -H "Accept: application/json"`;
+  -H "Content-Type: application/json" \\
+  --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'`;
 }

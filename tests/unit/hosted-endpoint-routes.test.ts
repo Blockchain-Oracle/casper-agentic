@@ -113,6 +113,28 @@ describe("hosted endpoint route", () => {
     expect(mocks.getHostedEndpoint).toHaveBeenCalledWith("source-1", undefined);
     expect(JSON.stringify(body)).not.toContain("credentialRef");
     expect(JSON.stringify(body)).not.toContain("tokenHash");
+    expect(JSON.stringify(body)).not.toContain("cgw_test_once");
+    expect(body.client).toMatchObject({
+      auth: {
+        header: "Authorization",
+        scheme: "Bearer",
+        tokenPresented: false,
+        valueFormat: "Bearer <client-access-token>",
+      },
+      endpointUrl: "https://gw.test/api/mcp/source-1",
+      payment: {
+        challengeHeader: "PAYMENT-REQUIRED",
+        protected: true,
+        requestHeader: "PAYMENT-SIGNATURE",
+        responseHeader: "PAYMENT-RESPONSE",
+        x402Version: 2,
+      },
+      transport: {
+        jsonRpc: "2.0",
+        strategy: "http-first",
+        type: "streamable-http",
+      },
+    });
     expect(body.endpoint.tools[0].paymentRequirements).toMatchObject({
       amount: "7500000000",
       network: "casper:casper-test",

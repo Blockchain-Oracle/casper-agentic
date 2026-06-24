@@ -15,10 +15,32 @@ describe("client config snippets", () => {
   it("renders generated endpoint access values when provided", () => {
     const config = clientConfig("curl", {
       clientToken: "cgw_test_generated",
-      endpointUrl: "/api/mcp/source-1",
+      endpointUrl: "https://gw.test/api/mcp/source-1",
     });
 
-    expect(config).toContain("/api/mcp/source-1");
+    expect(config).toContain("https://gw.test/api/mcp/source-1");
     expect(config).toContain("Bearer cgw_test_generated");
+    expect(config).toContain('"method":"tools/list"');
+  });
+
+  it("uses mcp-remote header syntax for Claude Desktop bridge config", () => {
+    const config = JSON.parse(
+      clientConfig("claude", {
+        clientToken: "cgw_test_generated",
+        endpointUrl: "https://gw.test/api/mcp/source-1",
+      }),
+    );
+
+    expect(config.mcpServers["casper-gw"].args).toEqual([
+      "mcp-remote@latest",
+      "https://gw.test/api/mcp/source-1",
+      "--transport",
+      "http-first",
+      "--header",
+      "Authorization:${CASPER_GW_MCP_AUTH_HEADER}",
+    ]);
+    expect(config.mcpServers["casper-gw"].env).toEqual({
+      CASPER_GW_MCP_AUTH_HEADER: "Bearer cgw_test_generated",
+    });
   });
 });
