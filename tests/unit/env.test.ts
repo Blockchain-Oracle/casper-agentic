@@ -44,5 +44,6 @@ describe("integration env preflight", () => {
     expect(config.casperNetwork).toBe("casper:casper-test");
     expect(config.paymentAsset).toBe("3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e");
     expect(config.facilitatorUrl).toBe("https://x402-facilitator.cspr.cloud");
+    expect(config.csprCloudStreamingBaseUrl).toBe("wss://streaming.testnet.cspr.cloud");
   });
 });

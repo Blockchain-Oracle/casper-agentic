@@ -1,6 +1,7 @@
 export const DEFAULT_CASPER_NETWORK = "casper:casper-test";
 export const DEFAULT_CASPER_NODE_RPC_URL = "https://node.testnet.casper.network/rpc";
 export const DEFAULT_CSPR_CLOUD_REST_BASE_URL = "https://api.testnet.cspr.cloud";
+export const DEFAULT_CSPR_CLOUD_STREAMING_BASE_URL = "wss://streaming.testnet.cspr.cloud";
 export const DEFAULT_FACILITATOR_URL = "https://x402-facilitator.cspr.cloud";
 export const DEFAULT_MCP_URL = "https://mcp.cspr.trade/mcp";
 export const DEFAULT_WCSPR_PACKAGE = "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e";
@@ -10,6 +11,7 @@ export interface RuntimeConfig {
   casperNodeRpcUrl: string;
   csprCloudApiKey?: string;
   csprCloudRestBaseUrl: string;
+  csprCloudStreamingBaseUrl: string;
   facilitatorUrl: string;
   mcpUrl: string;
   paymentAsset: string;
@@ -37,6 +39,7 @@ export function getRuntimeConfig(): RuntimeConfig {
     casperNodeRpcUrl: process.env.CASPER_NODE_RPC_URL ?? DEFAULT_CASPER_NODE_RPC_URL,
     csprCloudApiKey: optional(process.env.CSPR_CLOUD_API_KEY),
     csprCloudRestBaseUrl: process.env.CSPR_CLOUD_REST_BASE_URL ?? DEFAULT_CSPR_CLOUD_REST_BASE_URL,
+    csprCloudStreamingBaseUrl: process.env.CSPR_CLOUD_STREAMING_BASE_URL ?? DEFAULT_CSPR_CLOUD_STREAMING_BASE_URL,
     facilitatorUrl: process.env.CSPR_X402_FACILITATOR_URL ?? DEFAULT_FACILITATOR_URL,
     mcpUrl: process.env.CSPR_TRADE_MCP_URL ?? DEFAULT_MCP_URL,
     paymentAsset: process.env.CASPER_PAYMENT_ASSET_PACKAGE ?? DEFAULT_WCSPR_PACKAGE,

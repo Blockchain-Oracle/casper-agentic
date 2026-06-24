@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { hasDatabaseUrl } from "@/db/client";
+import { getCsprCloudStreamingReadiness } from "@/server/cspr-cloud-streaming";
 import { getIntegrationConfigStatus, getRuntimeConfig } from "@/server/env";
 import { X402FacilitatorClient } from "@/server/x402-facilitator";
 
@@ -21,6 +22,7 @@ export async function GET() {
     database: { configured: hasDatabaseUrl() },
     facilitator,
     required,
+    streaming: getCsprCloudStreamingReadiness(config),
   });
 }
 
