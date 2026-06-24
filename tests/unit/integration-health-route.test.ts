@@ -59,4 +59,33 @@ describe("integration health route", () => {
     expect(JSON.stringify(body)).not.toContain("api-pass");
     expect(JSON.stringify(body)).not.toContain("secret-cspr-cloud-token");
   });
+
+  it("reports wallet signing readiness without exposing signer material", async () => {
+    process.env.CSPR_CLOUD_API_KEY = "secret-cspr-cloud-token";
+    process.env.CASPER_TESTNET_SIGNER_PRIVATE_KEY_PEM_PATH = ".secrets/casper-phase0/payer.pem";
+    process.env.CASPER_TESTNET_SIGNER_PRIVATE_KEY_PEM = "PRIVATE KEY MATERIAL";
+    facilitatorSupported.mockResolvedValue({
+      kinds: [{ network: "casper:casper-test", scheme: "exact" }],
+    });
+
+    const { GET } = await import("@/app/api/health/integrations/route");
+    const response = await GET();
+    const body = await response.json();
+    const serialized = JSON.stringify(body);
+
+    expect(body.walletSigning).toMatchObject({
+      browserWallet: { provider: "CSPR.click", status: "not_enabled" },
+      currentPath: {
+        mode: "testnet_signer",
+        purpose: "integration_verification_only",
+        status: "configured",
+      },
+      policyTiming: "before_signing",
+      productionCustody: "not_claimed",
+    });
+    expect(serialized).not.toContain("PRIVATE KEY MATERIAL");
+    expect(serialized).not.toContain(".secrets");
+    expect(serialized).not.toContain("payer.pem");
+    expect(serialized).not.toContain("secret-cspr-cloud-token");
+  });
 });

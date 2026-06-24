@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { hasDatabaseUrl } from "@/db/client";
 import { getCsprCloudStreamingReadiness } from "@/server/cspr-cloud-streaming";
 import { getIntegrationConfigStatus, getRuntimeConfig } from "@/server/env";
+import { getWalletSigningReadiness } from "@/server/wallet-signing-readiness";
 import { X402FacilitatorClient } from "@/server/x402-facilitator";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ export async function GET() {
     facilitator,
     required,
     streaming: getCsprCloudStreamingReadiness(config),
+    walletSigning: getWalletSigningReadiness(config),
   });
 }
 

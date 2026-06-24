@@ -100,6 +100,18 @@ test("wallet screen exposes real readiness and policy controls", async ({ page }
   await expect(page.getByText("Hosted encrypted signer")).toHaveCount(0);
 });
 
+test("settings keep signing boundaries explicit", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.includes("mobile"), "desktop settings controls are enough for signing-boundary copy");
+
+  await page.goto("/app");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByRole("heading", { name: "Settings & Audit" })).toBeVisible();
+  await expect(page.getByText("Testnet signer integration path")).toBeVisible();
+  await expect(page.getByText("integration verification only")).toBeVisible();
+  await expect(page.getByText("CSPR.click not enabled")).toBeVisible();
+  await expect(page.getByText("Hosted encrypted signer")).toHaveCount(0);
+});
+
 test("integration health reports preflight state without secret values", async ({ request }) => {
   const response = await request.get("/api/health/integrations");
   expect(response.ok()).toBeTruthy();
@@ -107,6 +119,7 @@ test("integration health reports preflight state without secret values", async (
   const body = await response.json();
   expect(body.casper.network).toBe("casper:casper-test");
   expect(Array.isArray(body.required.missing)).toBeTruthy();
+  expect(body.walletSigning.browserWallet.status).toBe("not_enabled");
   expect(JSON.stringify(body)).not.toContain("PRIVATE KEY");
 });
 

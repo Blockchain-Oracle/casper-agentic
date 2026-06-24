@@ -33,9 +33,10 @@ export function SettingsScreen() {
         <Panel title="Wallet signing mode">
           <KeyValueList
             rows={[
-              { key: "default signing mode", value: "Hosted encrypted signer" },
-              { key: "scope", value: "MVP/prototype only" },
-              { key: "production custody", value: "unresolved - do not claim" },
+              { key: "current payment signer", value: "Testnet signer integration path" },
+              { key: "scope", value: "integration verification only" },
+              { key: "browser wallet signing", value: "CSPR.click not enabled" },
+              { key: "production custody", value: "not claimed" },
               { key: "policy timing", value: "policy before payment signing" },
             ]}
           />

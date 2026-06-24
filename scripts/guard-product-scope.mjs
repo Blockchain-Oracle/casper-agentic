@@ -14,6 +14,7 @@ const blocked = [
   { label: "send policy", pattern: /\bsend policy\b/i },
   { label: "fake deploy", pattern: /\bfake deploy\b/i },
   { label: "registry route", pattern: /registry/i },
+  { label: "hosted custody signer", pattern: /\bHosted encrypted signer\b/i },
 ];
 const extensions = new Set([".css", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"]);
 
