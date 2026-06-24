@@ -8,7 +8,7 @@ Use this file when an agent enters the project cold. It is a map, not the full c
 
 Casper GW / Casper Agent Commerce Gateway is at the post-prototype reintegration stage.
 
-Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified, Phase 7 hosted endpoint settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, and Phase 8 public explorer history pagination is locally implemented, reviewed, and verified. Do not jump into broad UI redesign or production custody.
+Verdict from the latest review: **planning is allowed**, but the visual design is **not fully approved yet**. Phase 0 is proven on Casper Testnet, Phase 1 provider-gateway work is locally implemented and verified, Phase 2 wallet readiness/policy work is locally implemented, reviewed, and verified, Phase 3 paid-tool console settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 4 public explorer proof lookup is locally implemented, reviewed, and verified, Phase 5 public explorer account search is locally implemented, reviewed, and verified, Phase 6 hosted endpoint payment enforcement is locally implemented, reviewed, and verified, Phase 7 hosted endpoint settlement is locally implemented, reviewed, verified, and proven with a real Casper Testnet deploy, Phase 8 public explorer history pagination is locally implemented, reviewed, and verified, and Phase 9 external account-history pagination is locally implemented, reviewed, and CI-verified. Do not jump into broad UI redesign or production custody.
 
 The current product shape:
 
@@ -260,9 +260,29 @@ Phase 8 public explorer history pagination was completed locally on 2026-06-23.
 
 No GitHub PR was opened because no remote is configured in this checkout.
 
+## Completed Phase 9 Gate
+
+Phase 9 external account-history pagination was completed locally on 2026-06-24.
+
+- Plan: `.thoughts/plans/2026-06-24-casper-gw-phase-9-external-account-history-pagination.md`
+- Verification audit: `.thoughts/verification/2026-06-24-casper-gw-phase-9-external-account-history-pagination.md`
+- `/api/explorer/search` now accepts `externalPage` and `externalPageSize` for account-history proof pagination.
+- CSPR.cloud token-action pagination preserves `item_count` and `page_count`, and uses `page_size`; `limit` was verified as the wrong page-size parameter for this endpoint.
+- Public account search keeps Casper GW receipts first when they exist and attaches separate CSPR.cloud external account history.
+- External-only account search returns `external_proof` rows with gateway/policy/x402 context unavailable and Casper token-action facts in the Casper proof layer.
+- `/explorer` now exposes minimal external account-history controls after account search while remaining public with no app auth, wallet connection, or sidebar.
+- Non-spending CSPR.cloud account-history smoke resolved the known Testnet payer account to 6 WCSPR actions across 3 pages at page size 2.
+- Initial independent review found one blocker and one should-fix; both were fixed:
+  - CSPR.cloud action-page failures now return `upstream_error`/`503` instead of empty proof or `not_found`.
+  - Out-of-range external pages now clamp/refetch the last CSPR.cloud page instead of rendering impossible page labels.
+- Focused re-review passed with no remaining Blocking or Should-fix findings.
+- `pnpm run ci` passed after review fixes with 118 unit tests, 14 browser tests, 2 intentional mobile skips, and `next build`.
+
+No GitHub PR was opened because no remote is configured in this checkout.
+
 ## Current Build Gate
 
-The next likely engineering slice is hosted endpoint client polish, explicit external account-history pagination for CSPR.cloud account proof, CSPR.click/browser signing planning, or another Abu-approved Context Engineering slice. Full external account-history pagination and public-key/CSPR.name search are intentionally not part of Phase 5, Phase 6, Phase 7, or Phase 8 and need their own plan.
+The next likely engineering slice is hosted endpoint client polish, public-key/CSPR.name search planning, CSPR.click/browser signing planning, contract-wide WCSPR feed planning, or another Abu-approved Context Engineering slice. Public-key/CSPR.name search, contract-wide explorer browsing, and CSPR.click signing still need their own accepted plans.
 
 Do not start broad design work, production custody, CSPR.click signing, Mainnet, generic send policy, registry/private tools, or new simulated product modes unless Abu explicitly changes scope through the Context Engineering flow.
 

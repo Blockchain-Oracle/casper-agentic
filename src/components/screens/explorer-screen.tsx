@@ -192,6 +192,7 @@ function sourceLabel(source: ExplorerSearchSource) {
   if (source === "casper_gw_receipt") return { label: "Casper GW receipt", tone: "signal" };
   if (source === "external_account_proof") return { label: "External account proof", tone: "primary" };
   if (source === "external_casper_proof") return { label: "External Casper proof", tone: "primary" };
+  if (source === "upstream_error") return { label: "Lookup unavailable", tone: "warn" };
   if (source === "unconfigured") return { label: "Lookup not configured", tone: "warn" };
   return { label: "Not found", tone: "danger" };
 }

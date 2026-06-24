@@ -3,29 +3,29 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { ExternalAccountHistoryBar } from "@/components/explorer/external-account-history-bar";
 import { useReceiptDeepLink } from "@/components/explorer/use-receipt-deep-link";
+import { useExplorerSearch } from "@/components/explorer/use-explorer-search";
 import { useReceiptHistory } from "@/components/explorer/use-receipt-history";
 import { ExplorerScreen, type ExplorerFilter } from "@/components/screens/explorer-screen";
 import { Chip } from "@/components/ui";
 import { receipts } from "@/lib/fixtures";
 import { buildReceiptDetail, receiptById } from "@/lib/receipt-detail";
-import type { ExplorerSearchResult } from "@/lib/types";
 
-const RECEIPT_HISTORY_PAGE_SIZE = 4;
-
+const RECEIPT_HISTORY_PAGE_SIZE = 4, EXTERNAL_ACCOUNT_PAGE_SIZE = 4;
+type ExplorerViewMode = "history" | "search";
 export function PublicExplorerApp() {
   const searchParams = useSearchParams();
   const receiptParam = searchParams.get("receipt");
   const deepLink = useReceiptDeepLink(receiptParam);
+  const explorerSearch = useExplorerSearch(EXTERNAL_ACCOUNT_PAGE_SIZE);
   const [selectedReceiptOverride, setSelectedReceiptOverride] = useState<string | null>(null);
   const [explorerFilter, setExplorerFilter] = useState<ExplorerFilter>("all");
   const [historyPage, setHistoryPage] = useState(1);
   const [historyQuery, setHistoryQuery] = useState("");
   const [historyFrom, setHistoryFrom] = useState("");
   const [historyTo, setHistoryTo] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [searchResult, setSearchResult] = useState<ExplorerSearchResult | null>(null);
+  const [viewMode, setViewMode] = useState<ExplorerViewMode>("history");
   const receiptHistory = useReceiptHistory({
     from: historyFrom,
     page: historyPage,
@@ -36,7 +36,11 @@ export function PublicExplorerApp() {
   });
 
   const receiptRows = receiptHistory.receipts.map((detail) => detail.receipt);
-  const activeDetails = searchResult?.matches ?? receiptHistory.receipts;
+  const searchResult = viewMode === "search" ? explorerSearch.result : null;
+  const localSearchDetails = searchResult?.matches ?? (searchResult?.detail ? [searchResult.detail] : []);
+  const externalDetails =
+    searchResult?.source === "casper_gw_account" ? searchResult.externalAccount?.matches ?? [] : [];
+  const activeDetails = searchResult ? [...localSearchDetails, ...externalDetails] : receiptHistory.receipts;
   const activeReceiptRows = activeDetails.map((detail) => detail.receipt);
   const selectedReceiptId =
     selectedReceiptOverride ?? searchResult?.detail?.receipt.id ?? receiptParam ?? receiptRows[0]?.id ?? receipts[0].id;
@@ -45,35 +49,31 @@ export function PublicExplorerApp() {
     (deepLink.detail?.receipt.id === selectedReceiptId ? deepLink.detail : undefined) ??
     activeDetails[0] ??
     buildReceiptDetail(receiptById(selectedReceiptId));
-  const receiptDetail = searchResult?.detail ?? feedReceiptDetail;
+  const receiptDetail = selectedReceiptOverride ? feedReceiptDetail : searchResult?.detail ?? feedReceiptDetail;
   const selectedReceipt = receiptDetail.receipt;
   const filteredReceipts = useMemo(() => {
-    if (!searchResult?.matches || explorerFilter === "all") return activeReceiptRows;
+    if (!searchResult || explorerFilter === "all") return activeReceiptRows;
     return activeReceiptRows.filter((receipt) => receipt.status === explorerFilter);
-  }, [activeReceiptRows, explorerFilter, searchResult?.matches]);
-
-  async function runSearch() {
-    const query = searchQuery.trim();
-    if (!query) {
-      setSearchResult(null);
-      return;
-    }
-    setSearching(true);
-    try {
-      const response = await fetch(`/api/explorer/search?q=${encodeURIComponent(query)}`);
-      const body = (await response.json()) as ExplorerSearchResult;
-      setSearchResult(body);
-      if (body.detail) setSelectedReceiptOverride(body.detail.receipt.id);
-    } catch {
-      setSearchResult({ message: "Explorer search failed before a result was returned.", query, source: "not_found" });
-    } finally {
-      setSearching(false);
-    }
-  }
+  }, [activeReceiptRows, explorerFilter, searchResult]);
 
   function selectReceipt(receiptId: string) {
-    setSearchResult(null);
     setSelectedReceiptOverride(receiptId);
+  }
+
+  function searchExplorerFirstPage() {
+    setViewMode("search");
+    setSelectedReceiptOverride(null);
+    explorerSearch.searchFirstPage();
+  }
+
+  function nextExternalPage() {
+    setSelectedReceiptOverride(null);
+    explorerSearch.nextExternalPage();
+  }
+
+  function previousExternalPage() {
+    setSelectedReceiptOverride(null);
+    explorerSearch.previousExternalPage();
   }
 
   function changeFilter(filter: ExplorerFilter) {
@@ -101,7 +101,8 @@ export function PublicExplorerApp() {
   }
 
   function beginHistoryBrowse() {
-    setSearchResult(null);
+    setViewMode("history");
+    explorerSearch.clear();
     deepLink.clear();
     setSelectedReceiptOverride(receiptRows[0]?.id ?? receipts[0].id);
   }
@@ -145,8 +146,7 @@ export function PublicExplorerApp() {
           <div className="eyebrow">Public infrastructure</div>
           <h1>Casper x402 Explorer</h1>
           <p className="subhead">
-            Public receipt inspection for rich Casper GW records plus external deploy and account
-            proof lookup. External proofs show chain facts only.
+            Public receipt inspection for rich Casper GW records plus external deploy and account proof lookup. External proofs show chain facts only.
           </p>
           <div className="buttonRow" style={{ marginTop: 14 }}>
             <Chip tone={receiptHistory.source === "postgres" ? "primary" : "warn"}>
@@ -156,6 +156,12 @@ export function PublicExplorerApp() {
             <Chip tone="signal">No sign-in required</Chip>
           </div>
         </header>
+        <ExternalAccountHistoryBar
+          history={searchResult?.externalAccount}
+          loading={explorerSearch.searching}
+          onNext={nextExternalPage}
+          onPrevious={previousExternalPage}
+        />
         <ExplorerScreen
           explorerFilter={explorerFilter}
           filteredReceipts={filteredReceipts}
@@ -177,13 +183,13 @@ export function PublicExplorerApp() {
           }}
           onFilter={changeFilter}
           onReceipt={selectReceipt}
-          onSearch={runSearch}
-          onSearchQuery={setSearchQuery}
+          onSearch={searchExplorerFirstPage}
+          onSearchQuery={explorerSearch.setQuery}
           receiptDetail={receiptDetail}
           searchMessage={searchResult?.message}
-          searchQuery={searchQuery}
+          searchQuery={explorerSearch.query}
           searchSource={searchResult?.source}
-          searching={searching}
+          searching={explorerSearch.searching}
           selectedReceipt={selectedReceipt}
           selectedReceiptId={selectedReceipt.id}
         />

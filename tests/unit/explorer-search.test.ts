@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   getReceiptDetail: vi.fn(),
   getReceiptDetailByDeployHash: vi.fn(),
   getTokenActions: vi.fn(),
+  getTokenActionsPage: vi.fn(),
   getRuntimeConfig: vi.fn(),
   listReceiptDetailsByWallet: vi.fn(),
 }));
@@ -32,6 +33,7 @@ vi.mock("@/server/cspr-cloud", () => ({
       getDeploy: mocks.getDeploy,
       getFTOwnerships: mocks.getFTOwnerships,
       getTokenActions: mocks.getTokenActions,
+      getTokenActionsPage: mocks.getTokenActionsPage,
     };
   }),
 }));
@@ -48,6 +50,7 @@ beforeEach(() => {
   mocks.getReceiptDetailByDeployHash.mockResolvedValue(undefined);
   mocks.getFTOwnerships.mockResolvedValue([]);
   mocks.getTokenActions.mockResolvedValue([]);
+  mocks.getTokenActionsPage.mockResolvedValue({ data: [], itemCount: 0, page: 1, pageCount: 0, pageSize: 4 });
   mocks.listReceiptDetailsByWallet.mockResolvedValue([]);
   mocks.getRuntimeConfig.mockReturnValue({
     casperNetwork: "casper:casper-test",
@@ -92,18 +95,25 @@ describe("explorer search", () => {
     expect(mocks.getDeploy).not.toHaveBeenCalled();
   });
 
-  it("returns Casper GW account receipt matches before external account lookup", async () => {
+  it("returns Casper GW account receipts and attaches external account history", async () => {
     const details = [receiptDetail("receipt-1"), receiptDetail("receipt-2")];
     mocks.listReceiptDetailsByWallet.mockResolvedValue(details);
+    mocks.getTokenActionsPage.mockResolvedValue({ data: [], itemCount: 2, page: 1, pageCount: 1, pageSize: 4 });
 
     const result = await searchExplorer(`account:${accountHash.toUpperCase()}`);
 
     expect(result.source).toBe("casper_gw_account");
     expect(result.detail).toBe(details[0]);
     expect(result.matches).toEqual(details);
+    expect(result.externalAccount?.pagination.totalCount).toBe(2);
     expect(mocks.listReceiptDetailsByWallet).toHaveBeenCalledWith(accountHash);
     expect(mocks.getDeploy).not.toHaveBeenCalled();
-    expect(mocks.getTokenActions).not.toHaveBeenCalled();
+    expect(mocks.getTokenActionsPage).toHaveBeenCalledWith({
+      accountHash,
+      contractPackageHash: "wcspr-package",
+      page: 1,
+      pageSize: 4,
+    });
   });
 
   it("accepts account-hash-prefixed account searches", async () => {
@@ -175,7 +185,8 @@ describe("explorer search", () => {
   it("builds limited external account proof context when no local account receipts exist", async () => {
     mocks.getAccount.mockResolvedValue({ account_hash: accountHash, balance: "100000000000", public_key: "01abc" });
     mocks.getFTOwnerships.mockResolvedValue([{ balance: "15000000000", contract_package_hash: "wcspr-package" }]);
-    mocks.getTokenActions.mockResolvedValue([
+    mocks.getTokenActionsPage.mockResolvedValue({
+      data: [
       {
         amount: "7500000000",
         contract_package_hash: "wcspr-package",
@@ -185,7 +196,12 @@ describe("explorer search", () => {
         timestamp: "2026-06-23T12:00:01Z",
         to_hash: "account-hash-payee",
       },
-    ]);
+      ],
+      itemCount: 1,
+      page: 1,
+      pageCount: 1,
+      pageSize: 4,
+    });
 
     const result = await searchExplorer(`wallet:${accountHash}`);
 
@@ -216,6 +232,16 @@ describe("explorer search", () => {
     expect(result.source).toBe("unconfigured");
     expect(result.detail).toBeUndefined();
     expect(result.message).toContain("CSPR_CLOUD_API_KEY");
+  });
+
+  it("returns upstream_error when external account history is unavailable", async () => {
+    mocks.getTokenActionsPage.mockRejectedValue(new Error("upstream down"));
+
+    const result = await searchExplorer(`account:${accountHash}`);
+
+    expect(result.source).toBe("upstream_error");
+    expect(result.detail).toBeUndefined();
+    expect(result.externalAccount?.source).toBe("upstream_error");
   });
 });
 

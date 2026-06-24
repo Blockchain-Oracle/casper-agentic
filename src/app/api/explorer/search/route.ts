@@ -6,7 +6,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q") ?? "";
-  const result = await searchExplorer(query);
-  const status = result.source === "unconfigured" ? 503 : result.source === "not_found" ? 404 : 200;
+  const result = await searchExplorer(query, {
+    externalPage: request.nextUrl.searchParams.get("externalPage"),
+    externalPageSize: request.nextUrl.searchParams.get("externalPageSize"),
+  });
+  const status = result.source === "unconfigured" || result.source === "upstream_error" ? 503 : result.source === "not_found" ? 404 : 200;
   return NextResponse.json(result, { status });
 }

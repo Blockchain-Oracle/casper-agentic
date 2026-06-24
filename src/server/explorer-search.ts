@@ -1,11 +1,16 @@
-import { buildExternalAccountDetail } from "@/lib/external-account-detail";
 import { buildExternalProofDetail } from "@/lib/external-proof-detail";
-import type { ExplorerSearchResult, ExplorerSearchSource, ReceiptDetail } from "@/lib/types";
+import type { ExternalAccountHistoryResult, ExplorerSearchResult, ExplorerSearchSource, ReceiptDetail } from "@/lib/types";
 import { CsprCloudClient } from "./cspr-cloud";
 import { getRuntimeConfig } from "./env";
+import { getExternalAccountHistory } from "./external-account-history";
 import { getReceiptDetail, getReceiptDetailByDeployHash, listReceiptDetailsByWallet } from "./receipt-store";
 
-export async function searchExplorer(rawQuery: string): Promise<ExplorerSearchResult> {
+export interface ExplorerSearchOptions {
+  externalPage?: number | string | null;
+  externalPageSize?: number | string | null;
+}
+
+export async function searchExplorer(rawQuery: string, options: ExplorerSearchOptions = {}): Promise<ExplorerSearchResult> {
   const parsed = parseQuery(rawQuery);
   const { query } = parsed;
   if (!query) return { message: "Enter a receipt id, deploy hash, or account hash.", query, source: "not_found" };
@@ -30,15 +35,18 @@ export async function searchExplorer(rawQuery: string): Promise<ExplorerSearchRe
 
   if (parsed.kind !== "deploy") {
     const accountReceipts = await listReceiptDetailsByWallet(query);
+    const externalAccount = parsed.kind === "account" ? await lookupExternalAccountHistory(query, options) : undefined;
     if (accountReceipts.length) {
       return {
         detail: accountReceipts[0],
+        ...(externalAccount && externalAccount.source !== "not_found" ? { externalAccount } : {}),
         matches: accountReceipts,
         message: `Matched ${accountReceipts.length} Casper GW receipt${accountReceipts.length === 1 ? "" : "s"} for this account.`,
         query,
         source: "casper_gw_account",
       };
     }
+    if (externalAccount) return externalAccountResult(query, externalAccount);
   }
 
   if (parsed.kind !== "account") {
@@ -46,7 +54,8 @@ export async function searchExplorer(rawQuery: string): Promise<ExplorerSearchRe
     if (deployResult.source !== "not_found") return deployResult;
   }
 
-  return lookupExternalAccount(query);
+  const externalAccount = await lookupExternalAccountHistory(query, options);
+  return externalAccountResult(query, externalAccount);
 }
 
 function found(source: ExplorerSearchSource, query: string, detail: ReceiptDetail, message: string): ExplorerSearchResult {
@@ -85,50 +94,32 @@ async function lookupExternalDeploy(deployHash: string): Promise<ExplorerSearchR
   }
 }
 
-async function lookupExternalAccount(accountHash: string): Promise<ExplorerSearchResult> {
-  const config = getRuntimeConfig();
-  if (!config.csprCloudApiKey) {
+async function lookupExternalAccountHistory(accountHash: string, options: ExplorerSearchOptions) {
+  return getExternalAccountHistory({
+    accountHash,
+    page: options.externalPage,
+    pageSize: options.externalPageSize,
+  });
+}
+
+function externalAccountResult(query: string, externalAccount: ExternalAccountHistoryResult): ExplorerSearchResult {
+  if (externalAccount.source === "cspr_cloud") {
     return {
-      message: "CSPR_CLOUD_API_KEY is required for external Casper account lookup.",
-      query: accountHash,
-      source: "unconfigured",
+      detail: externalAccount.detail,
+      externalAccount,
+      matches: externalAccount.matches,
+      message: externalAccount.message,
+      query,
+      source: "external_account_proof",
     };
   }
-
-  const client = new CsprCloudClient(config);
-  try {
-    const [accountResult, ownershipResult, actionResult] = await Promise.allSettled([
-      client.getAccount(accountHash),
-      client.getFTOwnerships(accountHash, config.paymentAsset),
-      client.getTokenActions({ accountHash, contractPackageHash: config.paymentAsset }),
-    ]);
-    const account = accountResult.status === "fulfilled" ? accountResult.value : undefined;
-    const ownership = ownershipResult.status === "fulfilled" ? ownershipResult.value[0] : undefined;
-    const actions =
-      actionResult.status === "fulfilled"
-        ? actionResult.value.filter(
-            (action) =>
-              action.contract_package_hash.toLowerCase() === config.paymentAsset.toLowerCase() &&
-              (action.from_hash?.toLowerCase() === accountHash || action.to_hash?.toLowerCase() === accountHash),
-          )
-        : [];
-    if (!account && !ownership && !actions.length) {
-      return { message: "No Casper GW receipt or external account proof matched that account hash.", query: accountHash, source: "not_found" };
-    }
-
-    const detail = buildExternalAccountDetail({
-      account,
-      accountHash,
-      actions,
-      network: config.casperNetwork,
-      ownership,
-      paymentAsset: config.paymentAsset,
-      paymentAssetSymbol: config.paymentAssetSymbol,
-    });
-    return found("external_account_proof", accountHash, detail, "Resolved external Casper account proof from CSPR.cloud.");
-  } catch {
-    return { message: "No Casper GW receipt or external account proof matched that account hash.", query: accountHash, source: "not_found" };
+  if (externalAccount.source === "unconfigured") {
+    return { externalAccount, message: externalAccount.message, query, source: "unconfigured" };
   }
+  if (externalAccount.source === "upstream_error") {
+    return { externalAccount, message: externalAccount.message, query, source: "upstream_error" };
+  }
+  return { externalAccount, message: "No Casper GW receipt or external account proof matched that account hash.", query, source: "not_found" };
 }
 
 function parseQuery(rawQuery: string): { kind: "account" | "deploy" | "receipt" | "unknown"; query: string } {

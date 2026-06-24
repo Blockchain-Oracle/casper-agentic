@@ -5,10 +5,17 @@ interface ExternalAccountInput {
   accountHash: string;
   account?: CsprCloudAccount;
   actions: CsprCloudFTAction[];
+  actionPage?: {
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages: number;
+  };
   network: string;
   ownership?: CsprCloudFTOwnership;
   paymentAsset: string;
   paymentAssetSymbol: string;
+  receiptId?: string;
 }
 
 export function buildExternalAccountDetail(input: ExternalAccountInput): ReceiptDetail {
@@ -18,12 +25,12 @@ export function buildExternalAccountDetail(input: ExternalAccountInput): Receipt
     asset: input.paymentAssetSymbol,
     client: "external-account-lookup",
     hash: latest?.deploy_hash ?? null,
-    id: `account:${input.accountHash}`,
+    id: input.receiptId ?? `account:${input.accountHash}`,
     provider: "External Casper account",
     reason: "This account was resolved from CSPR.cloud, not from Casper GW receipt records.",
     status: "external_proof",
     time: latest?.timestamp ?? "unavailable",
-    tool: "unavailable",
+    tool: latest ? "payment token action" : "unavailable",
     wallet: input.accountHash,
   };
 
@@ -69,6 +76,13 @@ function casperRows(input: ExternalAccountInput, latest?: CsprCloudFTAction): Ke
     { key: "payment asset package", value: input.paymentAsset, mono: true },
     { key: "payment asset balance", value: input.ownership?.balance ?? "0", mono: true },
     { key: "recent payment actions", value: String(input.actions.length), mono: true },
+    ...(input.actionPage
+      ? [
+          { key: "action page", value: `${input.actionPage.page} of ${input.actionPage.totalPages}`, mono: true },
+          { key: "total payment actions", value: String(input.actionPage.totalCount), mono: true },
+          { key: "page size", value: String(input.actionPage.pageSize), mono: true },
+        ]
+      : []),
     ...(latest
       ? [
           { key: "latest deploy hash", value: latest.deploy_hash, mono: true },

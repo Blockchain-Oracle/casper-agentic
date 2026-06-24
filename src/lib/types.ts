@@ -153,16 +153,30 @@ export interface ReceiptHistoryResult {
   source: ReceiptFeedSource;
 }
 
+export type ExternalAccountHistorySource = "cspr_cloud" | "not_found" | "unconfigured" | "upstream_error";
+
+export interface ExternalAccountHistoryResult {
+  accountHash: string;
+  detail?: ReceiptDetail;
+  matches: ReceiptDetail[];
+  message: string;
+  network: string;
+  pagination: ReceiptHistoryPagination;
+  source: ExternalAccountHistorySource;
+}
+
 export type ExplorerSearchSource =
   | "casper_gw_account"
   | "casper_gw_receipt"
   | "external_account_proof"
   | "external_casper_proof"
   | "not_found"
+  | "upstream_error"
   | "unconfigured";
 
 export interface ExplorerSearchResult {
   detail?: ReceiptDetail;
+  externalAccount?: ExternalAccountHistoryResult;
   matches?: ReceiptDetail[];
   message: string;
   query: string;

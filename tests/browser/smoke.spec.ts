@@ -39,6 +39,29 @@ test("public explorer history browsing clears exact lookup state", async ({ page
   await expect(page.getByText(`${settledReceiptId} receipt`)).toHaveCount(0);
 });
 
+test("public explorer pages external account history controls", async ({ page }) => {
+  const accountHash = "bcf0dfd8955b196a69d9265ffa746b499b7644d12ed2cdc5dea01d914c1fdc12";
+
+  await page.route("**/api/explorer/search?**", async (route) => {
+    const pageNumber = Number(new URL(route.request().url()).searchParams.get("externalPage") ?? "1");
+    await route.fulfill({
+      body: JSON.stringify(externalAccountSearchResult(accountHash, pageNumber)),
+      contentType: "application/json",
+      status: 200,
+    });
+  });
+
+  await page.goto("/explorer");
+  await page.getByLabel("Search receipt id, deploy hash, or account hash").fill(`account:${accountHash}`);
+  await page.getByRole("button", { name: "Search explorer" }).click();
+
+  await expect(page.getByText("CSPR.cloud account history")).toBeVisible();
+  await expect(page.getByText("6 external actions - page 1 of 3")).toBeVisible();
+  await expect(page.getByText("External Casper account", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Next external page" }).click();
+  await expect(page.getByText("6 external actions - page 2 of 3")).toBeVisible();
+});
+
 test("operator app exposes the paid tool console without changing public explorer", async ({ page }) => {
   await page.goto("/app");
 
@@ -101,4 +124,45 @@ async function firstReceiptId(request: APIRequestContext, query: string) {
   if (!response.ok()) return undefined;
   const body = await response.json();
   return body.receipts?.[0]?.receipt?.id as string | undefined;
+}
+
+function externalAccountSearchResult(accountHash: string, page: number) {
+  const deployHash = `${String(page).repeat(64)}`.slice(0, 64);
+  const detail = {
+    casper: [
+      { key: "account hash", mono: true, value: accountHash },
+      { key: "action page", mono: true, value: `${page} of 3` },
+    ],
+    gateway: [{ key: "result source", value: "External Casper account proof" }],
+    policy: [{ key: "status", tone: "warn", value: "unavailable" }],
+    receipt: {
+      amount: "7500000000",
+      asset: "WCSPR",
+      client: "external-account-lookup",
+      hash: deployHash,
+      id: `external-account:${accountHash}:${deployHash}:${page}`,
+      provider: "External Casper account",
+      status: "external_proof",
+      time: "2026-06-23T21:34:47Z",
+      tool: "payment token action",
+      wallet: accountHash,
+    },
+    x402: [{ key: "status", tone: "warn", value: "unavailable" }],
+  };
+  return {
+    detail,
+    externalAccount: {
+      accountHash,
+      detail,
+      matches: [detail],
+      message: "Resolved 6 external WCSPR actions for this account through CSPR.cloud.",
+      network: "casper:casper-test",
+      pagination: { hasNextPage: page < 3, hasPreviousPage: page > 1, page, pageSize: 4, totalCount: 6, totalPages: 3 },
+      source: "cspr_cloud",
+    },
+    matches: [detail],
+    message: "Resolved 6 external WCSPR actions for this account through CSPR.cloud.",
+    query: accountHash,
+    source: "external_account_proof",
+  };
 }
