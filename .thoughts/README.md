@@ -16,6 +16,8 @@ Phase 24I CSPR.click embedded provider config is locally implemented and focused
 
 Phase 24J browser-signing settings state is locally implemented and focused-verified. Settings now reflects the shared CSPR.click browser-signing state instead of hard-coding `not enabled`, while still avoiding any live settlement or custody claim.
 
+Phase 24K app-level CSPR.click connect button is Chrome-verified. The Casper GW `Connect CSPR.click wallet` button opens the embedded modal with Google/Apple and extension providers, does not open an `accounts.cspr.click/signin.html` tab, and does not claim login/spend/proof.
+
 The current product shape:
 
 - MCPay-style provider gateway: connect API/OpenAPI/remote MCP, discover tools, price, publish hosted MCP/x402 endpoint.
