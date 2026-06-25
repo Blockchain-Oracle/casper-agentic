@@ -18,6 +18,8 @@ Phase 24J browser-signing settings state is locally implemented and focused-veri
 
 Phase 24K app-level CSPR.click connect button is Chrome-verified. The Casper GW `Connect CSPR.click wallet` button opens the embedded modal with Google/Apple and extension providers, does not open an `accounts.cspr.click/signin.html` tab, and does not claim login/spend/proof.
 
+Phase 24L CSPR.click browser smoke gate is locally implemented and focused-verified. CI now includes an isolated CSPR.click-configured Playwright suite that proves settings and the app-level connect button behave correctly with a deterministic mocked CSPR.click runtime, without provider login or spending.
+
 The current product shape:
 
 - MCPay-style provider gateway: connect API/OpenAPI/remote MCP, discover tools, price, publish hosted MCP/x402 endpoint.

@@ -20,6 +20,7 @@ export function checkPackageScripts(packageJson) {
     ["install --frozen-lockfile", "pnpm install --frozen-lockfile"],
     ["verify", "pnpm verify"],
     ["test:browser", "pnpm test:browser"],
+    ["test:browser:csprclick", "pnpm test:browser:csprclick"],
     ["build", "pnpm build"],
   ]);
   return findings;
@@ -39,7 +40,8 @@ export function checkCiWorkflow(text) {
     ["frozen install", /pnpm install --frozen-lockfile/],
     ["playwright chromium install", /pnpm exec playwright install --with-deps chromium/],
     ["verify command", /pnpm verify/],
-    ["browser smoke command", /pnpm test:browser/],
+    ["browser smoke command", /^\s*-?\s*run:\s*pnpm test:browser\s*$/m],
+    ["csprclick browser smoke command", /^\s*-?\s*run:\s*pnpm test:browser:csprclick\s*$/m],
     ["build command", /pnpm build/],
   ]);
 }

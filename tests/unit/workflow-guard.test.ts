@@ -21,7 +21,7 @@ describe("workflow guard", () => {
   it("requires workflow guard inside verify and frozen install inside ci", () => {
     const packageJson = {
       scripts: {
-        ci: "pnpm install && pnpm verify && pnpm test:browser && pnpm build",
+        ci: "pnpm install && pnpm verify && pnpm test:browser && pnpm test:browser:csprclick && pnpm build",
         verify: "pnpm guard:files && pnpm guard:product && pnpm guard:secrets && pnpm test && pnpm typecheck && pnpm lint",
       },
     };
@@ -35,7 +35,7 @@ describe("workflow guard", () => {
   it("does not treat test:browser as the unit test gate", () => {
     const packageJson = {
       scripts: {
-        ci: "pnpm install --frozen-lockfile && pnpm verify && pnpm test:browser && pnpm build",
+        ci: "pnpm install --frozen-lockfile && pnpm verify && pnpm test:browser && pnpm test:browser:csprclick && pnpm build",
         verify:
           "pnpm guard:files && pnpm guard:product && pnpm guard:secrets && pnpm guard:workflows && pnpm test:browser && pnpm typecheck && pnpm lint",
       },
@@ -65,7 +65,38 @@ jobs:
 
     expect(findings).toContain("ci.yml: missing push trigger");
     expect(findings).toContain("ci.yml: missing browser smoke command");
+    expect(findings).toContain("ci.yml: missing csprclick browser smoke command");
     expect(findings).toContain("ci.yml: missing build command");
+  });
+
+  it("does not treat the CSPR.click smoke as the standard browser smoke", () => {
+    const findings = guard.checkCiWorkflow(`
+name: CI
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "feat/**"
+jobs:
+  verify:
+    steps:
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm verify
+      - run: pnpm test:browser:csprclick
+      - run: pnpm build
+`);
+
+    expect(findings).toContain("ci.yml: missing browser smoke command");
+    expect(findings).not.toContain("ci.yml: missing csprclick browser smoke command");
   });
 
   it("rejects prune workflows that run on push or omit the database secret check", () => {
