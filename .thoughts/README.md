@@ -14,6 +14,8 @@ Phase 24H browser-wallet profile import is locally implemented and CI-verified. 
 
 Phase 24I CSPR.click embedded provider config is locally implemented and focused-verified. The app now defaults CSPR.click to iframe mode with Google/Apple social-login providers before extension wallets, and Chrome verified the embedded modal without clicking a provider or claiming a wallet login/spend.
 
+Phase 24J browser-signing settings state is locally implemented and focused-verified. Settings now reflects the shared CSPR.click browser-signing state instead of hard-coding `not enabled`, while still avoiding any live settlement or custody claim.
+
 The current product shape:
 
 - MCPay-style provider gateway: connect API/OpenAPI/remote MCP, discover tools, price, publish hosted MCP/x402 endpoint.

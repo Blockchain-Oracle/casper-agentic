@@ -2,8 +2,10 @@ import { Panel } from "@/components/screen-primitives";
 import { Chip, KeyValueList } from "@/components/ui";
 import { auditEvents } from "@/lib/fixtures";
 import { clientToken } from "@/lib/client-config";
+import type { BrowserSigningState } from "./browser-signing-state";
+import { browserWalletSigningLabel } from "./settings-signing-mode";
 
-export function SettingsScreen() {
+export function SettingsScreen({ browserSigningState }: { browserSigningState: BrowserSigningState }) {
   return (
     <div className="stack">
       <div className="grid two">
@@ -35,7 +37,7 @@ export function SettingsScreen() {
             rows={[
               { key: "current payment signer", value: "Testnet signer integration path" },
               { key: "scope", value: "integration verification only" },
-              { key: "browser wallet signing", value: "CSPR.click not enabled" },
+              { key: "browser wallet signing", value: browserWalletSigningLabel(browserSigningState) },
               { key: "production custody", value: "not claimed" },
               { key: "policy timing", value: "policy before payment signing" },
             ]}
