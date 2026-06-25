@@ -516,15 +516,16 @@ No GitHub PR was opened because no remote is configured in this checkout.
 
 ## Pending Phase 24 Plan
 
-Phase 24 real CSPR.click/browser signing is planned but not implemented or accepted yet.
+Phase 24 real CSPR.click/browser signing is planned and partially started, but full browser signing is not implemented yet.
 
 - Plan: `.thoughts/plans/2026-06-25-casper-gw-phase-24-real-csprclick-browser-signing.md`
-- Scope: prove the CSPR.click typed-data signing contract for Casper x402 before SDK/UI work, then only later enable one browser-approved Testnet paid call with no local-signer fallback.
-- Current boundary: CSPR.click/browser signing is still `not_enabled` in the product until this plan is accepted and implemented.
+- Completed Phase 24A audit: `.thoughts/verification/2026-06-25-casper-gw-phase-24a-signing-contract.md`
+- Completed Phase 24A scope: pure CSPR.click typed-data result normalization and x402 payment payload assembly contract.
+- Current boundary: CSPR.click/browser signing is still `not_enabled` in the product. No SDK/runtime, UI approval prompt, live settlement, deploy hash, or production custody claim exists yet.
 
 ## Current Build Gate
 
-The next likely engineering slice is accepting and executing the Phase 24 CSPR.click/browser signing plan, real feed-streaming runtime planning, public x402 scanner opt-in planning, remote deployment scheduling, or another Abu-approved Context Engineering slice. Broader explorer indexing beyond the configured WCSPR feed, actual WebSocket streaming consumption, public x402 scanner discovery, OAuth, remote deployment scheduling, and CSPR.click signing still need their own accepted plans or accepted implementation slices.
+The next likely engineering slice is Phase 24B CSPR.click browser adapter/load boundary, real feed-streaming runtime planning, public x402 scanner opt-in planning, remote deployment scheduling, or another Abu-approved Context Engineering slice. Broader explorer indexing beyond the configured WCSPR feed, actual WebSocket streaming consumption, public x402 scanner discovery, OAuth, remote deployment scheduling, and live CSPR.click signing still need their own accepted implementation slices.
 
 Do not start broad design work, production custody, CSPR.click signing, Mainnet, generic send policy, registry/private tools, or new simulated product modes unless Abu explicitly changes scope through the Context Engineering flow.
 
