@@ -1,4 +1,4 @@
-import type { PaymentPayload, PaymentRequirements } from "@x402/core/types";
+import type { PaymentRequirements } from "@x402/core/types";
 
 import {
   buildBrowserX402PaymentPayload,
@@ -13,15 +13,7 @@ export type BrowserPaidCallFlowResult = {
   attemptId?: string;
   explorerUrl?: string;
   message: string;
-  status:
-    | "blocked"
-    | "cancelled"
-    | "failed"
-    | "raw_proof_unavailable"
-    | "settled"
-    | "settle_failed"
-    | "upstream_failed"
-    | "verify_failed";
+  status: "blocked" | "auth_failed" | "failed" | "raw_proof_unavailable" | "settled" | "settle_failed" | "upstream_failed" | "verify_failed";
 };
 
 export type BrowserPaidCallFetch = (
@@ -29,7 +21,7 @@ export type BrowserPaidCallFetch = (
   input: { body: Record<string, unknown>; operatorToken: string },
 ) => Promise<unknown>;
 
-export async function runBrowserPaidCallFlow(input: {
+export type BrowserPaidCallFlowInput = {
   args: Record<string, unknown>;
   endpointUrl: string;
   fetchJson?: BrowserPaidCallFetch;
@@ -41,7 +33,9 @@ export async function runBrowserPaidCallFlow(input: {
   ) => Promise<CSPRClickSignTypedDataResult>;
   toolName: string;
   walletId: string;
-}): Promise<BrowserPaidCallFlowResult> {
+};
+
+export async function runBrowserPaidCallFlow(input: BrowserPaidCallFlowInput): Promise<BrowserPaidCallFlowResult> {
   const fetchJson = input.fetchJson ?? postJson;
   const intent = await fetchJson("/api/paid-calls/payment-intents", {
     body: baseRequest(input),
@@ -58,7 +52,7 @@ export async function runBrowserPaidCallFlow(input: {
   });
   if (keyCheck.status !== "ready") {
     const message = "message" in keyCheck ? keyCheck.message : "CSPR.click active account does not match the selected wallet";
-    return failed(message, parsedIntent.attemptId);
+    return reportBrowserFailure(fetchJson, input, parsedIntent.attemptId, message, "ACTIVE_ACCOUNT_MISMATCH");
   }
 
   const signature = await (input.signTypedData ?? defaultSignTypedData)(
@@ -74,8 +68,12 @@ export async function runBrowserPaidCallFlow(input: {
     signTypedDataResult: signature,
     x402Version: parsedIntent.x402Version,
   });
-  if (signed.status === "cancelled") return { attemptId: parsedIntent.attemptId, message: signed.message, status: "cancelled" };
-  if (signed.status === "failed") return failed(signed.message, parsedIntent.attemptId);
+  if (signed.status === "cancelled") {
+    return reportBrowserFailure(fetchJson, input, parsedIntent.attemptId, signed.message, "USER_CANCELLED");
+  }
+  if (signed.status === "failed") {
+    return reportBrowserFailure(fetchJson, input, parsedIntent.attemptId, signed.message, signature.errorCode);
+  }
 
   const completion = await fetchJson("/api/paid-calls/browser-completions", {
     body: {
@@ -151,7 +149,7 @@ function asIntent(value: unknown): IntentResponse | null {
   return value.status === "ready_for_signature" && isRecord(value.signing) ? (value as IntentResponse) : null;
 }
 
-function asCompletion(value: unknown): (BrowserPaidCallFlowResult & { paymentPayload?: PaymentPayload }) | null {
+function asCompletion(value: unknown): BrowserPaidCallFlowResult | null {
   if (!isRecord(value) || typeof value.attemptId !== "string" || typeof value.status !== "string") return null;
   return value as BrowserPaidCallFlowResult;
 }
@@ -162,6 +160,27 @@ function blocked(intent: Extract<IntentResponse, { status: "blocked" }>): Browse
 
 function failed(message: string, attemptId?: string): BrowserPaidCallFlowResult {
   return { attemptId, message, status: "failed" };
+}
+
+async function reportBrowserFailure(
+  fetchJson: BrowserPaidCallFetch,
+  input: BrowserPaidCallFlowInput,
+  attemptId: string,
+  reason: string,
+  errorCode?: string | null,
+  resultStatus: BrowserPaidCallFlowResult["status"] = "auth_failed",
+): Promise<BrowserPaidCallFlowResult> {
+  try {
+    const response = await fetchJson("/api/paid-calls/browser-failures", {
+      body: { attemptId, errorCode, reason, resultStatus, toolName: input.toolName },
+      operatorToken: input.operatorToken,
+    });
+    const closed = asCompletion(response);
+    if (closed) return { attemptId: closed.attemptId, message: closed.message ?? reason, status: closed.status };
+  } catch {
+    return failed(reason, attemptId);
+  }
+  return { attemptId, message: reason, status: resultStatus };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

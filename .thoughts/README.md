@@ -24,6 +24,8 @@ Phase 24M CSPR.click typed-data shape alignment is locally implemented and focus
 
 Phase 24N CSPR.click signing evidence audit is locally implemented and focused-verified. Browser completions now carry sanitized CSPR.click digest/public-key/hash-artifact metadata into audit events before facilitator verify/settle, so a live smoke can inspect what the wallet signed without changing settlement behavior.
 
+Phase 24O browser wallet funding and failure closeout is locally implemented and focused-verified. Abu's connected CSPR.click wallet was funded on Testnet with native CSPR and WCSPR, the browser paid-call console reached policy-approved signing, and the connected provider rejected typed-data signing with `SIGNATURE_SCHEME_NOT_SUPPORTED`. The latest browser attempt is correctly persisted as `auth_failed` with no x402 verify/settle rows and no Casper proof; no browser-approved settlement/deploy proof has been claimed.
+
 The current product shape:
 
 - MCPay-style provider gateway: connect API/OpenAPI/remote MCP, discover tools, price, publish hosted MCP/x402 endpoint.

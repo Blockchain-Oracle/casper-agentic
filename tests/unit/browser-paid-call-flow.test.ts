@@ -85,10 +85,11 @@ describe("browser paid-call flow", () => {
 
   it("fails closed before signing when the active CSPR.click key mismatches the selected wallet", async () => {
     const signTypedData = vi.fn();
+    const fetchJson = fetchDouble([failureIntent(), failureClosed("CSPR.click active account does not match the selected wallet")]);
     const result = await runBrowserPaidCallFlow({
       args: { amount: "10" },
       endpointUrl: "https://mcp.cspr.trade/mcp",
-      fetchJson: fetchDouble([readyIntent]),
+      fetchJson,
       getBrowserState: async () => ({ activePublicKey: `01${"cd".repeat(32)}`, connected: true }),
       operatorToken: "operator-token",
       signTypedData,
@@ -96,16 +97,25 @@ describe("browser paid-call flow", () => {
       walletId: "wallet-1",
     });
 
-    expect(result.status).toBe("failed");
+    expect(result.status).toBe("auth_failed");
     expect(result.message).toMatch(/active account does not match/);
     expect(signTypedData).not.toHaveBeenCalled();
+    expect(fetchJson).toHaveBeenNthCalledWith(2, "/api/paid-calls/browser-failures", expect.objectContaining({
+      body: expect.objectContaining({
+        attemptId: "attempt-1",
+        errorCode: "ACTIVE_ACCOUNT_MISMATCH",
+        resultStatus: "auth_failed",
+      }),
+      operatorToken: "operator-token",
+    }));
   });
 
   it("stops honestly when CSPR.click signing is cancelled", async () => {
+    const fetchJson = fetchDouble([readyIntent, failureClosed("CSPR.click signing was cancelled")]);
     const result = await runBrowserPaidCallFlow({
       args: { amount: "10" },
       endpointUrl: "https://mcp.cspr.trade/mcp",
-      fetchJson: fetchDouble([readyIntent]),
+      fetchJson,
       getBrowserState: async () => ({ activePublicKey: successfulSignature.publicKey, connected: true }),
       operatorToken: "operator-token",
       signTypedData: vi.fn().mockResolvedValue({ cancelled: true, digest: null, error: null, publicKey: null, signatureHex: null }),
@@ -113,7 +123,36 @@ describe("browser paid-call flow", () => {
       walletId: "wallet-1",
     });
 
-    expect(result).toEqual({ attemptId: "attempt-1", message: "CSPR.click signing was cancelled", status: "cancelled" });
+    expect(result).toEqual({ attemptId: "attempt-1", message: "CSPR.click signing was cancelled", status: "auth_failed" });
+    expect(fetchJson).toHaveBeenNthCalledWith(2, "/api/paid-calls/browser-failures", expect.objectContaining({
+      body: expect.objectContaining({ attemptId: "attempt-1", errorCode: "USER_CANCELLED" }),
+    }));
+  });
+
+  it("records unsupported CSPR.click signing before returning to the console", async () => {
+    const fetchJson = fetchDouble([readyIntent, failureClosed("signTypedData is not supported by this provider")]);
+    const result = await runBrowserPaidCallFlow({
+      args: { amount: "10" },
+      endpointUrl: "https://mcp.cspr.trade/mcp",
+      fetchJson,
+      getBrowserState: async () => ({ activePublicKey: successfulSignature.publicKey, connected: true }),
+      operatorToken: "operator-token",
+      signTypedData: vi.fn().mockResolvedValue({
+        cancelled: false,
+        digest: null,
+        error: "signTypedData is not supported by this provider",
+        errorCode: "UNSUPPORTED_TYPE",
+        publicKey: successfulSignature.publicKey,
+        signatureHex: null,
+      }),
+      toolName: "get_quote",
+      walletId: "wallet-1",
+    });
+
+    expect(result).toEqual({ attemptId: "attempt-1", message: "signTypedData is not supported by this provider", status: "auth_failed" });
+    expect(fetchJson).toHaveBeenNthCalledWith(2, "/api/paid-calls/browser-failures", expect.objectContaining({
+      body: expect.objectContaining({ errorCode: "UNSUPPORTED_TYPE", reason: "signTypedData is not supported by this provider" }),
+    }));
   });
 
   it.each(["verify_failed", "settle_failed", "raw_proof_unavailable", "upstream_failed"] as const)(
@@ -137,4 +176,12 @@ describe("browser paid-call flow", () => {
 
 function fetchDouble(responses: unknown[]) {
   return vi.fn().mockImplementation(async () => responses.shift());
+}
+
+function failureIntent() {
+  return readyIntent;
+}
+
+function failureClosed(message: string) {
+  return { attemptId: "attempt-1", message, reason: message, status: "auth_failed" };
 }
