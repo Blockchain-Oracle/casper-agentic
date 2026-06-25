@@ -1,3 +1,5 @@
+import { CSPRCLICK_SCRIPT_ID, CSPRCLICK_SCRIPT_SRC, getCSPRClickPublicConfig } from "@/lib/csprclick-browser";
+
 import type { RuntimeConfig } from "./env";
 import { getIntegrationConfigStatus, getRuntimeConfig } from "./env";
 
@@ -5,6 +7,12 @@ export interface WalletSigningReadiness {
   browserWallet: {
     futureGates: string[];
     provider: "CSPR.click";
+    runtime: {
+      appConfigured: boolean;
+      loadMode: "cdn";
+      scriptId: string;
+      scriptSrc: string;
+    };
     status: "not_enabled";
   };
   currentPath: {
@@ -18,6 +26,7 @@ export interface WalletSigningReadiness {
 
 export function getWalletSigningReadiness(config: RuntimeConfig = getRuntimeConfig()): WalletSigningReadiness {
   const integrationStatus = getIntegrationConfigStatus(config);
+  const browserConfig = getCSPRClickPublicConfig(process.env);
   const signerMissing = integrationStatus.missing.some((item) =>
     item.includes("CASPER_TESTNET_SIGNER_PRIVATE_KEY_PEM"),
   );
@@ -32,6 +41,12 @@ export function getWalletSigningReadiness(config: RuntimeConfig = getRuntimeConf
         "Resolve Casper proof through CSPR.cloud before claiming settlement.",
       ],
       provider: "CSPR.click",
+      runtime: {
+        appConfigured: browserConfig.status === "configured",
+        loadMode: "cdn",
+        scriptId: CSPRCLICK_SCRIPT_ID,
+        scriptSrc: CSPRCLICK_SCRIPT_SRC,
+      },
       status: "not_enabled",
     },
     currentPath: {
