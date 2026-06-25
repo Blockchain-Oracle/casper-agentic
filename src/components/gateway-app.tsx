@@ -14,8 +14,7 @@ import { defaultProviderPriceAmount, useProviderGateway } from "@/components/scr
 import { useWalletControl } from "@/components/screens/use-wallet-control";
 import { WalletScreen } from "@/components/screens/wallet-screen";
 import type { ConfigTab } from "@/lib/client-config";
-import { consoleReceiptId, screens } from "@/lib/fixtures";
-import { receiptById } from "@/lib/receipt-detail";
+import { screens } from "@/lib/fixtures";
 import type { Receipt, Screen, Tool } from "@/lib/types";
 
 export function GatewayApp() {
@@ -30,7 +29,6 @@ export function GatewayApp() {
 
   const activeScreen = screens.find((item) => item.id === screen) ?? screens[0];
   const pricingTool = provider.toolRows.find((tool) => tool.id === pricingToolId) ?? null;
-  const consoleReceipt = receiptById(consoleReceiptId);
 
   function go(next: Screen) {
     setScreen(next);
@@ -172,8 +170,6 @@ export function GatewayApp() {
         {screen === "console" ? (
           <TestConsoleScreen
             endpointUrl={provider.sourceUrl}
-            fixtureReceipt={consoleReceipt}
-            onOpenReceipt={openReceipt}
             operatorToken={provider.operatorToken}
             tools={provider.publishedTools}
             wallets={wallet.walletProfiles}

@@ -1,0 +1,123 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { payerHash, payeeAddress, requirements, signParams, successfulSignature } from "./browser-x402-signing-fixtures";
+
+import { runBrowserPaidCallFlow } from "@/lib/browser-paid-call-flow";
+
+const readyIntent = {
+  attemptId: "attempt-1",
+  paymentRequirements: requirements,
+  resource: { url: "https://mcp.cspr.trade/mcp#get_quote" },
+  signing: {
+    expectedAccountHash: payerHash,
+    expectedPublicKey: successfulSignature.publicKey,
+    signTypedDataParams: {
+      options: { returnHashArtifacts: true },
+      typedData: {
+        domain: signParams.typedData.domain,
+        message: {
+          ...signParams.typedData.message,
+          to: payeeAddress,
+        },
+        primaryType: "TransferWithAuthorization",
+        types: signParams.typedData.types,
+      },
+    },
+  },
+  status: "ready_for_signature",
+  x402Version: 2,
+};
+
+describe("browser paid-call flow", () => {
+  it("runs payment intent, CSPR.click signing, and browser completion", async () => {
+    const fetchJson = fetchDouble([readyIntent, { attemptId: "attempt-1", status: "settled" }]);
+    const result = await runBrowserPaidCallFlow({
+      args: { amount: "10" },
+      endpointUrl: "https://mcp.cspr.trade/mcp",
+      fetchJson,
+      getBrowserState: async () => ({ activePublicKey: successfulSignature.publicKey, connected: true }),
+      operatorToken: "operator-token",
+      signTypedData: vi.fn().mockResolvedValue(successfulSignature),
+      toolName: "get_quote",
+      walletId: "wallet-1",
+    });
+
+    expect(result).toEqual({ attemptId: "attempt-1", message: "Browser payment result: settled", status: "settled" });
+    expect(fetchJson).toHaveBeenNthCalledWith(1, "/api/paid-calls/payment-intents", expect.any(Object));
+    expect(fetchJson).toHaveBeenNthCalledWith(2, "/api/paid-calls/browser-completions", expect.objectContaining({
+      body: expect.objectContaining({ attemptId: "attempt-1", paymentPayload: expect.any(Object) }),
+    }));
+  });
+
+  it("does not request CSPR.click signing when policy blocks the intent", async () => {
+    const signTypedData = vi.fn();
+    const result = await runBrowserPaidCallFlow({
+      args: { amount: "10" },
+      endpointUrl: "https://mcp.cspr.trade/mcp",
+      fetchJson: fetchDouble([{ attemptId: "attempt-1", policy: { reason: "policy is disabled" }, status: "blocked" }]),
+      getBrowserState: async () => ({ connected: false }),
+      operatorToken: "operator-token",
+      signTypedData,
+      toolName: "get_quote",
+      walletId: "wallet-1",
+    });
+
+    expect(result).toEqual({ attemptId: "attempt-1", message: "policy is disabled", status: "blocked" });
+    expect(signTypedData).not.toHaveBeenCalled();
+  });
+
+  it("fails closed before signing when the active CSPR.click key mismatches the selected wallet", async () => {
+    const signTypedData = vi.fn();
+    const result = await runBrowserPaidCallFlow({
+      args: { amount: "10" },
+      endpointUrl: "https://mcp.cspr.trade/mcp",
+      fetchJson: fetchDouble([readyIntent]),
+      getBrowserState: async () => ({ activePublicKey: `01${"cd".repeat(32)}`, connected: true }),
+      operatorToken: "operator-token",
+      signTypedData,
+      toolName: "get_quote",
+      walletId: "wallet-1",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.message).toMatch(/active account does not match/);
+    expect(signTypedData).not.toHaveBeenCalled();
+  });
+
+  it("stops honestly when CSPR.click signing is cancelled", async () => {
+    const result = await runBrowserPaidCallFlow({
+      args: { amount: "10" },
+      endpointUrl: "https://mcp.cspr.trade/mcp",
+      fetchJson: fetchDouble([readyIntent]),
+      getBrowserState: async () => ({ activePublicKey: successfulSignature.publicKey, connected: true }),
+      operatorToken: "operator-token",
+      signTypedData: vi.fn().mockResolvedValue({ cancelled: true, digest: null, error: null, publicKey: null, signatureHex: null }),
+      toolName: "get_quote",
+      walletId: "wallet-1",
+    });
+
+    expect(result).toEqual({ attemptId: "attempt-1", message: "CSPR.click signing was cancelled", status: "cancelled" });
+  });
+
+  it.each(["verify_failed", "settle_failed", "raw_proof_unavailable", "upstream_failed"] as const)(
+    "returns %s browser completion status without rewriting it",
+    async (status) => {
+      const result = await runBrowserPaidCallFlow({
+        args: { amount: "10" },
+        endpointUrl: "https://mcp.cspr.trade/mcp",
+        fetchJson: fetchDouble([readyIntent, { attemptId: "attempt-1", status }]),
+        getBrowserState: async () => ({ activePublicKey: successfulSignature.publicKey, connected: true }),
+        operatorToken: "operator-token",
+        signTypedData: vi.fn().mockResolvedValue(successfulSignature),
+        toolName: "get_quote",
+        walletId: "wallet-1",
+      });
+
+      expect(result).toEqual({ attemptId: "attempt-1", message: `Browser payment result: ${status}`, status });
+    },
+  );
+});
+
+function fetchDouble(responses: unknown[]) {
+  return vi.fn().mockImplementation(async () => responses.shift());
+}

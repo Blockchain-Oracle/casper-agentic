@@ -10,20 +10,17 @@ import {
   type ConsoleTarget,
 } from "./test-console-target-panels";
 import { TestConsoleTimeline } from "./test-console-timeline";
+import { TestConsoleWalletActions } from "./test-console-wallet-actions";
 import { usePaidCallConsole } from "./use-paid-call-console";
-import type { ConsolePhase, Receipt, Tool, WalletProfile } from "@/lib/types";
+import type { ConsolePhase, Tool, WalletProfile } from "@/lib/types";
 
 export function TestConsoleScreen({
   endpointUrl,
-  fixtureReceipt,
-  onOpenReceipt,
   operatorToken,
   tools,
   wallets,
 }: {
   endpointUrl: string;
-  fixtureReceipt: Receipt;
-  onOpenReceipt: (receipt: Receipt) => void;
   operatorToken: string;
   tools: Tool[];
   wallets: WalletProfile[];
@@ -34,7 +31,7 @@ export function TestConsoleScreen({
   const [selectedToolId, setSelectedToolId] = useState(tools[0]?.id ?? "");
   const [selectedWalletId, setSelectedWalletId] = useState(wallets[0]?.id ?? "");
   const [toolArgs, setToolArgs] = useState<Record<string, string>>({});
-  const { apiMessage, apiReceiptId, apiTools, busy, discover, run } = usePaidCallConsole(operatorToken);
+  const { apiMessage, apiReceiptId, apiReceiptStatus, apiTools, browserSigningReady, busy, discover, run, runBrowser } = usePaidCallConsole(operatorToken);
 
   const activeEndpointUrl = target === "hosted" ? endpointUrl : endpointInput;
   const activeToolId = selectedToolId || tools[0]?.id || "";
@@ -51,6 +48,7 @@ export function TestConsoleScreen({
   const completed = phase === "complete";
   const inputFields = inputFieldsForTool(selectedApiTool);
   const runDisabled = busy || !selectedApiTool || !activeWalletId || !operatorToken;
+  const browserRunDisabled = runDisabled || !browserSigningReady || selectedWallet?.signingMode !== "browser-wallet";
 
   async function discoverEndpointTools() {
     const found = await discover(activeEndpointUrl);
@@ -64,7 +62,17 @@ export function TestConsoleScreen({
   async function runPaidCall() {
     if (!selectedApiTool || !activeWalletId) return;
     const args = Object.fromEntries(inputFields.map((field) => [field.name, toolArgs[field.name] ?? field.defaultValue]));
+    setPhase("discovered");
     if (await run({ args, endpointUrl: activeEndpointUrl, toolName: selectedApiTool.name, walletId: activeWalletId })) {
+      setPhase("complete");
+    }
+  }
+
+  async function runBrowserPaidCall() {
+    if (!selectedApiTool || !activeWalletId) return;
+    const args = Object.fromEntries(inputFields.map((field) => [field.name, toolArgs[field.name] ?? field.defaultValue]));
+    setPhase("discovered");
+    if (await runBrowser({ args, endpointUrl: activeEndpointUrl, toolName: selectedApiTool.name, walletId: activeWalletId })) {
       setPhase("complete");
     }
   }
@@ -155,21 +163,16 @@ export function TestConsoleScreen({
                   ))}
                 </select>
               </Field>
-              <div className={selectedWallet?.funded ? "notice signal" : "notice"}>
-                {activeWalletId
-                  ? selectedWallet?.funded
-                    ? "Policy pre-check can run before wallet signing."
-                    : "Wallet is not ready; a real run must stop before signing/payment."
-                  : "Select a real wallet profile before running a paid call."}
-              </div>
-              <button
-                className="primaryButton"
-                disabled={runDisabled}
-                onClick={runPaidCall}
-                type="button"
-              >
-                Run policy and paid call
-              </button>
+              <TestConsoleWalletActions
+                activeWalletId={activeWalletId}
+                browserRunDisabled={browserRunDisabled}
+                browserSigningReady={browserSigningReady}
+                busy={busy}
+                onRunBrowser={runBrowserPaidCall}
+                onRunSigner={runPaidCall}
+                runDisabled={runDisabled}
+                selectedWallet={selectedWallet}
+              />
             </div>
           )}
         </Panel>
@@ -178,8 +181,7 @@ export function TestConsoleScreen({
           apiReceiptId={apiReceiptId}
           completed={completed}
           discovered={discovered}
-          fixtureReceipt={fixtureReceipt}
-          onOpenReceipt={onOpenReceipt}
+          resultStatus={apiReceiptStatus}
         />
       </div>
     </div>

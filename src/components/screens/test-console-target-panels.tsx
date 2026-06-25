@@ -28,7 +28,7 @@ export function TestConsoleEndpointTargetPanel({
   target: ConsoleTarget;
 }) {
   return (
-    <Panel title="Endpoint target" action={<Chip tone="signal">Testnet signer gate</Chip>}>
+    <Panel title="Endpoint target" action={<Chip tone="signal">CSPR.click browser approval</Chip>}>
       <div className="stack">
         <Segmented<ConsoleTarget>
           options={[
@@ -47,8 +47,7 @@ export function TestConsoleEndpointTargetPanel({
           />
         </Field>
         <div className="notice">
-          The selected wallet must match the configured Testnet signer until browser
-          signing is implemented. Mismatches stop before payment.
+          Browser signing runs server policy first, then asks CSPR.click for approval. The integration signer path is separate.
         </div>
         <button className="primaryButton" disabled={busy} onClick={onDiscover} type="button">
           Discover endpoint tools
