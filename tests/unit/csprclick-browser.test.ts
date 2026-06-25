@@ -54,13 +54,14 @@ describe("CSPR.click browser adapter boundary", () => {
     expect(second).toEqual({ scriptId: CSPRCLICK_SCRIPT_ID, scriptSrc: CSPRCLICK_SCRIPT_SRC, status: "script_present" });
     expect(win.appendedScripts).toHaveLength(1);
     expect(win.clickSDKOptions).toMatchObject({ appId: "casper-gw-test", contentMode: "iframe" });
-    expect(win.clickUIOptions).toMatchObject({ rootAppElement: "#root", uiContainer: "csprclick-ui" });
+    expect(win.clickUIOptions).toMatchObject({ rootAppElement: "#app", uiContainer: "csprclick-ui" });
   });
 
   it("reports browser state without treating client presence as enabled signing", async () => {
     await expect(getCSPRClickBrowserState({})).resolves.toEqual({
       clientAvailable: false,
       connected: false,
+      signInAvailable: false,
       status: "client_unavailable",
     });
 
@@ -69,12 +70,14 @@ describe("CSPR.click browser adapter boundary", () => {
         csprclick: {
           getActiveAccount: () => ({ public_key: "01ab" }),
           getActivePublicKey: async () => "01ab",
+          signIn: vi.fn(),
         },
       }),
     ).resolves.toEqual({
       activePublicKey: "01ab",
       clientAvailable: true,
       connected: true,
+      signInAvailable: true,
       status: "connected",
     });
   });

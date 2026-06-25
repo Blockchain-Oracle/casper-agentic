@@ -68,16 +68,17 @@ describe("wallet signing readiness", () => {
     expect(readiness.browserWallet.status).toBe("not_enabled");
   });
 
-  it("reports CSPR.click public runtime config without enabling browser signing", () => {
+  it("reports CSPR.click public runtime config without claiming live proof", () => {
     process.env.NEXT_PUBLIC_CSPR_CLICK_APP_ID = "casper-gw-test";
     const readiness = getWalletSigningReadiness(baseConfig);
 
-    expect(readiness.browserWallet.status).toBe("not_enabled");
+    expect(readiness.browserWallet.status).toBe("configured");
     expect(readiness.browserWallet.runtime).toMatchObject({
       appConfigured: true,
       loadMode: "cdn",
       scriptId: "csprclick-client",
     });
+    expect(readiness.productionCustody).toBe("not_claimed");
     delete process.env.NEXT_PUBLIC_CSPR_CLICK_APP_ID;
   });
 });

@@ -14,12 +14,7 @@ import { TestConsoleWalletActions } from "./test-console-wallet-actions";
 import { usePaidCallConsole } from "./use-paid-call-console";
 import type { ConsolePhase, Tool, WalletProfile } from "@/lib/types";
 
-export function TestConsoleScreen({
-  endpointUrl,
-  operatorToken,
-  tools,
-  wallets,
-}: {
+export function TestConsoleScreen({ endpointUrl, operatorToken, tools, wallets }: {
   endpointUrl: string;
   operatorToken: string;
   tools: Tool[];
@@ -31,7 +26,8 @@ export function TestConsoleScreen({
   const [selectedToolId, setSelectedToolId] = useState(tools[0]?.id ?? "");
   const [selectedWalletId, setSelectedWalletId] = useState(wallets[0]?.id ?? "");
   const [toolArgs, setToolArgs] = useState<Record<string, string>>({});
-  const { apiMessage, apiReceiptId, apiReceiptStatus, apiTools, browserSigningReady, busy, discover, run, runBrowser } = usePaidCallConsole(operatorToken);
+  const { apiMessage, apiReceiptId, apiReceiptStatus, apiTools, browserSigningState, busy, connectBrowserWallet, discover, run, runBrowser } =
+    usePaidCallConsole(operatorToken);
 
   const activeEndpointUrl = target === "hosted" ? endpointUrl : endpointInput;
   const activeToolId = selectedToolId || tools[0]?.id || "";
@@ -48,7 +44,7 @@ export function TestConsoleScreen({
   const completed = phase === "complete";
   const inputFields = inputFieldsForTool(selectedApiTool);
   const runDisabled = busy || !selectedApiTool || !activeWalletId || !operatorToken;
-  const browserRunDisabled = runDisabled || !browserSigningReady || selectedWallet?.signingMode !== "browser-wallet";
+  const browserRunDisabled = runDisabled || !browserSigningState.connected || selectedWallet?.signingMode !== "browser-wallet";
 
   async function discoverEndpointTools() {
     const found = await discover(activeEndpointUrl);
@@ -166,8 +162,9 @@ export function TestConsoleScreen({
               <TestConsoleWalletActions
                 activeWalletId={activeWalletId}
                 browserRunDisabled={browserRunDisabled}
-                browserSigningReady={browserSigningReady}
+                browserSigningState={browserSigningState}
                 busy={busy}
+                onConnectBrowser={connectBrowserWallet}
                 onRunBrowser={runBrowserPaidCall}
                 onRunSigner={runPaidCall}
                 runDisabled={runDisabled}
@@ -177,12 +174,7 @@ export function TestConsoleScreen({
           )}
         </Panel>
 
-        <TestConsoleTimeline
-          apiReceiptId={apiReceiptId}
-          completed={completed}
-          discovered={discovered}
-          resultStatus={apiReceiptStatus}
-        />
+        <TestConsoleTimeline apiReceiptId={apiReceiptId} completed={completed} discovered={discovered} resultStatus={apiReceiptStatus} />
       </div>
     </div>
   );

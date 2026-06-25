@@ -1,7 +1,4 @@
-import type {
-  CSPRClickSignTypedDataParams,
-  CSPRClickSignTypedDataResult,
-} from "./browser-x402-signing";
+import type { CSPRClickSignTypedDataParams, CSPRClickSignTypedDataResult } from "./browser-x402-signing";
 
 export const CSPRCLICK_SCRIPT_ID = "csprclick-client";
 export const CSPRCLICK_SCRIPT_SRC = "https://cdn.cspr.click/ui/v2.1.0/csprclick-client-2.1.0.js";
@@ -35,12 +32,16 @@ export type CSPRClickAccount = {
 export type CSPRClickClient = {
   getActiveAccount?: () => CSPRClickAccount | null;
   getActivePublicKey?: () => Promise<string | undefined> | string | undefined;
+  off?: (eventName: CSPRClickEventName, handler: (event?: CSPRClickAccountEvent) => void) => void;
+  on?: (eventName: CSPRClickEventName, handler: (event?: CSPRClickAccountEvent) => void) => void;
   signIn?: () => void;
-  signTypedData?: (
-    params: CSPRClickSignTypedDataParams,
-    signingPublicKey: string,
-  ) => Promise<CSPRClickSignTypedDataResult | undefined>;
+  signInWithAccount?: (account: CSPRClickAccount) => void;
+  signTypedData?: (params: CSPRClickSignTypedDataParams, signingPublicKey: string) => Promise<CSPRClickSignTypedDataResult | undefined>;
 };
+
+export type CSPRClickEventName = "csprclick:disconnected" | "csprclick:signed_in" | "csprclick:signed_out" | "csprclick:switched_account" | "csprclick:unsolicited_account_change";
+
+export type CSPRClickAccountEvent = { account?: CSPRClickAccount };
 
 export type CSPRClickBrowserWindow = {
   clickSDKOptions?: unknown;
@@ -51,6 +52,8 @@ export type CSPRClickBrowserWindow = {
     getElementById: (id: string) => unknown;
     head?: { appendChild: (element: { async?: boolean; id: string; src?: string }) => unknown };
   };
+  addEventListener?: (eventName: "csprclick:loaded", handler: () => void) => void;
+  removeEventListener?: (eventName: "csprclick:loaded", handler: () => void) => void;
 };
 
 export function getCSPRClickPublicConfig(
@@ -69,7 +72,7 @@ export function getCSPRClickPublicConfig(
     sdk,
     status: "configured",
     ui: {
-      rootAppElement: clean(env.NEXT_PUBLIC_CSPR_CLICK_ROOT_ELEMENT) || "#root",
+      rootAppElement: clean(env.NEXT_PUBLIC_CSPR_CLICK_ROOT_ELEMENT) || "#app",
       uiContainer: clean(env.NEXT_PUBLIC_CSPR_CLICK_UI_CONTAINER) || "csprclick-ui",
     },
   };
@@ -105,16 +108,19 @@ export function prepareCSPRClickRuntime(windowLike: CSPRClickBrowserWindow, conf
 
 export async function getCSPRClickBrowserState(windowLike: Pick<CSPRClickBrowserWindow, "csprclick">) {
   const client = windowLike.csprclick;
-  if (!client) return { clientAvailable: false, connected: false, status: "client_unavailable" as const };
+  if (!client) return { clientAvailable: false, connected: false, signInAvailable: false, status: "client_unavailable" as const };
 
   const activeAccount = client.getActiveAccount?.() ?? null;
   const activePublicKey = clean((await client.getActivePublicKey?.()) ?? activeAccount?.public_key);
-  if (!activePublicKey) return { clientAvailable: true, connected: false, status: "client_available" as const };
+  if (!activePublicKey) {
+    return { clientAvailable: true, connected: false, signInAvailable: Boolean(client.signIn), status: "client_available" as const };
+  }
 
   return {
     activePublicKey: activePublicKey.toLowerCase(),
     clientAvailable: true,
     connected: true,
+    signInAvailable: Boolean(client.signIn),
     status: "connected" as const,
   };
 }

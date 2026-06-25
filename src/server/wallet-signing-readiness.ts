@@ -13,7 +13,7 @@ export interface WalletSigningReadiness {
       scriptId: string;
       scriptSrc: string;
     };
-    status: "not_enabled";
+    status: "configured" | "not_enabled";
   };
   currentPath: {
     mode: "testnet_signer";
@@ -33,13 +33,7 @@ export function getWalletSigningReadiness(config: RuntimeConfig = getRuntimeConf
 
   return {
     browserWallet: {
-      futureGates: [
-        "Install and configure CSPR.click SDK.",
-        "Require the active wallet public key to match the selected wallet profile.",
-        "Run spend policy before requesting wallet approval.",
-        "Handle user cancellation, network errors, timeout, sent, and processed states.",
-        "Resolve Casper proof through CSPR.cloud before claiming settlement.",
-      ],
+      futureGates: browserFutureGates(browserConfig.status === "configured"),
       provider: "CSPR.click",
       runtime: {
         appConfigured: browserConfig.status === "configured",
@@ -47,7 +41,7 @@ export function getWalletSigningReadiness(config: RuntimeConfig = getRuntimeConf
         scriptId: CSPRCLICK_SCRIPT_ID,
         scriptSrc: CSPRCLICK_SCRIPT_SRC,
       },
-      status: "not_enabled",
+      status: browserConfig.status === "configured" ? "configured" : "not_enabled",
     },
     currentPath: {
       mode: "testnet_signer",
@@ -57,4 +51,14 @@ export function getWalletSigningReadiness(config: RuntimeConfig = getRuntimeConf
     policyTiming: "before_signing",
     productionCustody: "not_claimed",
   };
+}
+
+function browserFutureGates(configured: boolean) {
+  const gates = [
+    "Require the active wallet public key to match the selected wallet profile.",
+    "Run spend policy before requesting wallet approval.",
+    "Handle user cancellation, network errors, timeout, sent, and processed states.",
+    "Resolve Casper proof through CSPR.cloud before claiming settlement.",
+  ];
+  return configured ? gates : ["Configure public CSPR.click app id.", ...gates];
 }

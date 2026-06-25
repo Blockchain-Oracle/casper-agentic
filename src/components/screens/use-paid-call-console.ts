@@ -3,8 +3,20 @@
 import { useEffect, useState } from "react";
 
 import { runBrowserPaidCallFlow } from "@/lib/browser-paid-call-flow";
-import { getCSPRClickPublicConfig, prepareCSPRClickRuntime, type CSPRClickBrowserWindow } from "@/lib/csprclick-browser";
+import {
+  getCSPRClickBrowserState,
+  prepareCSPRClickRuntime,
+  type CSPRClickBrowserWindow,
+} from "@/lib/csprclick-browser";
+import { bindCSPRClickAccountEvents, requestCSPRClickSignIn } from "@/lib/csprclick-browser-session";
+import { getCSPRClickClientPublicConfig } from "@/lib/csprclick-client-config";
 import { receiptStatuses, type ReceiptStatus } from "@/lib/types";
+import {
+  browserStateFromClient,
+  browserStateFromRuntime,
+  initialBrowserSigningState,
+} from "./browser-signing-state";
+import type { BrowserSigningState } from "./browser-signing-state";
 
 export interface ConsoleTool {
   description?: string;
@@ -24,15 +36,32 @@ export function usePaidCallConsole(operatorToken: string) {
   const [apiReceiptId, setApiReceiptId] = useState<string | null>(null);
   const [apiReceiptStatus, setApiReceiptStatus] = useState<ReceiptStatus | null>(null);
   const [apiTools, setApiTools] = useState<ConsoleTool[]>([]);
-  const [browserSigningReady, setBrowserSigningReady] = useState(false);
+  const [browserSigningState, setBrowserSigningState] = useState<BrowserSigningState>(initialBrowserSigningState);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const runtime = prepareCSPRClickRuntime(window as unknown as CSPRClickBrowserWindow, getCSPRClickPublicConfig());
+    const browserWindow = window as unknown as CSPRClickBrowserWindow;
+    const runtime = prepareCSPRClickRuntime(browserWindow, getCSPRClickClientPublicConfig());
+    let disposed = false;
+
+    async function refresh() {
+      if (runtime.status === "not_enabled" || runtime.status === "error") {
+        if (!disposed) setBrowserSigningState(browserStateFromRuntime(runtime.status));
+        return;
+      }
+      const state = await getCSPRClickBrowserState(browserWindow);
+      if (!disposed) setBrowserSigningState(browserStateFromClient(state));
+    }
+
+    const cleanup = bindCSPRClickAccountEvents(browserWindow, () => void refresh());
     const timer = window.setTimeout(() => {
-      setBrowserSigningReady(runtime.status === "script_appended" || runtime.status === "script_present");
+      void refresh();
     }, 0);
-    return () => window.clearTimeout(timer);
+    return () => {
+      disposed = true;
+      window.clearTimeout(timer);
+      cleanup();
+    };
   }, []);
 
   function operatorHeaders() {
@@ -92,8 +121,8 @@ export function usePaidCallConsole(operatorToken: string) {
   }
 
   async function runBrowser(input: PaidCallRunInput) {
-    if (!browserSigningReady) {
-      setApiMessage("CSPR.click not enabled.");
+    if (!browserSigningState.connected) {
+      setApiMessage(browserSigningState.message);
       return false;
     }
     setBusy(true);
@@ -117,7 +146,23 @@ export function usePaidCallConsole(operatorToken: string) {
     }
   }
 
-  return { apiMessage, apiReceiptId, apiReceiptStatus, apiTools, browserSigningReady, busy, discover, run, runBrowser };
+  function connectBrowserWallet() {
+    const result = requestCSPRClickSignIn((window as unknown as CSPRClickBrowserWindow).csprclick);
+    setApiMessage(result.message);
+  }
+
+  return {
+    apiMessage,
+    apiReceiptId,
+    apiReceiptStatus,
+    apiTools,
+    browserSigningState,
+    busy,
+    connectBrowserWallet,
+    discover,
+    run,
+    runBrowser,
+  };
 }
 
 function toReceiptStatus(value: unknown): ReceiptStatus | null {

@@ -57,7 +57,8 @@ export function GatewayApp() {
   }
 
   return (
-    <main className="app">
+    <main className="app" id="app">
+      <div id="csprclick-ui" />
       <AppShell
         active={screen}
         navOpen={navOpen}
