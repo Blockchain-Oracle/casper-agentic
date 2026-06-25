@@ -22,6 +22,8 @@ Phase 24L CSPR.click browser smoke gate is locally implemented and focused-verif
 
 Phase 24M CSPR.click typed-data shape alignment is locally implemented and focused-verified. Browser payment intents now match current CSPR.click documented `TransferWithAuthorization` params with unprefixed package hash, account addresses, and nonce before the next live browser-approved x402 smoke.
 
+Phase 24N CSPR.click signing evidence audit is locally implemented and focused-verified. Browser completions now carry sanitized CSPR.click digest/public-key/hash-artifact metadata into audit events before facilitator verify/settle, so a live smoke can inspect what the wallet signed without changing settlement behavior.
+
 The current product shape:
 
 - MCPay-style provider gateway: connect API/OpenAPI/remote MCP, discover tools, price, publish hosted MCP/x402 endpoint.

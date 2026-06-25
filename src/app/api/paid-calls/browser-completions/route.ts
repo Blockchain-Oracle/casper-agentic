@@ -40,6 +40,7 @@ function parseCompletionBody(body: unknown): BrowserPaymentCompletionInput {
     attemptId: requireString(body.attemptId, "attemptId"),
     endpointUrl: requireString(body.endpointUrl, "endpointUrl"),
     paymentPayload: paymentPayload as BrowserPaymentCompletionInput["paymentPayload"],
+    signingEvidence: isRecord(body.signingEvidence) ? body.signingEvidence : undefined,
     toolName: requireString(body.toolName, "toolName"),
   };
 }

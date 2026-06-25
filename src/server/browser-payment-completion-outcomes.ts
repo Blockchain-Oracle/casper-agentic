@@ -13,7 +13,14 @@ export interface ParsedBrowserPaymentCompletionInput {
   attemptId: string;
   endpointUrl: string;
   paymentPayload: PaymentPayload;
+  signingEvidence?: BrowserSigningEvidence;
   toolName: string;
+}
+
+export interface BrowserSigningEvidence {
+  digest?: unknown;
+  hashArtifacts?: unknown;
+  publicKey?: unknown;
 }
 
 export async function failBrowserVerify(

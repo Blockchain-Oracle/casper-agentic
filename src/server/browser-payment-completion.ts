@@ -15,7 +15,8 @@ import { normalizeCasperAccountHash } from "./casper-account";
 import { getRuntimeConfig } from "./env";
 import { normalizePayer, payerFromPayload, payerFromVerify, settlePayment } from "./hosted-paid-call-support";
 import { getPaidCallAttempt } from "./paid-call-attempt-store";
-import { persistX402Record } from "./receipt-store";
+import { persistAudit, persistX402Record } from "./receipt-store";
+import { auditSigningEvidence } from "./browser-signing-evidence";
 import { X402FacilitatorClient } from "./x402-facilitator";
 import { buildPaymentRequirements } from "./x402-payment";
 
@@ -24,6 +25,7 @@ export interface BrowserPaymentCompletionInput {
   attemptId: string;
   endpointUrl: string;
   paymentPayload: PaymentPayload;
+  signingEvidence?: Record<string, unknown>;
   toolName: string;
 }
 
@@ -41,6 +43,10 @@ export async function completeBrowserSignedPayment(input: BrowserPaymentCompleti
   const attempt = await getPaidCallAttempt(parsed.attemptId);
   if (!attempt) throw new BrowserPaymentCompletionInputError("browser payment intent attempt not found");
   assertCompletableAttempt(attempt, parsed);
+  const signingEvidence = auditSigningEvidence(parsed.signingEvidence);
+  if (signingEvidence) {
+    await persistAudit(parsed.attemptId, "info", "Browser CSPR.click signing evidence received", signingEvidence);
+  }
   const policyBlockReason = await browserCompletionPolicyBlock({ attempt, config, paymentInput: parsed });
   if (policyBlockReason) return failBrowserPolicy(parsed.attemptId, policyBlockReason);
 
@@ -143,6 +149,7 @@ function requireCompletionInput(input: BrowserPaymentCompletionInput): ParsedBro
     attemptId: requireText(input.attemptId, "attemptId"),
     endpointUrl,
     paymentPayload: input.paymentPayload,
+    signingEvidence: isRecord(input.signingEvidence) ? input.signingEvidence : undefined,
     toolName: requireText(input.toolName, "toolName"),
   };
 }

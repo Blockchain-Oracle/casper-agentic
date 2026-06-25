@@ -18,8 +18,18 @@ export type CSPRClickSignTypedDataResult = {
   digest: string | null;
   error: string | null;
   errorCode?: string;
+  hashArtifacts?: CSPRClickHashArtifacts;
   publicKey: string | null;
   signatureHex: string | null;
+};
+
+export type CSPRClickHashArtifacts = {
+  canonicalTypeString?: string;
+  domain?: Record<string, unknown>;
+  domainSeparator?: string;
+  domainTypeString?: string;
+  structHash?: string;
+  typeHash?: string;
 };
 
 export type BrowserX402FailureReason =

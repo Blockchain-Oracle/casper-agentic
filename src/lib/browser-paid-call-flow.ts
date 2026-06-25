@@ -78,7 +78,16 @@ export async function runBrowserPaidCallFlow(input: {
   if (signed.status === "failed") return failed(signed.message, parsedIntent.attemptId);
 
   const completion = await fetchJson("/api/paid-calls/browser-completions", {
-    body: { ...baseRequest(input), attemptId: parsedIntent.attemptId, paymentPayload: signed.paymentPayload },
+    body: {
+      ...baseRequest(input),
+      attemptId: parsedIntent.attemptId,
+      paymentPayload: signed.paymentPayload,
+      signingEvidence: {
+        digest: signed.digest,
+        hashArtifacts: signature.hashArtifacts,
+        publicKey: signed.publicKey,
+      },
+    },
     operatorToken: input.operatorToken,
   });
   const completed = asCompletion(completion);

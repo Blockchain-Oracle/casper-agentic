@@ -43,6 +43,7 @@ describe("browser payment completion route", () => {
       attemptId: "attempt-1",
       endpointUrl: "https://mcp.cspr.trade/mcp",
       paymentPayload: { payload: { authorization: { from: "payer" } }, resource: { url: "https://mcp.cspr.trade/mcp#get_quote" } },
+      signingEvidence: { digest: "0xabc", publicKey: "01ab" },
       toolName: "get_quote",
     };
     const response = await POST(request({ body, token: "operator-token" }));

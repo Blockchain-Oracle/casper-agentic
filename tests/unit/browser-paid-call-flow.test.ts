@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { payerHash, payeeAddress, requirements, signParams, successfulSignature } from "./browser-x402-signing-fixtures";
+import { digest, payerHash, payeeAddress, requirements, signParams, successfulSignature } from "./browser-x402-signing-fixtures";
 
 import { runBrowserPaidCallFlow } from "@/lib/browser-paid-call-flow";
 
@@ -37,7 +37,13 @@ describe("browser paid-call flow", () => {
       fetchJson,
       getBrowserState: async () => ({ activePublicKey: successfulSignature.publicKey, connected: true }),
       operatorToken: "operator-token",
-      signTypedData: vi.fn().mockResolvedValue(successfulSignature),
+      signTypedData: vi.fn().mockResolvedValue({
+        ...successfulSignature,
+        hashArtifacts: {
+          domainSeparator: `0x${"11".repeat(32)}`,
+          structHash: `0x${"22".repeat(32)}`,
+        },
+      }),
       toolName: "get_quote",
       walletId: "wallet-1",
     });
@@ -45,7 +51,18 @@ describe("browser paid-call flow", () => {
     expect(result).toEqual({ attemptId: "attempt-1", message: "Browser payment result: settled", status: "settled" });
     expect(fetchJson).toHaveBeenNthCalledWith(1, "/api/paid-calls/payment-intents", expect.any(Object));
     expect(fetchJson).toHaveBeenNthCalledWith(2, "/api/paid-calls/browser-completions", expect.objectContaining({
-      body: expect.objectContaining({ attemptId: "attempt-1", paymentPayload: expect.any(Object) }),
+      body: expect.objectContaining({
+        attemptId: "attempt-1",
+        paymentPayload: expect.any(Object),
+        signingEvidence: {
+          digest,
+          hashArtifacts: {
+            domainSeparator: `0x${"11".repeat(32)}`,
+            structHash: `0x${"22".repeat(32)}`,
+          },
+          publicKey: successfulSignature.publicKey.toLowerCase(),
+        },
+      }),
     }));
   });
 

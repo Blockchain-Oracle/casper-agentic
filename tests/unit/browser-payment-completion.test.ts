@@ -88,7 +88,20 @@ describe("browser payment completion", () => {
   });
 
   it("verifies, settles, resolves Casper proof, and calls the protected tool", async () => {
-    const result = await completeBrowserSignedPayment(browserCompletionInput());
+    const result = await completeBrowserSignedPayment(
+      browserCompletionInput({
+        signingEvidence: {
+          digest: `0x${"ef".repeat(32)}`,
+          hashArtifacts: {
+            domain: { ["x".repeat(120)]: "trimmed", chain_name: "casper:casper-test", contract_package_hash: "asset" },
+            domainSeparator: `0x${"11".repeat(32)}`,
+            ignoredNested: { value: "ignored" },
+            structHash: `0x${"22".repeat(32)}`,
+          },
+          publicKey: "01ab",
+        },
+      }),
+    );
 
     expect(result).toMatchObject({
       attemptId: "attempt-1",
@@ -110,6 +123,21 @@ describe("browser payment completion", () => {
       type: "exact_in",
     });
     expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "settled", undefined, { text: "quote" });
+    expect(mocks.persistAudit).toHaveBeenCalledWith(
+      "attempt-1",
+      "info",
+      "Browser CSPR.click signing evidence received",
+      {
+        digest: `0x${"ef".repeat(32)}`,
+        hasHashArtifacts: true,
+        hashArtifacts: {
+          domain: { ["x".repeat(80)]: "trimmed", chain_name: "casper:casper-test", contract_package_hash: "asset" },
+          domainSeparator: `0x${"11".repeat(32)}`,
+          structHash: `0x${"22".repeat(32)}`,
+        },
+        publicKey: "01ab",
+      },
+    );
     expect(JSON.stringify(result)).not.toContain("cspr-cloud-token");
   });
 
