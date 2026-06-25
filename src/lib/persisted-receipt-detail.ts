@@ -128,6 +128,9 @@ function policyNote(receipt: Receipt, policy: PersistedReceiptLayers["policyDeci
       ? "Spend was stopped before settlement. A block is a successful control outcome and has no transaction."
       : "Spend was stopped before signing. A block is a successful control outcome and has no transaction.";
   }
+  if (receipt.status === "policy_pending" && policy?.allowed === true) {
+    return "Policy allowed. Browser wallet signing has not run yet, so no payment or Casper transaction is attached.";
+  }
   if (receipt.status === "policy_pending") return "Policy evaluation did not complete. No payment step or Casper transaction is attached.";
   return undefined;
 }

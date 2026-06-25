@@ -1,10 +1,10 @@
-import type { IntegrationRuntimeConfig } from "./env";
+import type { RuntimeConfig } from "./env";
 import { evaluateSpendPolicy } from "./policy";
 import { getSpendPolicyForWallet, getWalletDailySpend } from "./spend-policy-store";
 
 export async function evaluateLivePaidCallPolicy(input: {
   assetBalance: bigint;
-  config: IntegrationRuntimeConfig;
+  config: RuntimeConfig;
   gasBalance: bigint;
   toolName: string;
   walletAccountHash: string;
