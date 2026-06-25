@@ -30,6 +30,7 @@ function state(status: BrowserSigningState["status"], overrides: Partial<Browser
     canRequestSignIn: status === "client_available" || status === "connected",
     connected: status === "connected",
     message: status,
+    providerCapabilities: [],
     ready: status !== "not_enabled",
     signTypedDataAvailable: status === "connected",
     status,

@@ -12,6 +12,10 @@ test("app connect button uses embedded CSPR.click runtime without opening a prov
   await page.goto("/app");
   await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByText("CSPR.click configured - connect before signing")).toBeVisible();
+  await expect(page.getByText("Google (csprclick-w3a-google)")).toBeVisible();
+  await expect(page.getByText("advertises sign-typed-data-eip712")).toBeVisible();
+  await expect(page.getByText("Casper Wallet (casper-wallet)")).toBeVisible();
+  await expect(page.getByText("does not advertise sign-typed-data-eip712").first()).toBeVisible();
 
   await page.getByRole("button", { name: "Wallets" }).click();
   await expect(page.getByText("Connect CSPR.click before browser approval.")).toBeVisible();
@@ -34,6 +38,16 @@ function csprClickRuntimeMock() {
   window.csprclick = {
     getActiveAccountAsync: async () => null,
     getActivePublicKey: async () => undefined,
+    getProviderInfo: async (provider) => {
+      const providers = {
+        'casper-wallet': { key: 'casper-wallet', name: 'Casper Wallet', supports: ['sign-message'], version: '2.4.2-extension' },
+        'csprclick-w3a-apple': { key: 'csprclick-w3a-apple', name: 'Apple', supports: ['sign-message'], version: 'web3auth' },
+        'csprclick-w3a-google': { key: 'csprclick-w3a-google', name: 'Google', supports: ['sign-typed-data-eip712'], version: 'web3auth' },
+        'ledger': { key: 'ledger', name: 'Ledger', supports: ['sign-deploy'], version: 'hardware' },
+        'metamask-snap': { key: 'metamask-snap', name: 'MetaMask Snap', supports: ['sign-message'], version: 'snap' }
+      };
+      return providers[provider];
+    },
     off: (eventName) => listeners.delete(eventName),
     on: (eventName, handler) => listeners.set(eventName, handler),
     signIn: () => {

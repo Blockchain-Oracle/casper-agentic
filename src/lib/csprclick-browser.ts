@@ -13,6 +13,7 @@ import {
   csprClickProviderSupportsTypedData,
   normalizeCSPRClickSupports,
 } from "./csprclick-provider-info";
+import { getCSPRClickProviderCapabilities } from "./csprclick-provider-capabilities";
 
 export type {
   CSPRClickAccount,
@@ -56,12 +57,16 @@ export function prepareCSPRClickRuntime(windowLike: CSPRClickBrowserWindow, conf
   return runtimeStatus("script_appended");
 }
 
-export async function getCSPRClickBrowserState(windowLike: Pick<CSPRClickBrowserWindow, "csprclick">) {
+export async function getCSPRClickBrowserState(
+  windowLike: Pick<CSPRClickBrowserWindow, "csprclick">,
+  providerKeys: string[] = [],
+) {
   const client = windowLike.csprclick;
   if (!client) {
     return {
       clientAvailable: false,
       connected: false,
+      providerCapabilities: [],
       signInAvailable: false,
       signTypedDataAvailable: false,
       status: "client_unavailable" as const,
@@ -78,12 +83,14 @@ export async function getCSPRClickBrowserState(windowLike: Pick<CSPRClickBrowser
     provider,
     supports: providerSupports,
   });
+  const providerCapabilities = await getCSPRClickProviderCapabilities(client, providerKeys);
 
   if (!activePublicKey) {
     return {
       clientAvailable: true,
       connected: false,
       provider: providerInfo,
+      providerCapabilities,
       providerSupportsTypedData,
       signInAvailable: Boolean(client.signIn),
       signTypedDataAvailable: Boolean(client.signTypedData),
@@ -96,6 +103,7 @@ export async function getCSPRClickBrowserState(windowLike: Pick<CSPRClickBrowser
     clientAvailable: true,
     connected: true,
     provider: providerInfo,
+    providerCapabilities,
     providerSupportsTypedData,
     signInAvailable: Boolean(client.signIn),
     signTypedDataAvailable: Boolean(client.signTypedData),

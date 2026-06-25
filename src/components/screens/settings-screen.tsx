@@ -3,6 +3,7 @@ import { Chip, KeyValueList } from "@/components/ui";
 import { auditEvents } from "@/lib/fixtures";
 import { clientToken } from "@/lib/client-config";
 import type { BrowserSigningState } from "./browser-signing-state";
+import { BrowserSigningProviderCapabilities } from "./browser-signing-evidence";
 import {
   browserProviderLabel,
   browserTypedDataSupportLabel,
@@ -48,6 +49,7 @@ export function SettingsScreen({ browserSigningState }: { browserSigningState: B
               { key: "policy timing", value: "policy before payment signing" },
             ]}
           />
+          <BrowserSigningProviderCapabilities state={browserSigningState} />
         </Panel>
         <Panel title="Audit log">
           {auditEvents.map((event) => (

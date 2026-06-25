@@ -28,6 +28,8 @@ Phase 24O browser wallet funding and failure closeout is locally implemented and
 
 Phase 24P CSPR.click provider compatibility preflight is locally implemented and verified. The app now reads CSPR.click provider metadata with `getProviderInfo`, surfaces provider key/name/version/supports in Settings, Wallets, and the paid-tool console, and fail-closes the browser run button when the connected provider explicitly lacks `sign-typed-data-eip712`. No message-signing fallback, x402 verify/settle request, or Casper deploy proof is claimed by this slice.
 
+Phase 24Q CSPR.click configured provider capability probe is locally implemented and verified. Settings now queries configured CSPR.click providers with `getProviderInfo(providerKey)` and surfaces which providers advertise `sign-typed-data-eip712` before another browser-approved payment attempt. This is a no-spend probe only: it does not sign, create payment intents, verify/settle x402, or claim Casper proof.
+
 The current product shape:
 
 - MCPay-style provider gateway: connect API/OpenAPI/remote MCP, discover tools, price, publish hosted MCP/x402 endpoint.

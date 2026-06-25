@@ -2,6 +2,14 @@ import { clean, type CSPRClickProviderInfo } from "./csprclick-browser-config";
 
 export const CSPRCLICK_TYPED_DATA_SUPPORT = "sign-typed-data-eip712";
 
+export type CSPRClickProviderCapability = {
+  key: string;
+  name?: string;
+  supports: string[];
+  typedDataSupport?: boolean;
+  version?: string;
+};
+
 export function normalizeCSPRClickSupports(supports: string[] | undefined) {
   return Array.isArray(supports)
     ? Array.from(new Set(supports.map((support) => clean(support)?.toLowerCase()).filter(Boolean) as string[]))
@@ -26,6 +34,24 @@ export function csprClickProviderInfo(input: {
         ...(name ? { name } : {}),
         supports: input.supports,
         ...(version ? { version } : {}),
-      }
+    }
     : undefined;
+}
+
+export function csprClickProviderCapability(input: {
+  provider?: CSPRClickProviderInfo;
+  providerKey: string;
+}): CSPRClickProviderCapability {
+  const supports = normalizeCSPRClickSupports(input.provider?.supports);
+  const key = clean(input.provider?.key ?? input.providerKey) ?? input.providerKey;
+  const name = clean(input.provider?.name);
+  const version = clean(input.provider?.version);
+  const typedDataSupport = csprClickProviderSupportsTypedData(supports);
+  return {
+    key,
+    ...(name ? { name } : {}),
+    supports,
+    ...(typedDataSupport === undefined ? {} : { typedDataSupport }),
+    ...(version ? { version } : {}),
+  };
 }

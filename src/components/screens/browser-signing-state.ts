@@ -11,6 +11,13 @@ export interface BrowserSigningState {
     supports: string[];
     version?: string;
   };
+  providerCapabilities: {
+    key: string;
+    name?: string;
+    supports: string[];
+    typedDataSupport?: boolean;
+    version?: string;
+  }[];
   providerSupportsTypedData?: boolean;
   ready: boolean;
   signTypedDataAvailable: boolean;
@@ -21,6 +28,7 @@ export const initialBrowserSigningState: BrowserSigningState = {
   canRequestSignIn: false,
   connected: false,
   message: "CSPR.click not enabled.",
+  providerCapabilities: [],
   ready: false,
   signTypedDataAvailable: false,
   status: "not_enabled",
@@ -31,6 +39,7 @@ export function browserStateFromRuntime(status: "error" | "not_enabled"): Browse
     canRequestSignIn: false,
     connected: false,
     message: status === "not_enabled" ? "CSPR.click not enabled." : "CSPR.click runtime unavailable.",
+    providerCapabilities: [],
     ready: false,
     signTypedDataAvailable: false,
     status,
@@ -45,6 +54,7 @@ export function browserStateFromClient(state: Awaited<ReturnType<typeof getCSPRC
       connected: true,
       message: connectedMessage(state),
       provider: state.provider,
+      providerCapabilities: state.providerCapabilities,
       providerSupportsTypedData: state.providerSupportsTypedData,
       ready: true,
       signTypedDataAvailable: state.signTypedDataAvailable,
@@ -57,6 +67,7 @@ export function browserStateFromClient(state: Awaited<ReturnType<typeof getCSPRC
       connected: false,
       message: "Connect CSPR.click before browser approval.",
       provider: state.provider,
+      providerCapabilities: state.providerCapabilities,
       providerSupportsTypedData: state.providerSupportsTypedData,
       ready: true,
       signTypedDataAvailable: state.signTypedDataAvailable,
@@ -67,6 +78,7 @@ export function browserStateFromClient(state: Awaited<ReturnType<typeof getCSPRC
     canRequestSignIn: false,
     connected: false,
     message: "Use the CSPR.click top bar to sign in; waiting for SDK client.",
+    providerCapabilities: [],
     ready: true,
     signTypedDataAvailable: false,
     status: "client_unavailable",

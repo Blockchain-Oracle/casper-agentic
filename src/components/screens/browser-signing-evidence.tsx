@@ -29,6 +29,18 @@ export function BrowserSigningProviderEvidence({ state }: { state: BrowserSignin
   );
 }
 
+export function BrowserSigningProviderCapabilities({ state }: { state: BrowserSigningState }) {
+  if (!state.providerCapabilities.length) return null;
+  return (
+    <KeyValueList
+      rows={state.providerCapabilities.map((provider) => ({
+        key: provider.name ? `${provider.name} (${provider.key})` : provider.key,
+        value: providerCapabilityLabel(provider),
+      }))}
+    />
+  );
+}
+
 export function BrowserSigningProviderNotice({ state }: { state: BrowserSigningState }) {
   if (!state.connected) return null;
   return (
@@ -40,4 +52,10 @@ export function BrowserSigningProviderNotice({ state }: { state: BrowserSigningS
 
 function shortPublicKey(value: string | undefined) {
   return value ? `${value.slice(0, 10)}...${value.slice(-8)}` : "unknown";
+}
+
+function providerCapabilityLabel(provider: BrowserSigningState["providerCapabilities"][number]) {
+  if (provider.typedDataSupport === true) return "advertises sign-typed-data-eip712";
+  if (provider.typedDataSupport === false) return "does not advertise sign-typed-data-eip712";
+  return provider.supports.length ? `reported: ${provider.supports.join(", ")}` : "capability evidence unavailable";
 }

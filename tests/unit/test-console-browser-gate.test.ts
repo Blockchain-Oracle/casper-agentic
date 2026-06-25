@@ -67,6 +67,7 @@ function browserState(input: { providerSupportsTypedData?: boolean }): BrowserSi
       supports: input.providerSupportsTypedData === false ? ["sign-message"] : ["sign-typed-data-eip712"],
       version: "2.4.2-extension",
     },
+    providerCapabilities: [],
     providerSupportsTypedData: input.providerSupportsTypedData,
     ready: true,
     signTypedDataAvailable: true,

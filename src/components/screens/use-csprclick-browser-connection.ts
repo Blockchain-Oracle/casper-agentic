@@ -26,7 +26,9 @@ export function useCSPRClickBrowserConnection(onMessage?: (message: string) => v
 
   useEffect(() => {
     const browserWindow = window as unknown as CSPRClickBrowserWindow;
-    const runtime = prepareCSPRClickRuntime(browserWindow, getCSPRClickClientPublicConfig());
+    const config = getCSPRClickClientPublicConfig();
+    const runtime = prepareCSPRClickRuntime(browserWindow, config);
+    const providerKeys = config.status === "configured" ? config.providers : [];
     let disposed = false;
 
     async function refresh() {
@@ -34,7 +36,7 @@ export function useCSPRClickBrowserConnection(onMessage?: (message: string) => v
         if (!disposed) setBrowserSigningState(browserStateFromRuntime(runtime.status));
         return;
       }
-      const state = await getCSPRClickBrowserState(browserWindow);
+      const state = await getCSPRClickBrowserState(browserWindow, providerKeys);
       if (!disposed) setBrowserSigningState(browserStateFromClient(state));
     }
 

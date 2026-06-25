@@ -109,6 +109,7 @@ describe("CSPR.click browser adapter boundary", () => {
     await expect(getCSPRClickBrowserState({})).resolves.toEqual({
       clientAvailable: false,
       connected: false,
+      providerCapabilities: [],
       signInAvailable: false,
       signTypedDataAvailable: false,
       status: "client_unavailable",
