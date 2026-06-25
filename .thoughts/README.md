@@ -49,6 +49,7 @@ The current product shape:
    - `CLAUDE.md` currently delegates to `AGENTS.md`
 
 2. Current build handoff:
+   - `.thoughts/handoffs/2026-06-25-claude-code-takeover.md`
    - `.thoughts/prototype-reintegration/2026-06-22-casper-gw-reintegration-and-codex-handoff.md`
    - Read section `0. Engineering Rules of Engagement` before making any claim or plan.
 
