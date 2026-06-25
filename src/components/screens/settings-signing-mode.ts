@@ -24,6 +24,7 @@ export function browserProviderLabel(state: BrowserSigningState) {
 }
 
 export function browserTypedDataSupportLabel(state: BrowserSigningState) {
+  if (state.status !== "connected") return "connect before provider support is relevant";
   if (!state.signTypedDataAvailable) return "SDK method unavailable";
   if (state.providerSupportsTypedData === true) return "provider advertises sign-typed-data-eip712";
   if (state.providerSupportsTypedData === false) return "provider does not advertise sign-typed-data-eip712";

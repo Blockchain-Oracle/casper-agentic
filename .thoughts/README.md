@@ -32,6 +32,8 @@ Phase 24Q CSPR.click configured provider capability probe is locally implemented
 
 Phase 24R CSPR.click provider chooser action is locally implemented and verified. Settings now keeps provider capability rows keyed by configured provider key even when the SDK reports duplicate provider metadata, and the Wallet signing mode panel includes an `Open CSPR.click provider chooser` action so the operator can switch away from a provider that lacks typed-data signing. No x402 payment, settlement, or Casper proof is claimed by this slice.
 
+Phase 24S CSPR.click disconnected provider-noise cleanup is locally implemented and focused-verified. Settings and browser-signing state no longer surface the SDK's current/last provider metadata when no active CSPR.click account is connected; configured provider capability rows remain as no-spend preflight evidence. Provider support is treated as relevant only after a wallet is connected for the x402 typed-data signing path. No x402 payment, settlement, or Casper proof is claimed by this slice.
+
 The current product shape:
 
 - MCPay-style provider gateway: connect API/OpenAPI/remote MCP, discover tools, price, publish hosted MCP/x402 endpoint.

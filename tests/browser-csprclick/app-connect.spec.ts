@@ -12,6 +12,8 @@ test("app connect button uses embedded CSPR.click runtime without opening a prov
   await page.goto("/app");
   await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByText("CSPR.click configured - connect before signing")).toBeVisible();
+  await expect(page.getByText("not connected")).toBeVisible();
+  await expect(page.getByText("connect before provider support is relevant")).toBeVisible();
   await expect(page.getByText("CSPR.click Web Wallet - Google (csprclick-w3a-google)")).toBeVisible();
   await expect(page.getByText("advertises sign-typed-data-eip712")).toBeVisible();
   await expect(page.getByText("Casper Wallet (casper-wallet)")).toBeVisible();

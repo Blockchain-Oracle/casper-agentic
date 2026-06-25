@@ -75,6 +75,18 @@ export async function getCSPRClickBrowserState(
 
   const activeAccount = await getActiveAccount(client);
   const activePublicKey = clean((await getActivePublicKey(client)) ?? activeAccount?.public_key);
+  const providerCapabilities = await getCSPRClickProviderCapabilities(client, providerKeys);
+  if (!activePublicKey) {
+    return {
+      clientAvailable: true,
+      connected: false,
+      providerCapabilities,
+      signInAvailable: Boolean(client.signIn),
+      signTypedDataAvailable: Boolean(client.signTypedData),
+      status: "client_available" as const,
+    };
+  }
+
   const provider = await getProviderInfo(client, activeAccount?.provider);
   const providerSupports = normalizeCSPRClickSupports(provider?.supports ?? activeAccount?.providerSupports);
   const providerSupportsTypedData = csprClickProviderSupportsTypedData(providerSupports);
@@ -83,20 +95,6 @@ export async function getCSPRClickBrowserState(
     provider,
     supports: providerSupports,
   });
-  const providerCapabilities = await getCSPRClickProviderCapabilities(client, providerKeys);
-
-  if (!activePublicKey) {
-    return {
-      clientAvailable: true,
-      connected: false,
-      provider: providerInfo,
-      providerCapabilities,
-      providerSupportsTypedData,
-      signInAvailable: Boolean(client.signIn),
-      signTypedDataAvailable: Boolean(client.signTypedData),
-      status: "client_available" as const,
-    };
-  }
 
   return {
     activePublicKey: activePublicKey.toLowerCase(),

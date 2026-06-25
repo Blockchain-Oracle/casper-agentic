@@ -23,6 +23,10 @@ describe("settings signing mode label", () => {
     expect(browserWalletSigningLabel(unsupported)).toBe("CSPR.click connected - provider lacks typed-data support");
     expect(browserTypedDataSupportLabel(unsupported)).toBe("provider does not advertise sign-typed-data-eip712");
   });
+
+  it("does not treat provider support as relevant before connection", () => {
+    expect(browserTypedDataSupportLabel(state("client_available"))).toBe("connect before provider support is relevant");
+  });
 });
 
 function state(status: BrowserSigningState["status"], overrides: Partial<BrowserSigningState> = {}): BrowserSigningState {
