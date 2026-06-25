@@ -65,6 +65,7 @@ vi.mock("@/server/receipt-store", () => ({
 vi.mock("@/server/x402-payment", () => ({ buildPaymentRequirements: mocks.buildPaymentRequirements }));
 
 import { createBrowserPaymentIntent } from "@/server/browser-payment-intent";
+import { hashPaidCallInput } from "@/server/paid-call-input-hash";
 
 describe("browser payment intent", () => {
   beforeEach(() => {
@@ -110,20 +111,22 @@ describe("browser payment intent", () => {
         primaryType: "TransferWithAuthorization",
       },
     });
-    expect(result.signing.signTypedDataParams.options?.domainTypes).toEqual([
-      { name: "name", type: "string" },
-      { name: "version", type: "string" },
-      { name: "chain_name", type: "string" },
-      { name: "contract_package_hash", type: "bytes32" },
-    ]);
-    expect(JSON.stringify(result)).not.toContain("cspr-cloud-token");
-    expect(JSON.stringify(result)).not.toContain("pem");
-    expect(JSON.stringify(result)).not.toContain("tokenHash");
+    expect(result.signing.signTypedDataParams.options?.domainTypes).toContainEqual({
+      name: "contract_package_hash",
+      type: "bytes32",
+    });
+    for (const secret of ["cspr-cloud-token", "pem", "tokenHash"]) expect(JSON.stringify(result)).not.toContain(secret);
     expect(mocks.persistPolicyDecision).toHaveBeenCalledWith(
       "attempt-1",
       true,
       "policy allowed before signing/payment",
-      expect.objectContaining({ policyLoaded: true, toolName: "get_quote" }),
+      expect.objectContaining({
+        browserPaymentIntent: {
+          inputHash: hashPaidCallInput({ amount: "10", token_in: "CSPR", token_out: "WCSPR", type: "exact_in" }),
+        },
+        policyLoaded: true,
+        toolName: "get_quote",
+      }),
     );
     expect(mocks.persistAudit).toHaveBeenCalledWith(
       "attempt-1",

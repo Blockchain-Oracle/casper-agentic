@@ -9,6 +9,7 @@ import { getRuntimeConfig, type RuntimeConfig } from "./env";
 import { redactLiveInput } from "./live-paid-call-input";
 import { evaluateLivePaidCallPolicy } from "./live-paid-call-policy";
 import { discoverMcpTools } from "./mcp-client";
+import { hashPaidCallInput } from "./paid-call-input-hash";
 import { persistAttempt, persistAudit, persistPolicyDecision, updateAttemptStatus } from "./receipt-store";
 import { getAgentWalletRecord } from "./wallet-store";
 import { buildPaymentRequirements } from "./x402-payment";
@@ -43,6 +44,7 @@ export async function createBrowserPaymentIntent(input: BrowserPaymentIntentInpu
 
   const walletAccountHash = normalizeCasperAccountHash(wallet.accountHash);
   const paymentRequirements = buildPaymentRequirements(config);
+  const inputHash = hashPaidCallInput(args);
   const attempt = await persistAttempt({
     amount: paymentRequirements.amount,
     asset: paymentRequirements.asset,
@@ -68,7 +70,10 @@ export async function createBrowserPaymentIntent(input: BrowserPaymentIntentInpu
     toolName,
     walletAccountHash,
   });
-  await persistPolicyDecision(attempt.id, policy.allowed, policy.reason, evidence);
+  await persistPolicyDecision(attempt.id, policy.allowed, policy.reason, {
+    ...evidence,
+    browserPaymentIntent: { inputHash },
+  });
 
   if (!policy.allowed) return blockIntent(attempt.id, policy.reason, { recordPolicyDecision: false });
 
