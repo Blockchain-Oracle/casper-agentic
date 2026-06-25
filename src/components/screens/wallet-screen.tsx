@@ -8,6 +8,10 @@ import {
   type WalletScreenProps,
   walletRows,
 } from "./wallet-screen-model";
+import {
+  BrowserSigningConnectionNotice,
+  BrowserSigningProviderEvidence,
+} from "./browser-signing-evidence";
 
 export function WalletScreen({
   copied,
@@ -89,11 +93,8 @@ export function WalletScreen({
 
         <Panel title="Add wallet">
           <div className="stack">
-            <div className={browserSigningState.connected ? "notice signal" : "notice"}>
-              {browserSigningState.connected
-                ? `Active CSPR.click public key: ${shortPublicKey(browserSigningState.activePublicKey)}`
-                : browserSigningState.message}
-            </div>
+            <BrowserSigningConnectionNotice state={browserSigningState} />
+            <BrowserSigningProviderEvidence state={browserSigningState} />
             <div className="buttonRow">
               {browserSigningState.canRequestSignIn && !browserSigningState.connected ? (
                 <button className="secondaryButton" disabled={loading} onClick={onConnectBrowserWallet} type="button">
@@ -195,5 +196,3 @@ export function WalletScreen({
     </div>
   );
 }
-
-function shortPublicKey(value: string | undefined) { return value ? `${value.slice(0, 10)}...${value.slice(-8)}` : "unknown"; }

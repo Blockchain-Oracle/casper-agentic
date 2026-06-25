@@ -26,6 +26,8 @@ Phase 24N CSPR.click signing evidence audit is locally implemented and focused-v
 
 Phase 24O browser wallet funding and failure closeout is locally implemented and focused-verified. Abu's connected CSPR.click wallet was funded on Testnet with native CSPR and WCSPR, the browser paid-call console reached policy-approved signing, and the connected provider rejected typed-data signing with `SIGNATURE_SCHEME_NOT_SUPPORTED`. The latest browser attempt is correctly persisted as `auth_failed` with no x402 verify/settle rows and no Casper proof; no browser-approved settlement/deploy proof has been claimed.
 
+Phase 24P CSPR.click provider compatibility preflight is locally implemented and verified. The app now reads CSPR.click provider metadata with `getProviderInfo`, surfaces provider key/name/version/supports in Settings, Wallets, and the paid-tool console, and fail-closes the browser run button when the connected provider explicitly lacks `sign-typed-data-eip712`. No message-signing fallback, x402 verify/settle request, or Casper deploy proof is claimed by this slice.
+
 The current product shape:
 
 - MCPay-style provider gateway: connect API/OpenAPI/remote MCP, discover tools, price, publish hosted MCP/x402 endpoint.

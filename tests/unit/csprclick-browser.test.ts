@@ -1,7 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-
 import { signParams, successfulSignature } from "./browser-x402-signing-fixtures";
-
 import {
   CSPRCLICK_SCRIPT_ID,
   CSPRCLICK_SCRIPT_SRC,
@@ -82,6 +80,7 @@ describe("CSPR.click browser adapter boundary", () => {
     ).resolves.toMatchObject({
       activePublicKey: "01async",
       connected: true,
+      signTypedDataAvailable: false,
       status: "connected",
     });
     expect(getActiveAccountAsync).toHaveBeenCalledOnce();
@@ -97,10 +96,11 @@ describe("CSPR.click browser adapter boundary", () => {
           signIn: vi.fn(),
         },
       }),
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       clientAvailable: true,
       connected: false,
       signInAvailable: true,
+      signTypedDataAvailable: false,
       status: "client_available",
     });
   });
@@ -110,6 +110,7 @@ describe("CSPR.click browser adapter boundary", () => {
       clientAvailable: false,
       connected: false,
       signInAvailable: false,
+      signTypedDataAvailable: false,
       status: "client_unavailable",
     });
 
@@ -121,11 +122,12 @@ describe("CSPR.click browser adapter boundary", () => {
           signIn: vi.fn(),
         },
       }),
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       activePublicKey: "01ab",
       clientAvailable: true,
       connected: true,
       signInAvailable: true,
+      signTypedDataAvailable: false,
       status: "connected",
     });
   });
@@ -133,13 +135,11 @@ describe("CSPR.click browser adapter boundary", () => {
   it("delegates signTypedData to CSPR.click and normalizes unavailable clients as errors", async () => {
     const signTypedData = vi.fn().mockResolvedValue(successfulSignature);
 
-    await expect(
-      requestCSPRClickTypedDataSignature(
-        { signTypedData },
-        signParams,
-        successfulSignature.publicKey,
-      ),
-    ).resolves.toEqual(successfulSignature);
+    await expect(requestCSPRClickTypedDataSignature(
+      { signTypedData },
+      signParams,
+      successfulSignature.publicKey,
+    )).resolves.toEqual(successfulSignature);
     expect(signTypedData).toHaveBeenCalledWith(signParams, successfulSignature.publicKey.toLowerCase());
 
     await expect(requestCSPRClickTypedDataSignature(null, signParams, successfulSignature.publicKey)).resolves.toMatchObject({

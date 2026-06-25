@@ -1,5 +1,6 @@
 import type { WalletProfile } from "@/lib/types";
 import type { BrowserSigningState } from "./browser-signing-state";
+import { BrowserSigningProviderNotice } from "./browser-signing-evidence";
 
 export function TestConsoleWalletActions({
   activeWalletId,
@@ -41,6 +42,7 @@ export function TestConsoleWalletActions({
           ? `Active CSPR.click public key: ${shortKey(browserSigningState.activePublicKey)}`
           : browserSigningState.message}
       </div>
+      <BrowserSigningProviderNotice state={browserSigningState} />
       <button className="primaryButton" disabled={browserRunDisabled} onClick={onRunBrowser} type="button">
         Run with CSPR.click approval
       </button>

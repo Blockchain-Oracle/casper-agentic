@@ -9,6 +9,7 @@ import {
   TestConsoleEndpointTargetPanel,
   type ConsoleTarget,
 } from "./test-console-target-panels";
+import { isBrowserApprovalRunDisabled } from "./test-console-browser-gate";
 import { TestConsoleTimeline } from "./test-console-timeline";
 import { TestConsoleWalletActions } from "./test-console-wallet-actions";
 import { usePaidCallConsole } from "./use-paid-call-console";
@@ -46,7 +47,11 @@ export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToke
   const completed = phase === "complete";
   const inputFields = inputFieldsForTool(selectedApiTool);
   const runDisabled = busy || !selectedApiTool || !activeWalletId || !operatorToken;
-  const browserRunDisabled = runDisabled || !browserSigningState.connected || selectedWallet?.signingMode !== "browser-wallet";
+  const browserRunDisabled = isBrowserApprovalRunDisabled({
+    baseRunDisabled: runDisabled,
+    browserSigningState,
+    selectedWallet,
+  });
 
   async function discoverEndpointTools() {
     const found = await discover(activeEndpointUrl);

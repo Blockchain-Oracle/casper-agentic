@@ -8,6 +8,11 @@ import {
   type CSPRClickClient,
   type CSPRClickPublicConfig,
 } from "./csprclick-browser-config";
+import {
+  csprClickProviderInfo,
+  csprClickProviderSupportsTypedData,
+  normalizeCSPRClickSupports,
+} from "./csprclick-provider-info";
 
 export type {
   CSPRClickAccount,
@@ -15,6 +20,7 @@ export type {
   CSPRClickBrowserWindow,
   CSPRClickClient,
   CSPRClickEventName,
+  CSPRClickProviderInfo,
   CSPRClickPublicConfig,
 } from "./csprclick-browser-config";
 export { CSPRCLICK_SCRIPT_ID, CSPRCLICK_SCRIPT_SRC, getCSPRClickPublicConfig } from "./csprclick-browser-config";
@@ -52,19 +58,47 @@ export function prepareCSPRClickRuntime(windowLike: CSPRClickBrowserWindow, conf
 
 export async function getCSPRClickBrowserState(windowLike: Pick<CSPRClickBrowserWindow, "csprclick">) {
   const client = windowLike.csprclick;
-  if (!client) return { clientAvailable: false, connected: false, signInAvailable: false, status: "client_unavailable" as const };
+  if (!client) {
+    return {
+      clientAvailable: false,
+      connected: false,
+      signInAvailable: false,
+      signTypedDataAvailable: false,
+      status: "client_unavailable" as const,
+    };
+  }
 
   const activeAccount = await getActiveAccount(client);
   const activePublicKey = clean((await getActivePublicKey(client)) ?? activeAccount?.public_key);
+  const provider = await getProviderInfo(client, activeAccount?.provider);
+  const providerSupports = normalizeCSPRClickSupports(provider?.supports ?? activeAccount?.providerSupports);
+  const providerSupportsTypedData = csprClickProviderSupportsTypedData(providerSupports);
+  const providerInfo = csprClickProviderInfo({
+    accountProvider: activeAccount?.provider,
+    provider,
+    supports: providerSupports,
+  });
+
   if (!activePublicKey) {
-    return { clientAvailable: true, connected: false, signInAvailable: Boolean(client.signIn), status: "client_available" as const };
+    return {
+      clientAvailable: true,
+      connected: false,
+      provider: providerInfo,
+      providerSupportsTypedData,
+      signInAvailable: Boolean(client.signIn),
+      signTypedDataAvailable: Boolean(client.signTypedData),
+      status: "client_available" as const,
+    };
   }
 
   return {
     activePublicKey: activePublicKey.toLowerCase(),
     clientAvailable: true,
     connected: true,
+    provider: providerInfo,
+    providerSupportsTypedData,
     signInAvailable: Boolean(client.signIn),
+    signTypedDataAvailable: Boolean(client.signTypedData),
     status: "connected" as const,
   };
 }
@@ -102,6 +136,14 @@ async function getActiveAccount(client: CSPRClickClient) {
 async function getActivePublicKey(client: CSPRClickClient) {
   try {
     return await client.getActivePublicKey?.();
+  } catch {
+    return undefined;
+  }
+}
+
+async function getProviderInfo(client: CSPRClickClient, provider?: string) {
+  try {
+    return await client.getProviderInfo?.(provider);
   } catch {
     return undefined;
   }

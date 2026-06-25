@@ -5,7 +5,15 @@ export interface BrowserSigningState {
   canRequestSignIn: boolean;
   connected: boolean;
   message: string;
+  provider?: {
+    key?: string;
+    name?: string;
+    supports: string[];
+    version?: string;
+  };
+  providerSupportsTypedData?: boolean;
   ready: boolean;
+  signTypedDataAvailable: boolean;
   status: "client_available" | "client_unavailable" | "connected" | "error" | "not_enabled";
 }
 
@@ -14,6 +22,7 @@ export const initialBrowserSigningState: BrowserSigningState = {
   connected: false,
   message: "CSPR.click not enabled.",
   ready: false,
+  signTypedDataAvailable: false,
   status: "not_enabled",
 };
 
@@ -23,6 +32,7 @@ export function browserStateFromRuntime(status: "error" | "not_enabled"): Browse
     connected: false,
     message: status === "not_enabled" ? "CSPR.click not enabled." : "CSPR.click runtime unavailable.",
     ready: false,
+    signTypedDataAvailable: false,
     status,
   };
 }
@@ -33,8 +43,11 @@ export function browserStateFromClient(state: Awaited<ReturnType<typeof getCSPRC
       activePublicKey: state.activePublicKey,
       canRequestSignIn: state.signInAvailable,
       connected: true,
-      message: "CSPR.click wallet connected.",
+      message: connectedMessage(state),
+      provider: state.provider,
+      providerSupportsTypedData: state.providerSupportsTypedData,
       ready: true,
+      signTypedDataAvailable: state.signTypedDataAvailable,
       status: "connected",
     };
   }
@@ -43,7 +56,10 @@ export function browserStateFromClient(state: Awaited<ReturnType<typeof getCSPRC
       canRequestSignIn: state.signInAvailable,
       connected: false,
       message: "Connect CSPR.click before browser approval.",
+      provider: state.provider,
+      providerSupportsTypedData: state.providerSupportsTypedData,
       ready: true,
+      signTypedDataAvailable: state.signTypedDataAvailable,
       status: "client_available",
     };
   }
@@ -52,6 +68,16 @@ export function browserStateFromClient(state: Awaited<ReturnType<typeof getCSPRC
     connected: false,
     message: "Use the CSPR.click top bar to sign in; waiting for SDK client.",
     ready: true,
+    signTypedDataAvailable: false,
     status: "client_unavailable",
   };
+}
+
+function connectedMessage(state: Awaited<ReturnType<typeof getCSPRClickBrowserState>>) {
+  if (state.status !== "connected") return "CSPR.click wallet connected.";
+  if (!state.signTypedDataAvailable) return "CSPR.click wallet connected, but typed-data signing is unavailable.";
+  if (state.providerSupportsTypedData === false) {
+    return "CSPR.click wallet connected, but this provider does not advertise typed-data signing.";
+  }
+  return "CSPR.click wallet connected.";
 }

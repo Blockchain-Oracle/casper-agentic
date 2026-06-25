@@ -3,7 +3,11 @@ import { Chip, KeyValueList } from "@/components/ui";
 import { auditEvents } from "@/lib/fixtures";
 import { clientToken } from "@/lib/client-config";
 import type { BrowserSigningState } from "./browser-signing-state";
-import { browserWalletSigningLabel } from "./settings-signing-mode";
+import {
+  browserProviderLabel,
+  browserTypedDataSupportLabel,
+  browserWalletSigningLabel,
+} from "./settings-signing-mode";
 
 export function SettingsScreen({ browserSigningState }: { browserSigningState: BrowserSigningState }) {
   return (
@@ -38,6 +42,8 @@ export function SettingsScreen({ browserSigningState }: { browserSigningState: B
               { key: "current payment signer", value: "Testnet signer integration path" },
               { key: "scope", value: "integration verification only" },
               { key: "browser wallet signing", value: browserWalletSigningLabel(browserSigningState) },
+              { key: "browser provider", value: browserProviderLabel(browserSigningState) },
+              { key: "typed-data support", value: browserTypedDataSupportLabel(browserSigningState) },
               { key: "production custody", value: "not claimed" },
               { key: "policy timing", value: "policy before payment signing" },
             ]}

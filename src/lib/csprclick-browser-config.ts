@@ -1,6 +1,7 @@
 import type {
   AccountType,
   CsprClickInitOptions,
+  ProviderInfo,
   SignTypedDataParams,
   SignTypedDataResult,
 } from "@make-software/csprclick-core-types";
@@ -34,11 +35,13 @@ export type CSPRClickPublicConfig =
     };
 
 export type CSPRClickAccount = Partial<Pick<AccountType, "provider" | "providerSupports" | "public_key">>;
+export type CSPRClickProviderInfo = Partial<Pick<ProviderInfo, "key" | "name" | "supports" | "version">>;
 
 export type CSPRClickClient = {
   getActiveAccount?: () => CSPRClickAccount | null;
   getActiveAccountAsync?: () => Promise<CSPRClickAccount | null>;
   getActivePublicKey?: () => Promise<string | undefined> | string | undefined;
+  getProviderInfo?: (provider?: string) => Promise<CSPRClickProviderInfo | undefined>;
   off?: (eventName: CSPRClickEventName, handler: (event?: CSPRClickAccountEvent) => void) => void;
   on?: (eventName: CSPRClickEventName, handler: (event?: CSPRClickAccountEvent) => void) => void;
   signIn?: () => void;
