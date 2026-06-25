@@ -1,94 +1,38 @@
 import type { CSPRClickSignTypedDataParams, CSPRClickSignTypedDataResult } from "./browser-x402-signing";
+import type { ClickUIOptions } from "@make-software/csprclick-core-types/clickui";
+import {
+  clean,
+  CSPRCLICK_SCRIPT_ID,
+  CSPRCLICK_SCRIPT_SRC,
+  type CSPRClickBrowserWindow,
+  type CSPRClickClient,
+  type CSPRClickPublicConfig,
+} from "./csprclick-browser-config";
 
-export const CSPRCLICK_SCRIPT_ID = "csprclick-client";
-export const CSPRCLICK_SCRIPT_SRC = "https://cdn.cspr.click/ui/v2.1.0/csprclick-client-2.1.0.js";
-
-const DEFAULT_PROVIDERS = ["casper-wallet", "ledger", "metamask-snap"];
-const ALLOWED_PROVIDERS = new Set([...DEFAULT_PROVIDERS, "csprclick-w3a-google"]);
-
-export type CSPRClickPublicConfig =
-  | {
-      reason: "missing_app_id";
-      sdk: { scriptId: string; scriptSrc: string };
-      status: "not_enabled";
-    }
-  | {
-      appId: string;
-      appName: string;
-      chainName: string;
-      contentMode: "iframe" | "popup";
-      providers: string[];
-      sdk: { scriptId: string; scriptSrc: string };
-      status: "configured";
-      ui: { rootAppElement: string; uiContainer: string };
-    };
-
-export type CSPRClickAccount = {
-  provider?: string;
-  providerSupports?: string[];
-  public_key?: string;
-};
-
-export type CSPRClickClient = {
-  getActiveAccount?: () => CSPRClickAccount | null;
-  getActivePublicKey?: () => Promise<string | undefined> | string | undefined;
-  off?: (eventName: CSPRClickEventName, handler: (event?: CSPRClickAccountEvent) => void) => void;
-  on?: (eventName: CSPRClickEventName, handler: (event?: CSPRClickAccountEvent) => void) => void;
-  signIn?: () => void;
-  signInWithAccount?: (account: CSPRClickAccount) => void;
-  signTypedData?: (params: CSPRClickSignTypedDataParams, signingPublicKey: string) => Promise<CSPRClickSignTypedDataResult | undefined>;
-};
-
-export type CSPRClickEventName = "csprclick:disconnected" | "csprclick:signed_in" | "csprclick:signed_out" | "csprclick:switched_account" | "csprclick:unsolicited_account_change";
-
-export type CSPRClickAccountEvent = { account?: CSPRClickAccount };
-
-export type CSPRClickBrowserWindow = {
-  clickSDKOptions?: unknown;
-  clickUIOptions?: unknown;
-  csprclick?: CSPRClickClient;
-  document?: {
-    createElement: (tagName: "script") => { async?: boolean; id: string; src?: string; tagName?: string };
-    getElementById: (id: string) => unknown;
-    head?: { appendChild: (element: { async?: boolean; id: string; src?: string }) => unknown };
-  };
-  addEventListener?: (eventName: "csprclick:loaded", handler: () => void) => void;
-  removeEventListener?: (eventName: "csprclick:loaded", handler: () => void) => void;
-};
-
-export function getCSPRClickPublicConfig(
-  env: Record<string, string | undefined> = process.env,
-): CSPRClickPublicConfig {
-  const appId = clean(env.NEXT_PUBLIC_CSPR_CLICK_APP_ID);
-  const sdk = { scriptId: CSPRCLICK_SCRIPT_ID, scriptSrc: CSPRCLICK_SCRIPT_SRC };
-  if (!appId) return { reason: "missing_app_id", sdk, status: "not_enabled" };
-
-  return {
-    appId,
-    appName: clean(env.NEXT_PUBLIC_CSPR_CLICK_APP_NAME) || "Casper GW",
-    chainName: clean(env.NEXT_PUBLIC_CASPER_CHAIN_NAME) || "casper-test",
-    contentMode: contentMode(env.NEXT_PUBLIC_CSPR_CLICK_CONTENT_MODE),
-    providers: providers(env.NEXT_PUBLIC_CSPR_CLICK_PROVIDERS),
-    sdk,
-    status: "configured",
-    ui: {
-      rootAppElement: clean(env.NEXT_PUBLIC_CSPR_CLICK_ROOT_ELEMENT) || "#app",
-      uiContainer: clean(env.NEXT_PUBLIC_CSPR_CLICK_UI_CONTAINER) || "csprclick-ui",
-    },
-  };
-}
+export type {
+  CSPRClickAccount,
+  CSPRClickAccountEvent,
+  CSPRClickBrowserWindow,
+  CSPRClickClient,
+  CSPRClickEventName,
+  CSPRClickPublicConfig,
+} from "./csprclick-browser-config";
+export { CSPRCLICK_SCRIPT_ID, CSPRCLICK_SCRIPT_SRC, getCSPRClickPublicConfig } from "./csprclick-browser-config";
 
 export function prepareCSPRClickRuntime(windowLike: CSPRClickBrowserWindow, config: CSPRClickPublicConfig) {
   if (config.status !== "configured") return { reason: config.reason, status: "not_enabled" as const };
   const documentLike = windowLike.document;
   if (!documentLike?.head) return { reason: "document_unavailable", status: "error" as const };
 
-  windowLike.clickUIOptions = {
+  const uiOptions: ClickUIOptions = {
     accountMenuItems: ["AccountCardMenuItem", "CopyHashMenuItem", "BuyCSPRMenuItem"],
     defaultTheme: "light",
     rootAppElement: config.ui.rootAppElement,
+    show1ClickModal: true,
+    showTopBar: true,
     uiContainer: config.ui.uiContainer,
   };
+  windowLike.clickUIOptions = uiOptions;
   windowLike.clickSDKOptions = {
     appId: config.appId,
     appName: config.appName,
@@ -110,8 +54,8 @@ export async function getCSPRClickBrowserState(windowLike: Pick<CSPRClickBrowser
   const client = windowLike.csprclick;
   if (!client) return { clientAvailable: false, connected: false, signInAvailable: false, status: "client_unavailable" as const };
 
-  const activeAccount = client.getActiveAccount?.() ?? null;
-  const activePublicKey = clean((await client.getActivePublicKey?.()) ?? activeAccount?.public_key);
+  const activeAccount = await getActiveAccount(client);
+  const activePublicKey = clean((await getActivePublicKey(client)) ?? activeAccount?.public_key);
   if (!activePublicKey) {
     return { clientAvailable: true, connected: false, signInAvailable: Boolean(client.signIn), status: "client_available" as const };
   }
@@ -146,16 +90,21 @@ export async function requestCSPRClickTypedDataSignature(
   }
 }
 
-function providers(value: string | undefined) {
-  const parsed = clean(value)
-    ?.split(",")
-    .map((item) => item.trim())
-    .filter((item) => ALLOWED_PROVIDERS.has(item));
-  return parsed?.length ? parsed : DEFAULT_PROVIDERS;
+async function getActiveAccount(client: CSPRClickClient) {
+  try {
+    if (client.getActiveAccountAsync) return await client.getActiveAccountAsync();
+    return client.getActiveAccount?.() ?? null;
+  } catch {
+    return client.getActiveAccount?.() ?? null;
+  }
 }
 
-function contentMode(value: string | undefined): "iframe" | "popup" {
-  return value === "popup" ? "popup" : "iframe";
+async function getActivePublicKey(client: CSPRClickClient) {
+  try {
+    return await client.getActivePublicKey?.();
+  } catch {
+    return undefined;
+  }
 }
 
 function runtimeStatus(status: "script_appended" | "script_present") {
@@ -190,9 +139,4 @@ function errorMessage(error: unknown) {
   if (error instanceof Error && error.message.trim()) return error.message.trim();
   if (typeof error === "string" && error.trim()) return error.trim();
   return "CSPR.click signTypedData rejected";
-}
-
-function clean(value: string | null | undefined) {
-  const text = value?.trim();
-  return text || undefined;
 }

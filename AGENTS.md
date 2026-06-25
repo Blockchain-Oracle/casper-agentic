@@ -21,6 +21,7 @@ Authoritative context lives in `.thoughts/`: wiki, research, raw reports, cloned
 - Do not make product decisions from memory when `.thoughts/` contains relevant research.
 - Before any meaningful implementation change, do a short local-reference checkpoint and mention which artifacts informed the decision. At minimum, check `.thoughts/README.md`, the active spec/plan/audit for the slice, and any relevant `.thoughts/raw/` or `.thoughts/raw/repos/` references for MCP Pay-style flows, x402 agent/payment patterns, provider discovery, receipt behavior, and UX patterns.
 - Use cloned/reference repos as practical pattern references, not source to copy. Prefer their proven flow shape over inventing new product behavior, then use Context7/current docs for the exact SDK/API syntax needed to implement that flow.
+- For CSPR.click work, check the installed official skill first at `/Users/abu/.codex/skills/csprclick-skill/SKILL.md`, then the local upstream examples clone at `.thoughts/raw/repos/csprclick-examples/`, then the Casper x402 CSPR.click reference under `.thoughts/raw/repos/casper-x402/go/examples/csprclick-x402/`, then Context7/direct CSPR.click docs for exact current SDK syntax.
 
 ## Working Rules
 

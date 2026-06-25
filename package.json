@@ -44,6 +44,7 @@
     }
   },
   "devDependencies": {
+    "@make-software/csprclick-core-types": "^2.1.0",
     "@playwright/test": "^1.61.0",
     "@types/node": "^20",
     "@types/react": "^19",

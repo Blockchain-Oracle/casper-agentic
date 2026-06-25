@@ -9,6 +9,7 @@ import {
   getCSPRClickPublicConfig,
   prepareCSPRClickRuntime,
   requestCSPRClickTypedDataSignature,
+  type CSPRClickBrowserWindow,
 } from "@/lib/csprclick-browser";
 
 describe("CSPR.click browser adapter boundary", () => {
@@ -54,7 +55,50 @@ describe("CSPR.click browser adapter boundary", () => {
     expect(second).toEqual({ scriptId: CSPRCLICK_SCRIPT_ID, scriptSrc: CSPRCLICK_SCRIPT_SRC, status: "script_present" });
     expect(win.appendedScripts).toHaveLength(1);
     expect(win.clickSDKOptions).toMatchObject({ appId: "casper-gw-test", contentMode: "iframe" });
-    expect(win.clickUIOptions).toMatchObject({ rootAppElement: "#app", uiContainer: "csprclick-ui" });
+    expect(win.clickUIOptions).toMatchObject({
+      rootAppElement: "#app",
+      show1ClickModal: true,
+      showTopBar: true,
+      uiContainer: "csprclick-ui",
+    });
+  });
+
+  it("prefers the current async active-account API when reading connection state", async () => {
+    const getActiveAccount = vi.fn(() => ({ public_key: "01old" }));
+    const getActiveAccountAsync = vi.fn().mockResolvedValue({ public_key: "01async" });
+
+    await expect(
+      getCSPRClickBrowserState({
+        csprclick: {
+          getActiveAccount,
+          getActiveAccountAsync,
+          signIn: vi.fn(),
+        },
+      }),
+    ).resolves.toMatchObject({
+      activePublicKey: "01async",
+      connected: true,
+      status: "connected",
+    });
+    expect(getActiveAccountAsync).toHaveBeenCalledOnce();
+    expect(getActiveAccount).not.toHaveBeenCalled();
+  });
+
+  it("does not revive stale sync account state when the async active-account API returns null", async () => {
+    await expect(
+      getCSPRClickBrowserState({
+        csprclick: {
+          getActiveAccount: vi.fn(() => ({ public_key: "01stale" })),
+          getActiveAccountAsync: vi.fn().mockResolvedValue(null),
+          signIn: vi.fn(),
+        },
+      }),
+    ).resolves.toEqual({
+      clientAvailable: true,
+      connected: false,
+      signInAvailable: true,
+      status: "client_available",
+    });
   });
 
   it("reports browser state without treating client presence as enabled signing", async () => {
@@ -132,10 +176,8 @@ function browserWindowDouble() {
   type ScriptDouble = { async?: boolean; id: string; src?: string; tagName?: string };
   const elements = new Map<string, ScriptDouble>();
   const appendedScripts: ScriptDouble[] = [];
-  const win = {
+  const win: CSPRClickBrowserWindow & { appendedScripts: ScriptDouble[] } = {
     appendedScripts,
-    clickSDKOptions: undefined as unknown,
-    clickUIOptions: undefined as unknown,
     document: {
       createElement: (tagName: string) => ({ id: "", tagName: tagName.toUpperCase() }),
       getElementById: (id: string) => elements.get(id) ?? null,

@@ -45,6 +45,9 @@ importers:
         specifier: 19.2.4
         version: 19.2.4(react@19.2.4)
     devDependencies:
+      '@make-software/csprclick-core-types':
+        specifier: ^2.1.0
+        version: 2.1.0
       '@playwright/test':
         specifier: ^1.61.0
         version: 1.61.0
@@ -868,6 +871,12 @@ packages:
 
   '@make-software/casper-x402@1.0.0':
     resolution: {integrity: sha512-Etn6CCzHpA5dxhJcBhoFvZNDxc271Gg2TU+HoVmAsuKE5/SZYqbePC4OvHT9ZzpqzBEcLlenTQSn255NpFEdjg==}
+
+  '@make-software/csprclick-core-types@2.1.0':
+    resolution: {integrity: sha512-tUfJQ3e9jiUSmu30CtQLe9f2CqLLOoglJL2XTWGQetbEa5ZL82bdH5S3JACqmliuBO/Yhi7Mflgh0ug+hw8Nxg==}
+
+  '@metamask/safe-event-emitter@2.0.0':
+    resolution: {integrity: sha512-/kSXhY692qiV1MXu6EeOZvg5nECLclxNXcKCxJ3cXQgYuRymRHpdx/t7JXfsK+JLjwA1e1c1/SBrlQYpusC29Q==}
 
   '@modelcontextprotocol/sdk@1.29.0':
     resolution: {integrity: sha512-zo37mZA9hJWpULgkRpowewez1y6ML5GsXJPY8FI0tBBCd77HEvza4jDqRKOXgHNn867PVGCyTdzqpz0izu5ZjQ==}
@@ -3796,6 +3805,12 @@ snapshots:
       - debug
       - encoding
       - supports-color
+
+  '@make-software/csprclick-core-types@2.1.0':
+    dependencies:
+      '@metamask/safe-event-emitter': 2.0.0
+
+  '@metamask/safe-event-emitter@2.0.0': {}
 
   '@modelcontextprotocol/sdk@1.29.0(zod@4.4.3)':
     dependencies:
