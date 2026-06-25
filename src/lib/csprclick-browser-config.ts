@@ -50,6 +50,7 @@ export type CSPRClickClient = {
     params: SignTypedDataParams,
     signingPublicKey: string,
   ) => Promise<CSPRClickSignTypedDataResult | SignTypedDataResult | undefined>;
+  switchAccount?: (withProvider?: string, options?: unknown) => Promise<void>;
 };
 
 export type CSPRClickEventName =

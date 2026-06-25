@@ -14,6 +14,7 @@ export interface BrowserSigningState {
   providerCapabilities: {
     key: string;
     name?: string;
+    reportedKey?: string;
     supports: string[];
     typedDataSupport?: boolean;
     version?: string;

@@ -5,6 +5,7 @@ export const CSPRCLICK_TYPED_DATA_SUPPORT = "sign-typed-data-eip712";
 export type CSPRClickProviderCapability = {
   key: string;
   name?: string;
+  reportedKey?: string;
   supports: string[];
   typedDataSupport?: boolean;
   version?: string;
@@ -43,13 +44,15 @@ export function csprClickProviderCapability(input: {
   providerKey: string;
 }): CSPRClickProviderCapability {
   const supports = normalizeCSPRClickSupports(input.provider?.supports);
-  const key = clean(input.provider?.key ?? input.providerKey) ?? input.providerKey;
+  const key = input.providerKey;
+  const reportedKey = clean(input.provider?.key);
   const name = clean(input.provider?.name);
   const version = clean(input.provider?.version);
   const typedDataSupport = csprClickProviderSupportsTypedData(supports);
   return {
     key,
     ...(name ? { name } : {}),
+    ...(reportedKey && reportedKey !== key ? { reportedKey } : {}),
     supports,
     ...(typedDataSupport === undefined ? {} : { typedDataSupport }),
     ...(version ? { version } : {}),

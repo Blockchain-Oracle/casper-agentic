@@ -12,7 +12,7 @@ test("app connect button uses embedded CSPR.click runtime without opening a prov
   await page.goto("/app");
   await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByText("CSPR.click configured - connect before signing")).toBeVisible();
-  await expect(page.getByText("Google (csprclick-w3a-google)")).toBeVisible();
+  await expect(page.getByText("CSPR.click Web Wallet - Google (csprclick-w3a-google)")).toBeVisible();
   await expect(page.getByText("advertises sign-typed-data-eip712")).toBeVisible();
   await expect(page.getByText("Casper Wallet (casper-wallet)")).toBeVisible();
   await expect(page.getByText("does not advertise sign-typed-data-eip712").first()).toBeVisible();
@@ -30,14 +30,40 @@ test("app connect button uses embedded CSPR.click runtime without opening a prov
   await expect.poll(() => page.evaluate(() => window.__casperGwCSPRClickSignInCalls)).toBe(1);
 });
 
-function csprClickRuntimeMock() {
+test("settings provider chooser switches account when already connected to unsupported provider", async ({ page }) => {
+  await page.route("https://cdn.cspr.click/**", async (route) => {
+    await route.fulfill({
+      body: csprClickRuntimeMock({ connected: true }),
+      contentType: "application/javascript",
+      status: 200,
+    });
+  });
+
+  await page.goto("/app");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByText("CSPR.click connected - provider lacks typed-data support")).toBeVisible();
+  await expect(page.getByText("Casper Wallet 2.4.2-extension")).toBeVisible();
+
+  await page.getByRole("button", { name: "Open CSPR.click provider chooser" }).click();
+
+  await expect(page.getByRole("dialog", { name: "Mock CSPR.click switch account" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__casperGwCSPRClickSwitchAccountCalls)).toBe(1);
+  await expect.poll(() => page.evaluate(() => window.__casperGwCSPRClickSignInCalls)).toBe(0);
+});
+
+function csprClickRuntimeMock(options = { connected: false }) {
   return `
 (() => {
   const listeners = new Map();
   window.__casperGwCSPRClickSignInCalls = 0;
+  window.__casperGwCSPRClickSwitchAccountCalls = 0;
   window.csprclick = {
-    getActiveAccountAsync: async () => null,
-    getActivePublicKey: async () => undefined,
+    getActiveAccountAsync: async () => ${options.connected
+      ? "({ provider: 'casper-wallet', providerSupports: ['sign-message'], public_key: '0202034f22ba451598257c05d09acb9e6b78127659f637a421b27ab321cfe214eb8d' })"
+      : "null"},
+    getActivePublicKey: async () => ${options.connected
+      ? "'0202034f22ba451598257c05d09acb9e6b78127659f637a421b27ab321cfe214eb8d'"
+      : "undefined"},
     getProviderInfo: async (provider) => {
       const providers = {
         'casper-wallet': { key: 'casper-wallet', name: 'Casper Wallet', supports: ['sign-message'], version: '2.4.2-extension' },
@@ -62,7 +88,18 @@ function csprClickRuntimeMock() {
       document.body.appendChild(dialog);
     },
     signInWithAccount: () => undefined,
-    signTypedData: async () => ({ cancelled: true, digest: null, error: 'not used in this smoke', publicKey: null, signatureHex: null })
+    signTypedData: async () => ({ cancelled: true, digest: null, error: 'not used in this smoke', publicKey: null, signatureHex: null }),
+    switchAccount: async () => {
+      window.__casperGwCSPRClickSwitchAccountCalls += 1;
+      const existing = document.querySelector('[data-testid="mock-csprclick-switch-modal"]');
+      if (existing) return;
+      const dialog = document.createElement('section');
+      dialog.setAttribute('aria-label', 'Mock CSPR.click switch account');
+      dialog.setAttribute('data-testid', 'mock-csprclick-switch-modal');
+      dialog.setAttribute('role', 'dialog');
+      dialog.textContent = 'Mock embedded CSPR.click account switcher';
+      document.body.appendChild(dialog);
+    }
   };
   window.dispatchEvent(new Event('csprclick:loaded'));
 })();
@@ -72,5 +109,6 @@ function csprClickRuntimeMock() {
 declare global {
   interface Window {
     __casperGwCSPRClickSignInCalls: number;
+    __casperGwCSPRClickSwitchAccountCalls: number;
   }
 }

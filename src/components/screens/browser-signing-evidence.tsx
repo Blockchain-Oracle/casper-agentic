@@ -34,7 +34,7 @@ export function BrowserSigningProviderCapabilities({ state }: { state: BrowserSi
   return (
     <KeyValueList
       rows={state.providerCapabilities.map((provider) => ({
-        key: provider.name ? `${provider.name} (${provider.key})` : provider.key,
+        key: providerCapabilityKey(provider),
         value: providerCapabilityLabel(provider),
       }))}
     />
@@ -55,7 +55,25 @@ function shortPublicKey(value: string | undefined) {
 }
 
 function providerCapabilityLabel(provider: BrowserSigningState["providerCapabilities"][number]) {
-  if (provider.typedDataSupport === true) return "advertises sign-typed-data-eip712";
-  if (provider.typedDataSupport === false) return "does not advertise sign-typed-data-eip712";
-  return provider.supports.length ? `reported: ${provider.supports.join(", ")}` : "capability evidence unavailable";
+  const suffix = provider.reportedKey ? `; SDK reported ${provider.reportedKey}` : "";
+  if (provider.typedDataSupport === true) return `advertises sign-typed-data-eip712${suffix}`;
+  if (provider.typedDataSupport === false) return `does not advertise sign-typed-data-eip712${suffix}`;
+  return provider.supports.length
+    ? `reported: ${provider.supports.join(", ")}${suffix}`
+    : `capability evidence unavailable${suffix}`;
+}
+
+function providerCapabilityKey(provider: BrowserSigningState["providerCapabilities"][number]) {
+  const label = configuredProviderLabel(provider.key) ?? provider.name ?? "CSPR.click provider";
+  return `${label} (${provider.key})`;
+}
+
+function configuredProviderLabel(key: string) {
+  return {
+    "casper-wallet": "Casper Wallet",
+    "csprclick-w3a-apple": "CSPR.click Web Wallet - Apple",
+    "csprclick-w3a-google": "CSPR.click Web Wallet - Google",
+    ledger: "Ledger",
+    "metamask-snap": "MetaMask Snap",
+  }[key];
 }

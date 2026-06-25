@@ -179,7 +179,9 @@ export function GatewayApp() {
             wallets={wallet.walletProfiles}
           />
         ) : null}
-        {screen === "settings" ? <SettingsScreen browserSigningState={browserWallet.browserSigningState} /> : null}
+        {screen === "settings" ? (
+          <SettingsScreen browserSigningState={browserWallet.browserSigningState} onConnectBrowserWallet={browserWallet.connectBrowserWallet} />
+        ) : null}
       </section>
 
       {pricingTool ? (

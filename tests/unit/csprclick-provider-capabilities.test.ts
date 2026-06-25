@@ -70,4 +70,31 @@ describe("CSPR.click configured provider capability probe", () => {
     });
     expect(signTypedData).not.toHaveBeenCalled();
   });
+
+  it("keeps configured provider keys when the SDK reports duplicate provider metadata", async () => {
+    const getProviderInfo = vi.fn(async () => ({
+      key: "csprclick-w3a-google",
+      name: "CSPR.click Web Wallet",
+      supports: ["sign-typed-data-eip712"],
+    }));
+
+    await expect(getCSPRClickProviderCapabilities(
+      { getProviderInfo },
+      ["csprclick-w3a-google", "csprclick-w3a-apple"],
+    )).resolves.toEqual([
+      {
+        key: "csprclick-w3a-google",
+        name: "CSPR.click Web Wallet",
+        supports: ["sign-typed-data-eip712"],
+        typedDataSupport: true,
+      },
+      {
+        key: "csprclick-w3a-apple",
+        name: "CSPR.click Web Wallet",
+        reportedKey: "csprclick-w3a-google",
+        supports: ["sign-typed-data-eip712"],
+        typedDataSupport: true,
+      },
+    ]);
+  });
 });

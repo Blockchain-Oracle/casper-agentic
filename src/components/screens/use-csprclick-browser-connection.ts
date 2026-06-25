@@ -7,7 +7,7 @@ import {
   prepareCSPRClickRuntime,
   type CSPRClickBrowserWindow,
 } from "@/lib/csprclick-browser";
-import { bindCSPRClickAccountEvents, requestCSPRClickSignIn } from "@/lib/csprclick-browser-session";
+import { bindCSPRClickAccountEvents, requestCSPRClickProviderChooser } from "@/lib/csprclick-browser-session";
 import { getCSPRClickClientPublicConfig } from "@/lib/csprclick-client-config";
 import {
   browserStateFromClient,
@@ -50,7 +50,10 @@ export function useCSPRClickBrowserConnection(onMessage?: (message: string) => v
   }, []);
 
   function connectBrowserWallet() {
-    const result = requestCSPRClickSignIn((window as unknown as CSPRClickBrowserWindow).csprclick);
+    const result = requestCSPRClickProviderChooser(
+      (window as unknown as CSPRClickBrowserWindow).csprclick,
+      { connected: browserSigningState.connected },
+    );
     setBrowserSigningState((current) => (
       current.connected ? current : { ...current, message: result.message }
     ));

@@ -50,3 +50,15 @@ export function requestCSPRClickSignIn(client: CSPRClickClient | null | undefine
   client.signIn();
   return { message: "CSPR.click sign-in requested", status: "requested" as const };
 }
+
+export function requestCSPRClickProviderChooser(
+  client: CSPRClickClient | null | undefined,
+  input: { connected: boolean },
+) {
+  if (!input.connected) return requestCSPRClickSignIn(client);
+  if (!client?.switchAccount) {
+    return { message: "CSPR.click account switch is unavailable", status: "unavailable" as const };
+  }
+  void client.switchAccount(undefined).catch(() => undefined);
+  return { message: "CSPR.click account switch requested", status: "requested" as const };
+}

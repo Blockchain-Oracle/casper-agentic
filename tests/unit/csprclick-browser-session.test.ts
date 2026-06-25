@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { CSPRClickAccountEvent, CSPRClickEventName } from "@/lib/csprclick-browser";
-import { bindCSPRClickAccountEvents, requestCSPRClickSignIn } from "@/lib/csprclick-browser-session";
+import {
+  bindCSPRClickAccountEvents,
+  requestCSPRClickProviderChooser,
+  requestCSPRClickSignIn,
+} from "@/lib/csprclick-browser-session";
 
 describe("CSPR.click browser session helpers", () => {
   it("binds account events and signs in unsolicited account changes", () => {
@@ -69,5 +73,23 @@ describe("CSPR.click browser session helpers", () => {
       message: "CSPR.click sign-in is unavailable",
       status: "unavailable",
     });
+  });
+
+  it("opens the account switcher for connected users and sign-in for unconnected users", () => {
+    const signIn = vi.fn();
+    const switchAccount = vi.fn().mockResolvedValue(undefined);
+
+    expect(requestCSPRClickProviderChooser({ signIn, switchAccount }, { connected: true })).toEqual({
+      message: "CSPR.click account switch requested",
+      status: "requested",
+    });
+    expect(switchAccount).toHaveBeenCalledWith(undefined);
+    expect(signIn).not.toHaveBeenCalled();
+
+    expect(requestCSPRClickProviderChooser({ signIn, switchAccount }, { connected: false })).toEqual({
+      message: "CSPR.click sign-in requested",
+      status: "requested",
+    });
+    expect(signIn).toHaveBeenCalledOnce();
   });
 });

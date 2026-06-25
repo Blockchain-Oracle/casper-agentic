@@ -10,7 +10,13 @@ import {
   browserWalletSigningLabel,
 } from "./settings-signing-mode";
 
-export function SettingsScreen({ browserSigningState }: { browserSigningState: BrowserSigningState }) {
+export function SettingsScreen({
+  browserSigningState,
+  onConnectBrowserWallet,
+}: {
+  browserSigningState: BrowserSigningState;
+  onConnectBrowserWallet: () => void;
+}) {
   return (
     <div className="stack">
       <div className="grid two">
@@ -49,6 +55,16 @@ export function SettingsScreen({ browserSigningState }: { browserSigningState: B
               { key: "policy timing", value: "policy before payment signing" },
             ]}
           />
+          <div className="buttonRow" style={{ marginTop: 12 }}>
+            <button
+              className="secondaryButton"
+              disabled={!browserSigningState.canRequestSignIn}
+              onClick={onConnectBrowserWallet}
+              type="button"
+            >
+              Open CSPR.click provider chooser
+            </button>
+          </div>
           <BrowserSigningProviderCapabilities state={browserSigningState} />
         </Panel>
         <Panel title="Audit log">
