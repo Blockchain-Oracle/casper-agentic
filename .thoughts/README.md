@@ -12,6 +12,8 @@ Verdict from the latest review: **planning is allowed**, but the visual design i
 
 Phase 24H browser-wallet profile import is locally implemented and CI-verified. The app can derive a wallet profile from the active CSPR.click public key and share that browser connection with the paid-tool console, but no browser-approved x402 settlement/deploy proof has been claimed yet.
 
+Phase 24I CSPR.click embedded provider config is locally implemented and focused-verified. The app now defaults CSPR.click to iframe mode with Google/Apple social-login providers before extension wallets, and Chrome verified the embedded modal without clicking a provider or claiming a wallet login/spend.
+
 The current product shape:
 
 - MCPay-style provider gateway: connect API/OpenAPI/remote MCP, discover tools, price, publish hosted MCP/x402 endpoint.

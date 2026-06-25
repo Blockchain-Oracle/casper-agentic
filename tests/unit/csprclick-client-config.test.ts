@@ -15,15 +15,15 @@ describe("CSPR.click client public config", () => {
     process.env.NEXT_PUBLIC_CASPER_CHAIN_NAME = "casper-test";
     process.env.NEXT_PUBLIC_CSPR_CLICK_APP_ID = "csprclick-template";
     process.env.NEXT_PUBLIC_CSPR_CLICK_APP_NAME = "Casper GW";
-    process.env.NEXT_PUBLIC_CSPR_CLICK_CONTENT_MODE = "popup";
-    process.env.NEXT_PUBLIC_CSPR_CLICK_PROVIDERS = "casper-wallet,ledger";
+    process.env.NEXT_PUBLIC_CSPR_CLICK_CONTENT_MODE = "iframe";
+    process.env.NEXT_PUBLIC_CSPR_CLICK_PROVIDERS = "csprclick-w3a-google,csprclick-w3a-apple,casper-wallet";
 
     expect(getCSPRClickClientPublicConfig()).toMatchObject({
       appId: "csprclick-template",
       appName: "Casper GW",
       chainName: "casper-test",
-      contentMode: "popup",
-      providers: ["casper-wallet", "ledger"],
+      contentMode: "iframe",
+      providers: ["csprclick-w3a-google", "csprclick-w3a-apple", "casper-wallet"],
       status: "configured",
     });
   });

@@ -11,8 +11,10 @@ import type { CSPRClickSignTypedDataResult } from "./browser-x402-signing";
 export const CSPRCLICK_SCRIPT_ID = "csprclick-client";
 export const CSPRCLICK_SCRIPT_SRC = "https://cdn.cspr.click/ui/v2.1.0/csprclick-client-2.1.0.js";
 
-const DEFAULT_PROVIDERS = ["casper-wallet", "ledger", "metamask-snap"];
-const ALLOWED_PROVIDERS = new Set([...DEFAULT_PROVIDERS, "csprclick-w3a-google"]);
+const SOCIAL_LOGIN_PROVIDERS = ["csprclick-w3a-google", "csprclick-w3a-apple"];
+const EXTENSION_PROVIDERS = ["casper-wallet", "ledger", "metamask-snap"];
+const DEFAULT_PROVIDERS = [...SOCIAL_LOGIN_PROVIDERS, ...EXTENSION_PROVIDERS];
+const ALLOWED_PROVIDERS = new Set(DEFAULT_PROVIDERS);
 
 export type CSPRClickPublicConfig =
   | {

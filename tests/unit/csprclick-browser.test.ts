@@ -28,8 +28,8 @@ describe("CSPR.click browser adapter boundary", () => {
       NEXT_PUBLIC_CASPER_CHAIN_NAME: "casper-test",
       NEXT_PUBLIC_CSPR_CLICK_APP_ID: "casper-gw-test",
       NEXT_PUBLIC_CSPR_CLICK_APP_NAME: "Casper GW",
-      NEXT_PUBLIC_CSPR_CLICK_CONTENT_MODE: "popup",
-      NEXT_PUBLIC_CSPR_CLICK_PROVIDERS: "casper-wallet, unknown, ledger",
+      NEXT_PUBLIC_CSPR_CLICK_CONTENT_MODE: "iframe",
+      NEXT_PUBLIC_CSPR_CLICK_PROVIDERS: "csprclick-w3a-google, unknown, csprclick-w3a-apple, casper-wallet",
       SECRET_PROVIDER_KEY: "do-not-include",
     });
 
@@ -37,8 +37,8 @@ describe("CSPR.click browser adapter boundary", () => {
       appId: "casper-gw-test",
       appName: "Casper GW",
       chainName: "casper-test",
-      contentMode: "popup",
-      providers: ["casper-wallet", "ledger"],
+      contentMode: "iframe",
+      providers: ["csprclick-w3a-google", "csprclick-w3a-apple", "casper-wallet"],
       status: "configured",
     });
     expect(JSON.stringify(config)).not.toContain("do-not-include");
@@ -54,7 +54,11 @@ describe("CSPR.click browser adapter boundary", () => {
     expect(first).toEqual({ scriptId: CSPRCLICK_SCRIPT_ID, scriptSrc: CSPRCLICK_SCRIPT_SRC, status: "script_appended" });
     expect(second).toEqual({ scriptId: CSPRCLICK_SCRIPT_ID, scriptSrc: CSPRCLICK_SCRIPT_SRC, status: "script_present" });
     expect(win.appendedScripts).toHaveLength(1);
-    expect(win.clickSDKOptions).toMatchObject({ appId: "casper-gw-test", contentMode: "iframe" });
+    expect(win.clickSDKOptions).toMatchObject({
+      appId: "casper-gw-test",
+      contentMode: "iframe",
+      providers: ["csprclick-w3a-google", "csprclick-w3a-apple", "casper-wallet", "ledger", "metamask-snap"],
+    });
     expect(win.clickUIOptions).toMatchObject({
       rootAppElement: "#app",
       show1ClickModal: true,

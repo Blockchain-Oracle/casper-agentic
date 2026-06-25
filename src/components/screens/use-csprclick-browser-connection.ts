@@ -49,6 +49,9 @@ export function useCSPRClickBrowserConnection(onMessage?: (message: string) => v
 
   function connectBrowserWallet() {
     const result = requestCSPRClickSignIn((window as unknown as CSPRClickBrowserWindow).csprclick);
+    setBrowserSigningState((current) => (
+      current.connected ? current : { ...current, message: result.message }
+    ));
     onMessage?.(result.message);
     return result.message;
   }
