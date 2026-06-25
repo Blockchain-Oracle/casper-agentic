@@ -3,8 +3,9 @@
 import { useCallback, useMemo, useState } from "react";
 
 import { providerRequest } from "@/lib/provider-gateway-client";
-import type { WalletProfile } from "@/lib/types";
+import { accountHashFromPublicKey, normalizeCasperPublicKey } from "@/lib/casper-public-key";
 import type { WalletPolicy, WalletReadiness, WalletRecord } from "@/lib/wallet-control-types";
+import { toWalletProfile } from "./wallet-profile-view";
 
 const DEFAULT_POLICY_AMOUNT = "7500000000";
 
@@ -15,6 +16,7 @@ export function useWalletControl(operatorToken: string) {
   const [policy, setPolicy] = useState<WalletPolicy | null>(null);
   const [walletLabel, setWalletLabel] = useState("Judge Testnet Wallet");
   const [walletAccountHash, setWalletAccountHash] = useState("");
+  const [walletPublicKey, setWalletPublicKey] = useState("");
   const [walletSigningMode, setWalletSigningMode] = useState("external");
   const [policyAmount, setPolicyAmount] = useState(DEFAULT_POLICY_AMOUNT);
   const [dailyLimit, setDailyLimit] = useState("");
@@ -79,12 +81,18 @@ export function useWalletControl(operatorToken: string) {
     setErrorMessage(null);
     try {
       const result = await providerRequest<{ wallet: WalletRecord }>("/api/wallets", {
-        body: { accountHash: walletAccountHash, label: walletLabel, signingMode: walletSigningMode },
+        body: {
+          accountHash: walletAccountHash,
+          label: walletLabel,
+          publicKey: walletPublicKey || undefined,
+          signingMode: walletSigningMode,
+        },
         method: "POST",
         operatorToken,
       });
       setSelectedWalletId(result.wallet.id);
       setWalletAccountHash("");
+      setWalletPublicKey("");
       setStatusMessage("Wallet profile saved. Refresh readiness to check CSPR.cloud balances.");
       await loadWallets(operatorToken);
     } catch (error) {
@@ -128,6 +136,21 @@ export function useWalletControl(operatorToken: string) {
     void loadPolicy(walletId);
   }
 
+  function useBrowserWalletProfile(publicKey: string | undefined) {
+    const normalizedPublicKey = normalizeCasperPublicKey(publicKey);
+    const accountHash = accountHashFromPublicKey(normalizedPublicKey);
+    if (!normalizedPublicKey || !accountHash) {
+      setErrorMessage("Connect CSPR.click before importing a browser-wallet profile.");
+      return;
+    }
+    setWalletPublicKey(normalizedPublicKey);
+    setWalletAccountHash(accountHash);
+    setWalletSigningMode("browser-wallet");
+    setWalletLabel("CSPR.click Browser Wallet");
+    setErrorMessage(null);
+    setStatusMessage("Active CSPR.click wallet loaded into the wallet profile form.");
+  }
+
   return {
     createWallet,
     dailyLimit,
@@ -152,26 +175,15 @@ export function useWalletControl(operatorToken: string) {
     setSessionLimit,
     setWalletAccountHash,
     setWalletLabel,
+    setWalletPublicKey,
     setWalletSigningMode,
     statusMessage,
+    useBrowserWalletProfile,
     walletAccountHash,
     walletLabel,
+    walletPublicKey,
     walletProfiles,
     wallets,
     walletSigningMode,
-  };
-}
-
-function toWalletProfile(wallet: WalletRecord, readiness: WalletReadiness | null): WalletProfile {
-  const active = readiness?.accountHash === wallet.accountHash ? readiness : null;
-  return {
-    account: `0x${wallet.accountHash.slice(0, 4)}...${wallet.accountHash.slice(-4)}`,
-    balance: active?.assetBalance ?? "unavailable",
-    fullAccount: `account-hash-${wallet.accountHash}`,
-    funded: Boolean(active?.ready),
-    id: wallet.id,
-    network: wallet.network,
-    signingMode: wallet.signingMode,
-    status: active?.ready ? "ready" : "not ready",
   };
 }

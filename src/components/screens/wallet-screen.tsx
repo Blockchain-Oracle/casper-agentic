@@ -15,6 +15,7 @@ export function WalletScreen({
   errorMessage,
   loading,
   onCopy,
+  onConnectBrowserWallet,
   onCreateWallet,
   onDailyLimit,
   onLoadWallets,
@@ -28,7 +29,9 @@ export function WalletScreen({
   onSessionLimit,
   onWalletAccountHash,
   onWalletLabel,
+  onWalletPublicKey,
   onWalletSigningMode,
+  onUseBrowserWalletProfile,
   operatorConnected,
   policy,
   policyAmount,
@@ -40,8 +43,10 @@ export function WalletScreen({
   selectedWalletId,
   sessionLimit,
   statusMessage,
+  browserSigningState,
   walletAccountHash,
   walletLabel,
+  walletPublicKey,
   wallets,
   walletSigningMode,
 }: WalletScreenProps) {
@@ -84,6 +89,26 @@ export function WalletScreen({
 
         <Panel title="Add wallet">
           <div className="stack">
+            <div className={browserSigningState.connected ? "notice signal" : "notice"}>
+              {browserSigningState.connected
+                ? `Active CSPR.click public key: ${shortPublicKey(browserSigningState.activePublicKey)}`
+                : browserSigningState.message}
+            </div>
+            <div className="buttonRow">
+              {browserSigningState.canRequestSignIn && !browserSigningState.connected ? (
+                <button className="secondaryButton" disabled={loading} onClick={onConnectBrowserWallet} type="button">
+                  Connect CSPR.click wallet
+                </button>
+              ) : null}
+              <button
+                className="secondaryButton"
+                disabled={loading || !browserSigningState.connected}
+                onClick={onUseBrowserWalletProfile}
+                type="button"
+              >
+                Use active CSPR.click wallet
+              </button>
+            </div>
             <div className="formGrid">
               <Field label="label">
                 <input className="input" onChange={(event) => onWalletLabel(event.target.value)} value={walletLabel} />
@@ -98,6 +123,9 @@ export function WalletScreen({
             </div>
             <Field label="account hash">
               <input className="input" onChange={(event) => onWalletAccountHash(event.target.value)} value={walletAccountHash} />
+            </Field>
+            <Field label="public key">
+              <input className="input" onChange={(event) => onWalletPublicKey(event.target.value)} value={walletPublicKey} />
             </Field>
             <button className="primaryButton" disabled={loading || !operatorConnected} onClick={onCreateWallet} type="button">
               Save wallet profile
@@ -167,3 +195,5 @@ export function WalletScreen({
     </div>
   );
 }
+
+function shortPublicKey(value: string | undefined) { return value ? `${value.slice(0, 10)}...${value.slice(-8)}` : "unknown"; }

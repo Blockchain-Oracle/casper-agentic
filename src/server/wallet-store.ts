@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 
 import { getDb } from "@/db/client";
 import { agentWallets } from "@/db/schema";
+import { accountHashFromPublicKey, normalizeCasperPublicKey } from "@/lib/casper-public-key";
 
 import { casperAccountAliases, normalizeCasperAccountHash } from "./casper-account";
 
@@ -42,12 +43,15 @@ export async function getAgentWalletRecord(identifier: string) {
 }
 
 export function normalizeAgentWalletInput(input: CreateAgentWalletInput) {
+  const accountHash = normalizeAccountHash(input.accountHash);
+  const signingMode = normalizeSigningMode(input.signingMode);
+  const publicKey = normalizeWalletPublicKey(input.publicKey, signingMode, accountHash);
   return {
-    accountHash: normalizeAccountHash(input.accountHash),
+    accountHash,
     label: requiredText(input.label, "wallet label"),
     network: requiredText(input.network, "wallet network"),
-    publicKey: optionalText(input.publicKey),
-    signingMode: normalizeSigningMode(input.signingMode),
+    publicKey,
+    signingMode,
   };
 }
 
@@ -72,9 +76,17 @@ function normalizeSigningMode(value: string) {
   throw new Error("wallet signing mode is not supported");
 }
 
-function optionalText(value?: string) {
+function normalizeWalletPublicKey(value: string | undefined, signingMode: string, accountHash: string) {
   const text = value?.trim();
-  return text ? text : undefined;
+  const publicKey = text ? normalizeCasperPublicKey(text) : null;
+  if (text && !publicKey) throw new Error("wallet public key must be a Casper public key");
+  if (signingMode === "browser-wallet" && !publicKey) {
+    throw new Error("browser-wallet profiles require a CSPR.click public key");
+  }
+  if (publicKey && accountHashFromPublicKey(publicKey) !== accountHash) {
+    throw new Error("wallet public key does not match account hash");
+  }
+  return publicKey ?? undefined;
 }
 
 function requiredText(value: string | undefined, label: string) {

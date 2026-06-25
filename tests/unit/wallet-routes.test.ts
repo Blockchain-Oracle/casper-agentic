@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { publicKey } from "./browser-x402-signing-fixtures";
 
 const mocks = vi.hoisted(() => ({
   createAgentWallet: vi.fn(),
@@ -47,7 +48,7 @@ describe("wallet profile routes", () => {
 
     const response = await POST(
       request("https://gw.test/api/wallets", {
-        body: { accountHash, label: "Judge Wallet", signingMode: "external" },
+        body: { accountHash, label: "Judge Wallet", publicKey, signingMode: "external" },
         token: "operator-token",
       }),
     );
@@ -57,7 +58,7 @@ describe("wallet profile routes", () => {
       accountHash,
       label: "Judge Wallet",
       network: "casper:casper-test",
-      publicKey: undefined,
+      publicKey,
       signingMode: "external",
     });
   });

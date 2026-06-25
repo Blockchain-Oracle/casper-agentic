@@ -1,5 +1,6 @@
 import type { Receipt, Tool } from "@/lib/types";
 import type { WalletPolicy, WalletReadiness, WalletRecord } from "@/lib/wallet-control-types";
+import type { BrowserSigningState } from "./browser-signing-state";
 
 export interface WalletScreenProps {
   copied: string | null;
@@ -7,6 +8,7 @@ export interface WalletScreenProps {
   errorMessage: string | null;
   loading: boolean;
   onCopy: (value: string) => void;
+  onConnectBrowserWallet: () => void;
   onCreateWallet: () => void;
   onDailyLimit: (value: string) => void;
   onLoadWallets: () => void;
@@ -20,7 +22,9 @@ export interface WalletScreenProps {
   onSessionLimit: (value: string) => void;
   onWalletAccountHash: (value: string) => void;
   onWalletLabel: (value: string) => void;
+  onWalletPublicKey: (value: string) => void;
   onWalletSigningMode: (value: string) => void;
+  onUseBrowserWalletProfile: () => void;
   operatorConnected: boolean;
   policy: WalletPolicy | null;
   policyAmount: string;
@@ -32,8 +36,10 @@ export interface WalletScreenProps {
   selectedWalletId: string;
   sessionLimit: string;
   statusMessage: string;
+  browserSigningState: BrowserSigningState;
   walletAccountHash: string;
   walletLabel: string;
+  walletPublicKey: string;
   wallets: WalletRecord[];
   walletSigningMode: string;
 }
@@ -42,6 +48,7 @@ export function walletRows(wallet: WalletRecord | null, readiness: WalletReadine
   if (!wallet) return [{ key: "wallet", value: "none selected" }];
   return [
     { key: "account", value: `account-hash-${wallet.accountHash}`, mono: true },
+    ...(wallet.publicKey ? [{ key: "public key", value: wallet.publicKey, mono: true }] : []),
     { key: "network", value: wallet.network, mono: true },
     { key: "signing mode", value: wallet.signingMode },
     { key: "CSPR gas", value: readiness?.gasBalance ?? "not checked", mono: true },

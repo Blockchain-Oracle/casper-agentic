@@ -12,9 +12,11 @@ import {
 import { TestConsoleTimeline } from "./test-console-timeline";
 import { TestConsoleWalletActions } from "./test-console-wallet-actions";
 import { usePaidCallConsole } from "./use-paid-call-console";
+import type { CSPRClickBrowserConnection } from "./use-csprclick-browser-connection";
 import type { ConsolePhase, Tool, WalletProfile } from "@/lib/types";
 
-export function TestConsoleScreen({ endpointUrl, operatorToken, tools, wallets }: {
+export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToken, tools, wallets }: {
+  browserConnection: CSPRClickBrowserConnection;
   endpointUrl: string;
   operatorToken: string;
   tools: Tool[];
@@ -27,7 +29,7 @@ export function TestConsoleScreen({ endpointUrl, operatorToken, tools, wallets }
   const [selectedWalletId, setSelectedWalletId] = useState(wallets[0]?.id ?? "");
   const [toolArgs, setToolArgs] = useState<Record<string, string>>({});
   const { apiMessage, apiReceiptId, apiReceiptStatus, apiTools, browserSigningState, busy, connectBrowserWallet, discover, run, runBrowser } =
-    usePaidCallConsole(operatorToken);
+    usePaidCallConsole(operatorToken, browserConnection);
 
   const activeEndpointUrl = target === "hosted" ? endpointUrl : endpointInput;
   const activeToolId = selectedToolId || tools[0]?.id || "";

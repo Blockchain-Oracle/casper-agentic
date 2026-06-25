@@ -10,6 +10,7 @@ import { ImportScreen } from "@/components/screens/import-screen";
 import { PricingScreen } from "@/components/screens/pricing-screen";
 import { SettingsScreen } from "@/components/screens/settings-screen";
 import { TestConsoleScreen } from "@/components/screens/test-console-screen";
+import { useCSPRClickBrowserConnection } from "@/components/screens/use-csprclick-browser-connection";
 import { defaultProviderPriceAmount, useProviderGateway } from "@/components/screens/use-provider-gateway";
 import { useWalletControl } from "@/components/screens/use-wallet-control";
 import { WalletScreen } from "@/components/screens/wallet-screen";
@@ -25,6 +26,7 @@ export function GatewayApp() {
   const [configTab, setConfigTab] = useState<ConfigTab>("cursor");
   const [copied, setCopied] = useState<string | null>(null);
   const provider = useProviderGateway();
+  const browserWallet = useCSPRClickBrowserConnection();
   const wallet = useWalletControl(provider.operatorToken);
 
   const activeScreen = screens.find((item) => item.id === screen) ?? screens[0];
@@ -59,12 +61,7 @@ export function GatewayApp() {
   return (
     <main className="app" id="app">
       <div id="csprclick-ui" />
-      <AppShell
-        active={screen}
-        navOpen={navOpen}
-        onScreen={go}
-        onToggleNav={() => setNavOpen((open) => !open)}
-      />
+      <AppShell active={screen} navOpen={navOpen} onScreen={go} onToggleNav={() => setNavOpen((open) => !open)} />
       <section className="page">
         <header className="pageHeader">
           <div className="eyebrow">{activeScreen.eyebrow}</div>
@@ -137,6 +134,7 @@ export function GatewayApp() {
             errorMessage={wallet.errorMessage}
             loading={wallet.loading}
             onCopy={copy}
+            onConnectBrowserWallet={browserWallet.connectBrowserWallet}
             onCreateWallet={wallet.createWallet}
             onDailyLimit={wallet.setDailyLimit}
             onLoadWallets={() => wallet.loadWallets()}
@@ -150,7 +148,9 @@ export function GatewayApp() {
             onSessionLimit={wallet.setSessionLimit}
             onWalletAccountHash={wallet.setWalletAccountHash}
             onWalletLabel={wallet.setWalletLabel}
+            onWalletPublicKey={wallet.setWalletPublicKey}
             onWalletSigningMode={wallet.setWalletSigningMode}
+            onUseBrowserWalletProfile={() => wallet.useBrowserWalletProfile(browserWallet.browserSigningState.activePublicKey)}
             operatorConnected={Boolean(provider.operatorToken)}
             policy={wallet.policy}
             policyAmount={wallet.policyAmount}
@@ -162,14 +162,17 @@ export function GatewayApp() {
             selectedWalletId={wallet.selectedWalletId}
             sessionLimit={wallet.sessionLimit}
             statusMessage={wallet.statusMessage}
+            browserSigningState={browserWallet.browserSigningState}
             walletAccountHash={wallet.walletAccountHash}
             walletLabel={wallet.walletLabel}
+            walletPublicKey={wallet.walletPublicKey}
             wallets={wallet.wallets}
             walletSigningMode={wallet.walletSigningMode}
           />
         ) : null}
         {screen === "console" ? (
           <TestConsoleScreen
+            browserConnection={browserWallet}
             endpointUrl={provider.sourceUrl}
             operatorToken={provider.operatorToken}
             tools={provider.publishedTools}
