@@ -63,6 +63,9 @@ The current product shape:
    - `.thoughts/stories/2026-06-22-casper-gw-current-stories.md`
 
 5. Fresh designer handoff:
+   - `.thoughts/design/2026-06-25-casper-gw-designer-product-flow-brief.md`
+   - `.thoughts/design/2026-06-25-casper-gw-designer-prompt.md`
+   - These are the current designer-facing product-flow docs. They intentionally do not prescribe visual style or component structure and they do not treat the current UI as design truth.
    - `.thoughts/design/2026-06-22-designer-reset-brief.md`
    - `.thoughts/design/2026-06-22-designer-reset-prompt.md`
 
@@ -77,6 +80,7 @@ The current product shape:
    - Treat older quality/spec/story items as subject to the deltas in the 2026-06-22 current profile and handoff.
 
 8. Research and references:
+   - `.thoughts/research/2026-06-25-casper-gw-signing-modes-reality.md`
    - `.thoughts/raw/source-index.md`
    - `.thoughts/wiki/`
    - `.thoughts/research/`
@@ -580,15 +584,23 @@ Do not silently stub missing production facts. Ask Abu for:
 
 ## Current Design Gate
 
-The design pass should not be a full redesign. It should apply:
+The latest designer-facing handoff is:
 
-- top-header app navigation instead of the prototype sidebar,
-- wallet/funding/policy as a modal with tabs,
-- fund-wallet journey as a drawer or stepper,
-- add-source as a modal wizard,
-- price-and-publish as a per-tool drawer,
-- settings as a tabbed page,
-- explorer vitality strip and real `testnet.cspr.live` proof links,
-- per-result fixture labels where data is mocked.
+- `.thoughts/design/2026-06-25-casper-gw-designer-product-flow-brief.md`
+- `.thoughts/design/2026-06-25-casper-gw-designer-prompt.md`
 
-The visual language can stay; the required correction is structure and wallet funding realism.
+Use those files for the next design pass. They document product truth, routes, actors, flows, entities, states, proof boundaries, and non-goals without prescribing visual style or component structure. Older design notes that recommend specific component patterns are background context only unless the designer chooses them.
+
+Hard design boundaries remain:
+
+- do not use the current implementation UI as design truth,
+- `/app` is protected by wallet connection,
+- `/explorer` and public receipt/proof details are public,
+- provider upstream credentials, MCP client access, and wallet/payment authorization stay separate,
+- receipt/proof layers stay separate,
+- mocked proof/payment data must be labeled,
+- no registry/private-tool model,
+- no sandbox product surface,
+- no Simulated/Local product modes,
+- no fake deploy hashes,
+- no Mainnet or production-custody claim in this pass.
