@@ -99,22 +99,19 @@ describe("browser payment intent", () => {
       typedData: {
         domain: {
           chain_name: requirements.network,
-          contract_package_hash: `0x${requirements.asset}`,
+          contract_package_hash: requirements.asset,
           name: "Wrapped CSPR",
           version: "1",
         },
         message: {
-          from: `0x${payerAddress}`,
-          to: `0x${payeeAddress}`,
+          from: payerAddress,
+          to: payeeAddress,
           value: Number(requirements.amount),
         },
         primaryType: "TransferWithAuthorization",
       },
     });
-    expect(result.signing.signTypedDataParams.options?.domainTypes).toContainEqual({
-      name: "contract_package_hash",
-      type: "bytes32",
-    });
+    expect(result.signing.signTypedDataParams.options).toEqual({ returnHashArtifacts: true });
     for (const secret of ["cspr-cloud-token", "pem", "tokenHash"]) expect(JSON.stringify(result)).not.toContain(secret);
     expect(mocks.persistPolicyDecision).toHaveBeenCalledWith(
       "attempt-1",

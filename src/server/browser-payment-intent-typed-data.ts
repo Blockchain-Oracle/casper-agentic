@@ -21,25 +21,19 @@ export function buildCSPRClickPaymentIntentParams(input: {
 
   return {
     options: {
-      domainTypes: [
-        { name: "name", type: "string" },
-        { name: "version", type: "string" },
-        { name: "chain_name", type: "string" },
-        { name: "contract_package_hash", type: "bytes32" },
-      ],
       returnHashArtifacts: true,
     },
     typedData: {
       domain: {
         chain_name: input.paymentRequirements.network,
-        contract_package_hash: hex(input.paymentRequirements.asset),
+        contract_package_hash: input.paymentRequirements.asset,
         name,
         version,
       },
       message: {
-        from: hex(`00${normalizeCasperAccountHash(input.payerAccountHash)}`),
-        nonce: hex(nonce),
-        to: hex(input.paymentRequirements.payTo),
+        from: `00${normalizeCasperAccountHash(input.payerAccountHash)}`,
+        nonce,
+        to: input.paymentRequirements.payTo,
         validAfter,
         validBefore,
         value: safeUintNumber(input.paymentRequirements.amount),
@@ -63,9 +57,4 @@ function safeUintNumber(value: string) {
   const amount = Number(value);
   if (!Number.isSafeInteger(amount) || amount < 0) throw new Error("browser payment-intent amount is not safe to encode");
   return amount;
-}
-
-function hex(value: string) {
-  const text = value.trim().toLowerCase();
-  return text.startsWith("0x") ? text : `0x${text}`;
 }

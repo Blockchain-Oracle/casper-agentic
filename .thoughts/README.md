@@ -20,6 +20,8 @@ Phase 24K app-level CSPR.click connect button is Chrome-verified. The Casper GW 
 
 Phase 24L CSPR.click browser smoke gate is locally implemented and focused-verified. CI now includes an isolated CSPR.click-configured Playwright suite that proves settings and the app-level connect button behave correctly with a deterministic mocked CSPR.click runtime, without provider login or spending.
 
+Phase 24M CSPR.click typed-data shape alignment is locally implemented and focused-verified. Browser payment intents now match current CSPR.click documented `TransferWithAuthorization` params with unprefixed package hash, account addresses, and nonce before the next live browser-approved x402 smoke.
+
 The current product shape:
 
 - MCPay-style provider gateway: connect API/OpenAPI/remote MCP, discover tools, price, publish hosted MCP/x402 endpoint.
