@@ -73,6 +73,12 @@
   border-radius: var(--radius);
   background: var(--dark);
   color: #e7e9ee;
+  /* Re-scope text tokens so children using var(--ink*) stay legible on the dark card. */
+  --ink: #f1f3f6;
+  --ink-2: #aab1bd;
+  --ink-3: #7b828e;
+  --line: #252a36;
+  --line-2: #2a2f3a;
 }
 
 .darkPanel .row {

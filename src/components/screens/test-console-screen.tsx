@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Panel } from "@/components/screen-primitives";
 import { Field, KeyValueList } from "@/components/ui";
 import { inputFieldsForTool } from "./console-schema";
+import { TestConsoleApproveModal, type ApproveMethod } from "./test-console-approve-modal";
+import { TestConsoleInputFields } from "./test-console-input-fields";
 import {
   TestConsoleDiscoveredToolsPanel,
   TestConsoleEndpointTargetPanel,
@@ -30,6 +32,8 @@ export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToke
   const [selectedToolId, setSelectedToolId] = useState(tools[0]?.id ?? "");
   const [selectedWalletId, setSelectedWalletId] = useState(wallets[0]?.id ?? "");
   const [toolArgs, setToolArgs] = useState<Record<string, string>>({});
+  const [confirm, setConfirm] = useState<ApproveMethod>(null);
+  const [discovering, setDiscovering] = useState(false);
   const { apiMessage, apiReceiptId, apiReceiptStatus, apiTools, browserSigningState, busy, connectBrowserWallet, discover, runAgentWallet, runBrowser } =
     usePaidCallConsole(operatorToken, browserConnection);
 
@@ -49,6 +53,7 @@ export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToke
   const inputFields = inputFieldsForTool(selectedApiTool);
   const runDisabled = busy || !selectedApiTool || !activeWalletId || !operatorToken;
   const canPayAgentWallet = target === "hosted" && Boolean(sourceId);
+  const priceLabel = selectedTool?.price ? `${selectedTool.price.toFixed(2)} WCSPR` : "server-configured WCSPR";
   const browserRunDisabled = isBrowserApprovalRunDisabled({
     baseRunDisabled: runDisabled,
     browserSigningState,
@@ -56,7 +61,9 @@ export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToke
   });
 
   async function discoverEndpointTools() {
+    setDiscovering(true);
     const found = await discover(activeEndpointUrl);
+    setDiscovering(false);
     if (!found) return;
     const first = found[0] ?? null;
     setSelectedToolId(first?.name ?? "");
@@ -82,6 +89,12 @@ export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToke
     }
   }
 
+  async function confirmAndRun() {
+    if (confirm === "agent-wallet") await payWithAgentWallet();
+    else if (confirm === "browser") await runBrowserPaidCall();
+    setConfirm(null);
+  }
+
   function updateArg(name: string, value: string) {
     setToolArgs((current) => ({ ...current, [name]: value }));
   }
@@ -103,6 +116,7 @@ export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToke
           discovered={discovered}
           discoveredTools={discoveredTools}
           hasApiTools={Boolean(apiTools.length)}
+          loading={discovering}
           onToolSelect={setSelectedToolId}
           selectedToolId={selectedToolId}
         />
@@ -119,42 +133,10 @@ export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToke
                   { key: "selected tool", value: selectedApiTool.name, mono: true },
                   { key: "payment asset", value: "CEP-18 WCSPR", mono: true },
                   { key: "network", value: "casper:casper-test", mono: true },
-                  {
-                    key: "price",
-                    value: selectedTool?.price ? `${selectedTool.price.toFixed(2)} WCSPR` : "server-configured WCSPR",
-                    mono: true,
-                  },
+                  { key: "price", value: priceLabel, mono: true },
                 ]}
               />
-              {inputFields.length ? (
-                <div className="formGrid">
-                  {inputFields.map((field) => (
-                    <Field key={field.name} label={field.required ? `${field.name} *` : field.name}>
-                      {field.options.length ? (
-                        <select
-                          className="input"
-                          onChange={(event) => updateArg(field.name, event.target.value)}
-                          value={toolArgs[field.name] ?? field.defaultValue}
-                        >
-                          {field.options.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          className="input"
-                          onChange={(event) => updateArg(field.name, event.target.value)}
-                          value={toolArgs[field.name] ?? field.defaultValue}
-                        />
-                      )}
-                    </Field>
-                  ))}
-                </div>
-              ) : (
-                <div className="emptyState">No input required for this tool.</div>
-              )}
+              <TestConsoleInputFields inputFields={inputFields} toolArgs={toolArgs} updateArg={updateArg} />
               <Field label="wallet / policy">
                 <select
                   className="input"
@@ -175,8 +157,8 @@ export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToke
                 busy={busy}
                 canPayAgentWallet={canPayAgentWallet}
                 onConnectBrowser={connectBrowserWallet}
-                onPayAgentWallet={payWithAgentWallet}
-                onRunBrowser={runBrowserPaidCall}
+                onPayAgentWallet={() => setConfirm("agent-wallet")}
+                onRunBrowser={() => setConfirm("browser")}
                 runDisabled={runDisabled}
                 selectedWallet={selectedWallet}
               />
@@ -186,6 +168,16 @@ export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToke
 
         <TestConsoleTimeline apiReceiptId={apiReceiptId} completed={completed} discovered={discovered} resultStatus={apiReceiptStatus} />
       </div>
+
+      <TestConsoleApproveModal
+        busy={busy}
+        method={confirm}
+        onApprove={confirmAndRun}
+        onCancel={() => setConfirm(null)}
+        priceLabel={priceLabel}
+        toolName={selectedApiTool?.name ?? "—"}
+        walletId={activeWalletId}
+      />
     </div>
   );
 }

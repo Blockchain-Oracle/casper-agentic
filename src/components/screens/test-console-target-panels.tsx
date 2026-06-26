@@ -50,7 +50,7 @@ export function TestConsoleEndpointTargetPanel({
           Browser signing runs server policy first, then asks CSPR.click for approval. The integration signer path is separate.
         </div>
         <button className="primaryButton" disabled={busy} onClick={onDiscover} type="button">
-          Discover endpoint tools
+          {busy ? "Discovering…" : "Discover endpoint tools"}
         </button>
         <div className="notice">{apiMessage}</div>
       </div>
@@ -62,18 +62,22 @@ export function TestConsoleDiscoveredToolsPanel({
   discovered,
   discoveredTools,
   hasApiTools,
+  loading,
   onToolSelect,
   selectedToolId,
 }: {
   discovered: boolean;
   discoveredTools: DiscoveredTool[];
   hasApiTools: boolean;
+  loading?: boolean;
   onToolSelect: (toolName: string) => void;
   selectedToolId: string;
 }) {
   return (
     <Panel title="Discovered tools">
-      {!discovered ? (
+      {loading ? (
+        <div className="emptyState">Discovering tools…</div>
+      ) : !discovered ? (
         <div className="emptyState">Discover tools before selecting inputs.</div>
       ) : (
         <div className="stack tight">
