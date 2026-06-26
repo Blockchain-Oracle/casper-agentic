@@ -43,6 +43,10 @@ export const toolPrices = pgTable("tool_prices", {
 export const endpointAccessKeys = pgTable("endpoint_access_keys", {
   id: uuid("id").primaryKey().defaultRandom(),
   sourceId: uuid("source_id").references(() => providerSources.id),
+  // Optional binding to a hosted agent wallet. When set, the token authorizes the
+  // server to sign x402 payments with that wallet under policy (autonomous agent
+  // path); when null, the caller must supply a signed payment (today's behavior).
+  walletId: uuid("wallet_id").references(() => agentWallets.id),
   tokenHash: text("token_hash").notNull(),
   label: text("label").notNull(),
   scope: jsonb("scope").default({}).notNull(),
@@ -57,6 +61,23 @@ export const agentWallets = pgTable("agent_wallets", {
   publicKey: text("public_key"),
   network: text("network").notNull(),
   signingMode: text("signing_mode").notNull(),
+  ...timestamps,
+});
+
+// Hosted-custody agent-wallet keys, kept in a SEPARATE table from agent_wallets so
+// no wallet-profile view query can ever select key material. Testnet only; not a
+// production custody claim. Encryption handled by wallet-key-crypto (AES-256-GCM).
+export const walletKeys = pgTable("wallet_keys", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  walletId: uuid("wallet_id")
+    .references(() => agentWallets.id)
+    .notNull()
+    .unique(),
+  algorithm: text("algorithm").notNull(),
+  ciphertext: text("ciphertext").notNull(),
+  iv: text("iv").notNull(),
+  authTag: text("auth_tag").notNull(),
+  keyVersion: integer("key_version").default(1).notNull(),
   ...timestamps,
 });
 

@@ -7,9 +7,10 @@ export function TestConsoleWalletActions({
   browserRunDisabled,
   browserSigningState,
   busy,
+  canPayAgentWallet,
   onConnectBrowser,
+  onPayAgentWallet,
   onRunBrowser,
-  onRunSigner,
   runDisabled,
   selectedWallet,
 }: {
@@ -17,9 +18,10 @@ export function TestConsoleWalletActions({
   browserRunDisabled: boolean;
   browserSigningState: BrowserSigningState;
   busy: boolean;
+  canPayAgentWallet: boolean;
   onConnectBrowser: () => void;
+  onPayAgentWallet: () => void;
   onRunBrowser: () => void;
-  onRunSigner: () => void;
   runDisabled: boolean;
   selectedWallet?: WalletProfile;
 }) {
@@ -32,6 +34,11 @@ export function TestConsoleWalletActions({
             : "Wallet is not ready; a real run must stop before signing/payment."
           : "Select a real wallet profile before running a paid call."}
       </div>
+      {canPayAgentWallet ? (
+        <button className="primaryButton" disabled={runDisabled} onClick={onPayAgentWallet} type="button">
+          Pay with my agent wallet
+        </button>
+      ) : null}
       {browserSigningState.canRequestSignIn && !browserSigningState.connected ? (
         <button className="secondaryButton" disabled={busy} onClick={onConnectBrowser} type="button">
           Connect CSPR.click wallet
@@ -43,11 +50,8 @@ export function TestConsoleWalletActions({
           : browserSigningState.message}
       </div>
       <BrowserSigningProviderNotice state={browserSigningState} />
-      <button className="primaryButton" disabled={browserRunDisabled} onClick={onRunBrowser} type="button">
-        Run with CSPR.click approval
-      </button>
-      <button className="secondaryButton" disabled={runDisabled} onClick={onRunSigner} type="button">
-        Run integration signer path
+      <button className="secondaryButton" disabled={browserRunDisabled} onClick={onRunBrowser} type="button">
+        Connect &amp; sign (CSPR.click)
       </button>
       {busy ? <div className="muted">Waiting for the current console request.</div> : null}
     </div>

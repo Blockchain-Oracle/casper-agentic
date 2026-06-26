@@ -24,6 +24,8 @@
     "maintenance:prune-feed": "tsx scripts/prune-external-feed-state.ts",
     "smoke:live": "tsx scripts/live-smoke.ts",
     "smoke:hosted-live": "tsx scripts/hosted-live-smoke.ts",
+    "smoke:server-signed": "tsx scripts/server-signed-live-smoke.ts",
+    "smoke:agent-wallet": "tsx scripts/agent-wallet-live-smoke.ts",
     "fund:browser-wallet": "tsx scripts/fund-browser-wallet.ts",
     "wrap:wcspr": "tsx scripts/wrap-wcspr.ts"
   },

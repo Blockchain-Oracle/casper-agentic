@@ -1,9 +1,10 @@
 import { Panel, TabButton, TrustBoundaryGrid } from "@/components/screen-primitives";
-import { Chip, KeyValueList } from "@/components/ui";
+import { Chip, Field, KeyValueList } from "@/components/ui";
 import { clientConfig, type ConfigTab } from "@/lib/client-config";
-import type { Tool } from "@/lib/types";
+import type { Tool, WalletProfile } from "@/lib/types";
 
 export function EndpointScreen({
+  accessWalletId,
   clientToken,
   configTab,
   copied,
@@ -11,11 +12,14 @@ export function EndpointScreen({
   endpointToolCount,
   endpointUrl,
   loading,
+  onAccessWalletChange,
   onConfigTab,
   onCopy,
   onCreateAccess,
   publishedTools,
+  wallets,
 }: {
+  accessWalletId: string;
   clientToken: string | null;
   configTab: ConfigTab;
   copied: string | null;
@@ -23,12 +27,15 @@ export function EndpointScreen({
   endpointToolCount: number;
   endpointUrl: string;
   loading: boolean;
+  onAccessWalletChange: (walletId: string) => void;
   onConfigTab: (tab: ConfigTab) => void;
   onCopy: (value: string) => void;
   onCreateAccess: () => void;
   publishedTools: Tool[];
+  wallets: WalletProfile[];
 }) {
   const code = clientConfig(configTab, { clientToken, endpointUrl });
+  const serverSignable = wallets.filter((wallet) => wallet.signingMode === "hosted" || wallet.signingMode === "test-signer");
 
   return (
     <div className="stack">
@@ -62,15 +69,30 @@ export function EndpointScreen({
           <div className="notice">
             Client access tokens authenticate MCP clients only. They are not provider upstream
             credentials and cannot authorize wallet spending. x402 payment payloads are sent
-            separately after the endpoint returns a 402 challenge.
+            separately after the endpoint returns a 402 challenge — unless the token is bound to a
+            hosted wallet below, in which case the Gateway server-signs under that wallet&apos;s policy.
           </div>
+          <Field label="Autonomous server-signing (optional): bind a hosted wallet">
+            <select
+              className="input"
+              onChange={(event) => onAccessWalletChange(event.target.value)}
+              value={accessWalletId}
+            >
+              <option value="">No wallet — client config token (the caller signs)</option>
+              {serverSignable.map((wallet) => (
+                <option key={wallet.id} value={wallet.id}>
+                  {wallet.id} · {wallet.signingMode}
+                </option>
+              ))}
+            </select>
+          </Field>
           <button
             className="primaryButton"
             disabled={loading || !publishedTools.length}
             onClick={onCreateAccess}
             type="button"
           >
-            {loading ? "Generating..." : "Generate client access"}
+            {loading ? "Generating..." : accessWalletId ? "Generate autonomous agent token" : "Generate client access"}
           </button>
         </div>
       </Panel>

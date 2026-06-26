@@ -1,5 +1,5 @@
-import { GatewayApp } from "@/components/gateway-app";
+import { redirect } from "next/navigation";
 
 export default function AppPage() {
-  return <GatewayApp />;
+  redirect("/app/dashboard");
 }

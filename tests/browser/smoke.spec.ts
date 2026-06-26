@@ -62,54 +62,14 @@ test("public explorer pages external account history controls", async ({ page })
   await expect(page.getByText("6 external actions - page 2 of 3")).toBeVisible();
 });
 
-test("operator app exposes the paid tool console without changing public explorer", async ({ page }) => {
+test("operator app is wallet-gated behind a connect overlay", async ({ page }) => {
+  // The v3 app (/app → /app/dashboard) is gated: with no wallet connected, a
+  // headless browser sees the connect overlay, not the operator workspace.
   await page.goto("/app");
 
-  await page.getByRole("button", { name: "Open test console" }).click();
-  await expect(page.getByRole("heading", { name: "Paid Tool Test Console" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Discover endpoint tools" })).toBeVisible();
-  await expect(page.getByText("Design fixture")).toHaveCount(0);
-  await expect(page.getByText("CSPR.click browser approval")).toBeVisible();
-});
-
-test("provider wiring avoids fake hosted credentials", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name.includes("mobile"), "mobile nav switching is covered separately");
-
-  await page.goto("/app");
-  await page.getByRole("button", { name: "Start provider flow" }).click();
-  await expect(page.getByRole("heading", { name: "Source Import" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Discover Remote MCP" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Load provider records" })).toBeVisible();
-
-  await page.getByRole("button", { name: "Endpoint" }).click();
-  await expect(page.getByText("/api/mcp/{sourceId}", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText(/client-access-token/).first()).toBeVisible();
-  await expect(page.getByText("gw.casper-gateway.io")).toHaveCount(0);
-});
-
-test("wallet screen exposes real readiness and policy controls", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name.includes("mobile"), "desktop wallet controls are the Phase 2 smoke target");
-
-  await page.goto("/app");
-  await page.getByRole("button", { name: "Wallets" }).click();
-  await expect(page.getByRole("heading", { name: "Wallet Control Plane" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Load wallet records" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Save wallet profile" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Save spend policy" })).toBeVisible();
-  await expect(page.getByText("ready fixture")).toHaveCount(0);
-  await expect(page.getByText("Hosted encrypted signer")).toHaveCount(0);
-});
-
-test("settings keep signing boundaries explicit", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name.includes("mobile"), "desktop settings controls are enough for signing-boundary copy");
-
-  await page.goto("/app");
-  await page.getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByRole("heading", { name: "Settings & Audit" })).toBeVisible();
-  await expect(page.getByText("Testnet signer integration path")).toBeVisible();
-  await expect(page.getByText("integration verification only")).toBeVisible();
-  await expect(page.getByText("CSPR.click not enabled")).toBeVisible();
-  await expect(page.getByText("Hosted encrypted signer")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Connect a Casper wallet to enter the app" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Connect wallet/ })).toBeVisible();
+  await expect(page.getByText(/never ask for a seed phrase, private key, or provider secret/)).toBeVisible();
 });
 
 test("integration health reports preflight state without secret values", async ({ request }) => {

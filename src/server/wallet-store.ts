@@ -72,7 +72,7 @@ function normalizeAccountHash(value: string) {
 
 function normalizeSigningMode(value: string) {
   const signingMode = requiredText(value, "wallet signing mode");
-  if (["browser-wallet", "test-signer", "external"].includes(signingMode)) return signingMode;
+  if (["browser-wallet", "test-signer", "hosted", "external"].includes(signingMode)) return signingMode;
   throw new Error("wallet signing mode is not supported");
 }
 

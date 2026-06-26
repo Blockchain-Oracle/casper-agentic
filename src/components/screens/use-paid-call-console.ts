@@ -19,6 +19,13 @@ export interface PaidCallRunInput {
   walletId: string;
 }
 
+export interface AgentWalletRunInput {
+  args: Record<string, unknown>;
+  sourceId: string;
+  toolName: string;
+  walletId: string;
+}
+
 export function usePaidCallConsole(operatorToken: string, browserConnection: CSPRClickBrowserConnection) {
   const [apiMessage, setApiMessage] = useState("Discovery and paid runs use the server API.");
   const [apiReceiptId, setApiReceiptId] = useState<string | null>(null);
@@ -82,6 +89,37 @@ export function usePaidCallConsole(operatorToken: string, browserConnection: CSP
     }
   }
 
+  // Trigger 1 — "Pay with my agent wallet": the Gateway server-signs with the
+  // selected wallet against a hosted/proxied tool (no browser popup, no env signer).
+  async function runAgentWallet(input: AgentWalletRunInput) {
+    setBusy(true);
+    setApiReceiptId(null);
+    setApiReceiptStatus(null);
+    setApiMessage("Paying with your agent wallet — policy, server signature, x402 settle, receipt...");
+    try {
+      const response = await fetch("/api/paid-calls/agent-wallet", {
+        body: JSON.stringify(input),
+        headers: operatorHeaders(),
+        method: "POST",
+      });
+      const body = await response.json();
+      if (body.attemptId) setApiReceiptId(body.attemptId);
+      const status = toReceiptStatus(body.status);
+      if (status) setApiReceiptStatus(status);
+      if (!response.ok) {
+        setApiMessage(body.error ?? "agent_wallet_payment_failed");
+        return false;
+      }
+      setApiMessage(`Paid-call result: ${body.status ?? "settled"}`);
+      return Boolean(status);
+    } catch (error) {
+      setApiMessage(error instanceof Error ? error.message : "Agent wallet payment failed.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function runBrowser(input: PaidCallRunInput) {
     const { browserSigningState } = browserConnection;
     if (!browserSigningState.connected) {
@@ -123,6 +161,7 @@ export function usePaidCallConsole(operatorToken: string, browserConnection: CSP
     connectBrowserWallet,
     discover,
     run,
+    runAgentWallet,
     runBrowser,
   };
 }

@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   getAccount: vi.fn(),
   getContractPackageTokenActions: vi.fn(),
   getDeploy: vi.fn(),
-  getConfiguredSignerAddress: vi.fn(),
+  buildSignerForWallet: vi.fn(),
   getFTOwnerships: vi.fn(),
   getAgentWalletRecord: vi.fn(),
   getSpendPolicyForWallet: vi.fn(),
@@ -93,7 +93,10 @@ vi.mock("@/server/spend-policy-store", () => ({
 vi.mock("@/server/x402-payment", () => ({
   buildPaymentRequirements: mocks.buildPaymentRequirements,
   createCasperPaymentPayload: mocks.createCasperPaymentPayload,
-  getConfiguredSignerAddress: mocks.getConfiguredSignerAddress,
+}));
+
+vi.mock("@/server/wallet-signer", () => ({
+  buildSignerForWallet: mocks.buildSignerForWallet,
 }));
 
 import { runLivePaidToolCall } from "@/server/live-paid-call";
@@ -112,7 +115,7 @@ describe("live paid-call success and proof handling", () => {
     expect(mocks.discoverMcpTools).toHaveBeenCalledWith(livePaidCallEndpointUrl);
     expect(mocks.getSpendPolicyForWallet).toHaveBeenCalledWith(livePaidCallPayerHash);
     expect(mocks.getWalletDailySpend).not.toHaveBeenCalled();
-    expect(mocks.createCasperPaymentPayload).toHaveBeenCalledWith(expect.any(Object), `${livePaidCallEndpointUrl}#get_quote`);
+    expect(mocks.createCasperPaymentPayload).toHaveBeenCalledWith(expect.any(Object), `${livePaidCallEndpointUrl}#get_quote`, expect.any(Object));
     expect(mocks.callMcpTool).toHaveBeenCalledWith(livePaidCallEndpointUrl, "get_quote", {
       amount: "10",
       token_in: "CSPR",

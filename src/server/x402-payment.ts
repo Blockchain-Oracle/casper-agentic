@@ -21,21 +21,32 @@ export function buildPaymentRequirements(config: RuntimeConfig): PaymentRequirem
   };
 }
 
-export async function createCasperPaymentPayload(
-  config: IntegrationRuntimeConfig,
+/** Mode-agnostic Casper x402 client signer (matches casper-x402's ClientCasperSigner). */
+export type ClientCasperSigner = {
+  accountAddress: () => string;
+  publicKey: () => string;
+  signEIP712: (digest: Uint8Array) => Promise<Uint8Array>;
+};
+
+/**
+ * Sign a fresh x402 payment payload against arbitrary requirements. Shared by the
+ * console path (global config requirements) and the hosted server-signs path
+ * (per-tool `tool_prices` requirements) — one signing engine, many price sources.
+ */
+export async function signPaymentPayload(
+  requirements: PaymentRequirements,
   resourceUrl: string,
+  signer: ClientCasperSigner,
 ) {
-  const requirements = buildPaymentRequirements(config);
   const paymentRequired: PaymentRequired = {
     accepts: [requirements],
     resource: {
-      description: "Casper GW Phase 0 paid tool call",
+      description: "Casper GW paid tool call",
       mimeType: "application/json",
       url: resourceUrl,
     },
     x402Version: 2,
   };
-  const signer = createSigner(config);
   const [{ ExactCasperScheme }, { x402Client }] = await Promise.all([
     import("@make-software/casper-x402/exact/client"),
     import("@x402/fetch"),
@@ -51,13 +62,22 @@ export async function createCasperPaymentPayload(
   };
 }
 
+export async function createCasperPaymentPayload(
+  config: IntegrationRuntimeConfig,
+  resourceUrl: string,
+  signer?: ClientCasperSigner,
+) {
+  return signPaymentPayload(buildPaymentRequirements(config), resourceUrl, signer ?? createSigner(config));
+}
+
 export function getConfiguredSignerAddress(config: IntegrationRuntimeConfig) {
   return createSigner(config).accountAddress();
 }
 
-function createSigner(config: IntegrationRuntimeConfig) {
-  const algorithm = config.signerKeyAlgo === "ed25519" ? KeyAlgorithm.ED25519 : KeyAlgorithm.SECP256K1;
-  const privateKey = PrivateKey.fromPem(readSignerPem(config), algorithm);
+/** Build a signer from PEM key material (used by the env test-signer and per-wallet hosted keys). */
+export function signerFromPem(pem: string, keyAlgo: string): ClientCasperSigner {
+  const algorithm = keyAlgo === "ed25519" ? KeyAlgorithm.ED25519 : KeyAlgorithm.SECP256K1;
+  const privateKey = PrivateKey.fromPem(pem, algorithm);
   const accountAddress = `00${privateKey.publicKey.accountHash().toHex()}`;
   const publicKey = privateKey.publicKey.toHex();
   return {
@@ -65,6 +85,10 @@ function createSigner(config: IntegrationRuntimeConfig) {
     publicKey: () => publicKey,
     signEIP712: async (digest: Uint8Array) => privateKey.signAndAddAlgorithmBytes(digest),
   };
+}
+
+function createSigner(config: IntegrationRuntimeConfig): ClientCasperSigner {
+  return signerFromPem(readSignerPem(config), config.signerKeyAlgo);
 }
 
 export function readSignerPem(config: IntegrationRuntimeConfig) {

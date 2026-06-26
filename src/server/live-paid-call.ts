@@ -18,9 +18,10 @@ import {
   persistX402Record,
   updateAttemptStatus,
 } from "./receipt-store";
+import { buildSignerForWallet } from "./wallet-signer";
 import { getAgentWalletRecord } from "./wallet-store";
 import { X402FacilitatorClient } from "./x402-facilitator";
-import { buildPaymentRequirements, createCasperPaymentPayload, getConfiguredSignerAddress } from "./x402-payment";
+import { buildPaymentRequirements, createCasperPaymentPayload, type ClientCasperSigner } from "./x402-payment";
 
 export { PaidCallInputError, isPaidCallInputError } from "./live-paid-call-input";
 export type { PaidCallInput } from "./live-paid-call-input";
@@ -43,8 +44,6 @@ export async function runLivePaidToolCall(input: PaidCallInput) {
   const tool = tools.find((item) => item.name === toolName);
   if (!tool) throw new Error(`Remote MCP endpoint did not expose ${toolName}`);
 
-  const signer = getConfiguredSignerAddress(config);
-  const signerHash = normalizeCasperAccountHash(signer);
   const selectedWallet = await getAgentWalletRecord(walletId);
   if (!selectedWallet) throw new PaidCallInputError("selected wallet not found");
   const walletAccountHash = normalizeCasperAccountHash(selectedWallet.accountHash);
@@ -61,20 +60,34 @@ export async function runLivePaidToolCall(input: PaidCallInput) {
     walletAccountHash,
   });
 
-  if (walletAccountHash !== signerHash) {
-    const reason = "selected wallet is not the configured Testnet signer";
+  const blockAttempt = async (reason: string, audit: string, evidence: Record<string, unknown> = {}) => {
     await persistPolicyDecision(attempt.id, false, reason, {
       selectedWalletId: input.walletId,
-      signerAccountHash: signerHash,
-      signingMode: selectedWallet?.signingMode,
+      signingMode: selectedWallet.signingMode,
       walletAccountHash,
+      ...evidence,
     });
     await updateAttemptStatus(attempt.id, "blocked", reason);
-    await persistAudit(attempt.id, "block", "Selected wallet cannot sign through configured Testnet signer", {
-      reason,
-      selectedWalletId: input.walletId,
+    await persistAudit(attempt.id, "block", audit, { reason, selectedWalletId: input.walletId });
+    return { attemptId: attempt.id, policy: { allowed: false, reason }, status: "blocked" as const };
+  };
+
+  // Signer for the selected wallet: hosted = its own decrypted key, test-signer = env PEM.
+  // The signer's account hash must equal the selected wallet — replaces the old single-signer gate.
+  let signer: ClientCasperSigner;
+  try {
+    signer = await buildSignerForWallet(config, selectedWallet);
+  } catch (error) {
+    return blockAttempt(
+      error instanceof Error ? error.message : "selected wallet cannot sign server-side",
+      "Selected wallet cannot sign server-side",
+    );
+  }
+  const signerHash = normalizeCasperAccountHash(signer.accountAddress());
+  if (signerHash !== walletAccountHash) {
+    return blockAttempt("signer key does not match the selected wallet", "Signer key does not match selected wallet", {
+      signerAccountHash: signerHash,
     });
-    return { attemptId: attempt.id, policy: { allowed: false, reason }, status: "blocked" };
   }
 
   const account = await csprCloud.getAccount(walletAccountHash);
@@ -98,7 +111,7 @@ export async function runLivePaidToolCall(input: PaidCallInput) {
   }
 
   const resourceUrl = `${endpointUrl}#${toolName}`;
-  const payment = await createCasperPaymentPayload(config, resourceUrl);
+  const payment = await createCasperPaymentPayload(config, resourceUrl, signer);
   const verifyResponse = await facilitator.verify({
     paymentPayload: payment.paymentPayload,
     paymentRequirements: payment.paymentRequirements,

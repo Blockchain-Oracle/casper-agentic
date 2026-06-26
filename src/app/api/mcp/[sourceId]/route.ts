@@ -10,11 +10,12 @@ import {
   resolveHostedTool,
   toHostedEndpointPublicView,
 } from "@/server/hosted-endpoint";
+import { HostedPaidCallInputError } from "@/server/hosted-paid-call";
 import {
-  HostedPaidCallInputError,
-  runHostedPaidToolCall,
-  type HostedPaidToolCallInput,
-} from "@/server/hosted-paid-call";
+  respondHostedOutcome,
+  runCallerSignedToolCall,
+  runServerSignedToolCall,
+} from "@/server/hosted-mcp-dispatch";
 import {
   HostedEndpointRequestError,
   jsonRpcError,
@@ -22,7 +23,6 @@ import {
   parseJsonRpcRequest,
   requiredToolArgs,
   requiredToolName,
-  type JsonRpcMessage,
 } from "@/server/mcp-json-rpc";
 
 export const dynamic = "force-dynamic";
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ so
 
     const signature = paymentHeader(request);
     if (signature) {
-      const outcome = await runPaidToolCall({
+      const outcome = await runCallerSignedToolCall({
         args: requiredToolArgs(message.params),
         endpoint,
         id: message.id,
@@ -104,23 +104,21 @@ export async function POST(request: NextRequest, context: { params: Promise<{ so
         requestUrl: request.url,
         tool,
       });
-      if (outcome instanceof NextResponse) return outcome;
-      if (outcome.kind === "success") {
-        return NextResponse.json(
-          { id: message.id, jsonrpc: "2.0", result: outcome.result },
-          {
-            headers: hostedPaymentHeaders(outcome.paymentResponseHeader, outcome.attemptId),
-          },
-        );
-      }
-      return jsonRpcError(
-        message.id,
-        outcome.code,
-        outcome.message,
-        outcome.data,
-        outcome.status,
-        outcome.paymentResponseHeader ? hostedPaymentHeaders(outcome.paymentResponseHeader, outcome.attemptId) : undefined,
-      );
+      return respondHostedOutcome(message.id, outcome);
+    }
+
+    // No caller signature, but the token is bound to a hosted wallet → the Gateway
+    // server-signs under that wallet's policy (autonomous agent + API key path).
+    if (access.walletId) {
+      const outcome = await runServerSignedToolCall({
+        args: requiredToolArgs(message.params),
+        endpoint,
+        id: message.id,
+        requestUrl: request.url,
+        tool,
+        walletId: access.walletId,
+      });
+      return respondHostedOutcome(message.id, outcome);
     }
 
     const paymentRequired = buildHostedPaymentRequired({
@@ -148,26 +146,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ so
   }
 }
 
-async function runPaidToolCall(input: HostedPaidToolCallInput & { id: JsonRpcMessage["id"] }) {
-  const { id, ...paidInput } = input;
-  try {
-    return await runHostedPaidToolCall(paidInput);
-  } catch (error) {
-    if (error instanceof HostedPaidCallInputError) {
-      return jsonRpcError(id, error.code, error.message, { status: "invalid_payment" }, error.status);
-    }
-    throw error;
-  }
-}
-
 function paymentHeader(request: NextRequest) {
   return request.headers.get("payment-signature") ?? request.headers.get("x-payment");
-}
-
-function hostedPaymentHeaders(paymentResponseHeader: string, attemptId?: string): HeadersInit {
-  return {
-    "Access-Control-Expose-Headers": "PAYMENT-RESPONSE,x-casper-gw-receipt-id",
-    "PAYMENT-RESPONSE": paymentResponseHeader,
-    ...(attemptId ? { "x-casper-gw-receipt-id": attemptId } : {}),
-  };
 }

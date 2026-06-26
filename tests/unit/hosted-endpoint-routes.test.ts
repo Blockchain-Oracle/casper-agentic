@@ -56,6 +56,7 @@ describe("endpoint access-key route", () => {
       label: "Cursor",
       scope: { sourceId: "source-1", toolIds: ["tool-1"] },
       sourceId: "source-1",
+      walletId: null,
     });
     expect(await response.json()).toEqual({
       accessKey: { id: "key-1", label: "Cursor", sourceId: "source-1" },

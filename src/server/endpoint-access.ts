@@ -4,6 +4,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { getDb } from "@/db/client";
 import { endpointAccessKeys } from "@/db/schema";
 import { listPublishedEndpointTools, logProviderEvent } from "./provider-store";
+import { getAgentWalletRecord } from "./wallet-store";
 
 export interface EndpointAccessScope {
   sourceId: string;
@@ -19,9 +20,11 @@ export async function createEndpointAccessKey(input: {
   label: string;
   scope: EndpointAccessScopeInput;
   sourceId: string;
+  walletId?: string | null;
 }) {
   const token = `cgw_test_${randomBytes(24).toString("base64url")}`;
   const scope = await validateEndpointAccessScope(input.sourceId, input.scope);
+  if (input.walletId) await assertServerSignableWallet(input.walletId);
   const [row] = await getDb()
     .insert(endpointAccessKeys)
     .values({
@@ -29,6 +32,7 @@ export async function createEndpointAccessKey(input: {
       scope,
       sourceId: input.sourceId,
       tokenHash: hashClientAccessToken(token),
+      walletId: input.walletId ?? null,
     })
     .returning();
 
@@ -78,6 +82,8 @@ export function toEndpointAccessKeyView(row: typeof endpointAccessKeys.$inferSel
     revoked: row.revoked,
     scope: normalizeEndpointAccessScope(sourceId, row.scope),
     sourceId,
+    // Bound hosted wallet for the autonomous server-signs path; null = caller-signs.
+    walletId: row.walletId ?? null,
   };
 }
 
@@ -126,6 +132,14 @@ function requiredText(value: string | undefined, label: string) {
   const text = value?.trim();
   if (!text) throw new Error(`${label} is required`);
   return text;
+}
+
+async function assertServerSignableWallet(walletId: string) {
+  const wallet = await getAgentWalletRecord(walletId);
+  if (!wallet) throw new Error("bound wallet not found");
+  if (wallet.signingMode !== "hosted" && wallet.signingMode !== "test-signer") {
+    throw new Error("bound wallet must support server-side signing (hosted or test-signer)");
+  }
 }
 
 async function validateEndpointAccessScope(sourceId: string, scope: EndpointAccessScopeInput) {

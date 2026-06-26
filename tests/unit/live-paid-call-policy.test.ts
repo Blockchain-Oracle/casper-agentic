@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   getAccount: vi.fn(),
   getContractPackageTokenActions: vi.fn(),
   getDeploy: vi.fn(),
-  getConfiguredSignerAddress: vi.fn(),
+  buildSignerForWallet: vi.fn(),
   getFTOwnerships: vi.fn(),
   getAgentWalletRecord: vi.fn(),
   getSpendPolicyForWallet: vi.fn(),
@@ -94,7 +94,10 @@ vi.mock("@/server/spend-policy-store", () => ({
 vi.mock("@/server/x402-payment", () => ({
   buildPaymentRequirements: mocks.buildPaymentRequirements,
   createCasperPaymentPayload: mocks.createCasperPaymentPayload,
-  getConfiguredSignerAddress: mocks.getConfiguredSignerAddress,
+}));
+
+vi.mock("@/server/wallet-signer", () => ({
+  buildSignerForWallet: mocks.buildSignerForWallet,
 }));
 
 import { runLivePaidToolCall } from "@/server/live-paid-call";

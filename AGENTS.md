@@ -6,6 +6,13 @@ Casper GW / Casper Agent Commerce Gateway is a Next.js App Router prototype for 
 
 Authoritative context lives in `.thoughts/`: wiki, research, raw reports, cloned reference repos, quality profile, spec, stories, designer brief, prototype discovery, prototype reintegration, and research-backed plan. Start with `.thoughts/README.md` for the current read order and stage status before opening deeper artifacts.
 
+## Working Pace And Quality Bar
+
+- The June 30, 2026 qualification deadline is NOT a working constraint. Abu builds fast with AI agents and has capacity; never invoke the deadline to justify cutting scope, skipping gates, or rushing.
+- Deadline pressure never licenses mediocre work, skipped best practices, half-finished slices, fake/stubbed product behavior, or mock/placeholder/aspirational documentation.
+- Documentation must describe real, verified behavior only. Do not write docs for things that do not exist yet or have not been proven. Abu strongly dislikes mock/placeholder docs.
+- Default to doing it right over doing it fast-and-wrong. Follow the Context Engineering gates and the Quality Gates below fully, every time.
+
 ## Research Source Order
 
 - For Casper GW product, UX, MCP Pay/x402 inspiration, wallet-policy, registry, explorer, or hackathon-positioning questions, inspect local project context first:

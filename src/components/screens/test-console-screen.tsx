@@ -16,10 +16,11 @@ import { usePaidCallConsole } from "./use-paid-call-console";
 import type { CSPRClickBrowserConnection } from "./use-csprclick-browser-connection";
 import type { ConsolePhase, Tool, WalletProfile } from "@/lib/types";
 
-export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToken, tools, wallets }: {
+export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToken, sourceId, tools, wallets }: {
   browserConnection: CSPRClickBrowserConnection;
   endpointUrl: string;
   operatorToken: string;
+  sourceId?: string;
   tools: Tool[];
   wallets: WalletProfile[];
 }) {
@@ -29,7 +30,7 @@ export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToke
   const [selectedToolId, setSelectedToolId] = useState(tools[0]?.id ?? "");
   const [selectedWalletId, setSelectedWalletId] = useState(wallets[0]?.id ?? "");
   const [toolArgs, setToolArgs] = useState<Record<string, string>>({});
-  const { apiMessage, apiReceiptId, apiReceiptStatus, apiTools, browserSigningState, busy, connectBrowserWallet, discover, run, runBrowser } =
+  const { apiMessage, apiReceiptId, apiReceiptStatus, apiTools, browserSigningState, busy, connectBrowserWallet, discover, runAgentWallet, runBrowser } =
     usePaidCallConsole(operatorToken, browserConnection);
 
   const activeEndpointUrl = target === "hosted" ? endpointUrl : endpointInput;
@@ -47,6 +48,7 @@ export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToke
   const completed = phase === "complete";
   const inputFields = inputFieldsForTool(selectedApiTool);
   const runDisabled = busy || !selectedApiTool || !activeWalletId || !operatorToken;
+  const canPayAgentWallet = target === "hosted" && Boolean(sourceId);
   const browserRunDisabled = isBrowserApprovalRunDisabled({
     baseRunDisabled: runDisabled,
     browserSigningState,
@@ -62,11 +64,11 @@ export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToke
     setPhase("discovered");
   }
 
-  async function runPaidCall() {
-    if (!selectedApiTool || !activeWalletId) return;
+  async function payWithAgentWallet() {
+    if (!selectedApiTool || !activeWalletId || !sourceId) return;
     const args = Object.fromEntries(inputFields.map((field) => [field.name, toolArgs[field.name] ?? field.defaultValue]));
     setPhase("discovered");
-    if (await run({ args, endpointUrl: activeEndpointUrl, toolName: selectedApiTool.name, walletId: activeWalletId })) {
+    if (await runAgentWallet({ args, sourceId, toolName: selectedApiTool.name, walletId: activeWalletId })) {
       setPhase("complete");
     }
   }
@@ -171,9 +173,10 @@ export function TestConsoleScreen({ browserConnection, endpointUrl, operatorToke
                 browserRunDisabled={browserRunDisabled}
                 browserSigningState={browserSigningState}
                 busy={busy}
+                canPayAgentWallet={canPayAgentWallet}
                 onConnectBrowser={connectBrowserWallet}
+                onPayAgentWallet={payWithAgentWallet}
                 onRunBrowser={runBrowserPaidCall}
-                onRunSigner={runPaidCall}
                 runDisabled={runDisabled}
                 selectedWallet={selectedWallet}
               />

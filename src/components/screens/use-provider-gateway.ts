@@ -137,7 +137,7 @@ export function useProviderGateway() {
       setLoading(false);
     }
   }
-  async function createClientAccess() {
+  async function createClientAccess(walletId?: string) {
     if (!operatorToken) return setErrorMessage("Operator access token is required.");
     if (!providerSource) return setErrorMessage("Create or load a provider source before generating client access.");
 
@@ -146,7 +146,7 @@ export function useProviderGateway() {
     try {
       const created = await providerRequest<{ token: string }>(
         `/api/provider/sources/${providerSource.id}/access-keys`,
-        { body: { label: "App client config" }, method: "POST", operatorToken },
+        { body: { label: walletId ? "App agent token" : "App client config", walletId }, method: "POST", operatorToken },
       );
       const endpoint = await providerRequest<{
         client: { discovery?: { manifestUrl: string }; endpointUrl: string };
@@ -159,7 +159,7 @@ export function useProviderGateway() {
       setEndpointConnectionUrl(endpoint.client.endpointUrl);
       setEndpointDiscoveryUrl(endpoint.client.discovery?.manifestUrl ?? null);
       setEndpointToolCount(endpoint.endpoint.tools.length);
-      setStatusMessage(`Generated scoped client access for ${endpoint.endpoint.tools.length} published tools.`);
+      setStatusMessage(`Generated ${walletId ? "wallet-bound agent token" : "scoped client access"} for ${endpoint.endpoint.tools.length} published tools.`);
     } catch (error) {
       handleError(error);
     } finally {

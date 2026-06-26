@@ -1,0 +1,2 @@
+ALTER TABLE "endpoint_access_keys" ADD COLUMN "wallet_id" uuid;--> statement-breakpoint
+ALTER TABLE "endpoint_access_keys" ADD CONSTRAINT "endpoint_access_keys_wallet_id_agent_wallets_id_fk" FOREIGN KEY ("wallet_id") REFERENCES "public"."agent_wallets"("id") ON DELETE no action ON UPDATE no action;

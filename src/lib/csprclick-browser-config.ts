@@ -12,9 +12,10 @@ import type { CSPRClickSignTypedDataResult } from "./browser-x402-signing";
 export const CSPRCLICK_SCRIPT_ID = "csprclick-client";
 export const CSPRCLICK_SCRIPT_SRC = "https://cdn.cspr.click/ui/v2.1.0/csprclick-client-2.1.0.js";
 
-const SOCIAL_LOGIN_PROVIDERS = ["csprclick-w3a-google", "csprclick-w3a-apple"];
+// Casper Connect wallets only. Google/Apple social login removed per Abu's
+// product decision (2026-06-26): the connect modal offers Casper wallets, not social login.
 const EXTENSION_PROVIDERS = ["casper-wallet", "ledger", "metamask-snap"];
-const DEFAULT_PROVIDERS = [...SOCIAL_LOGIN_PROVIDERS, ...EXTENSION_PROVIDERS];
+const DEFAULT_PROVIDERS = [...EXTENSION_PROVIDERS];
 const ALLOWED_PROVIDERS = new Set(DEFAULT_PROVIDERS);
 
 export type CSPRClickPublicConfig =

@@ -23,7 +23,8 @@ describe("CSPR.click client public config", () => {
       appName: "Casper GW",
       chainName: "casper-test",
       contentMode: "iframe",
-      providers: ["csprclick-w3a-google", "csprclick-w3a-apple", "casper-wallet"],
+      // Google/Apple social-login providers are filtered out (removed by product decision).
+      providers: ["casper-wallet"],
       status: "configured",
     });
   });

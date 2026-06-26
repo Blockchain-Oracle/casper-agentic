@@ -86,6 +86,30 @@ export default function Home() {
             </div>
           ))}
         </div>
+
+        <div className="stack" style={{ marginTop: 32 }}>
+          <Chip tone="primary">One signing engine, three triggers</Chip>
+          <p className="subhead" style={{ margin: 0 }}>
+            Every paid call settles a fresh per-call x402 authorization on Casper Testnet. The same
+            policy → verify → settle → Casper-proof path runs underneath all three.
+          </p>
+          <div className="grid auto">
+            {[
+              ["Pay with my agent wallet", "The Gateway server-signs with your selected wallet, under its spend limits and tool allowlist."],
+              ["Connect & sign", "Your own Casper wallet approves each payment via CSPR.click — Casper wallets only."],
+              ["Autonomous agent + API key", "An agent sends only a bearer token bound to a hosted wallet; the Gateway signs under policy."],
+            ].map(([title, note]) => (
+              <div className="stat" key={title}>
+                <div className="panelTitle" style={{ fontSize: 16 }}>
+                  {title}
+                </div>
+                <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+                  {note}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
     </main>
   );

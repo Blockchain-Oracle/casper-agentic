@@ -36,7 +36,11 @@ export function livePaidCallInput(overrides: Partial<Parameters<typeof runLivePa
 export function setLivePaidCallDefaults(mocks: Record<string, ConfigurableMock>) {
   mocks.supported.mockResolvedValue({ kinds: [{ network: "casper:casper-test", scheme: "exact" }] });
   mocks.discoverMcpTools.mockResolvedValue([{ name: "get_quote" }]);
-  mocks.getConfiguredSignerAddress.mockReturnValue(livePaidCallPayerAddress);
+  mocks.buildSignerForWallet.mockResolvedValue({
+    accountAddress: () => livePaidCallPayerAddress,
+    publicKey: () => "01casperpublickey",
+    signEIP712: async () => new Uint8Array(65),
+  });
   mocks.getAgentWalletRecord.mockResolvedValue({
     accountHash: livePaidCallPayerHash,
     id: "wallet-1",

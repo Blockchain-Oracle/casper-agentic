@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   getAccount: vi.fn(),
   getContractPackageTokenActions: vi.fn(),
   getDeploy: vi.fn(),
-  getConfiguredSignerAddress: vi.fn(),
+  buildSignerForWallet: vi.fn(),
   getFTOwnerships: vi.fn(),
   getAgentWalletRecord: vi.fn(),
   getSpendPolicyForWallet: vi.fn(),
@@ -96,7 +96,10 @@ vi.mock("@/server/spend-policy-store", () => ({
 vi.mock("@/server/x402-payment", () => ({
   buildPaymentRequirements: mocks.buildPaymentRequirements,
   createCasperPaymentPayload: mocks.createCasperPaymentPayload,
-  getConfiguredSignerAddress: mocks.getConfiguredSignerAddress,
+}));
+
+vi.mock("@/server/wallet-signer", () => ({
+  buildSignerForWallet: mocks.buildSignerForWallet,
 }));
 
 import { runLivePaidToolCall } from "@/server/live-paid-call";
@@ -146,7 +149,7 @@ describe("live paid-call orchestration", () => {
     expect(mocks.persistPolicyDecision).toHaveBeenCalledWith(
       "attempt-1",
       false,
-      "selected wallet is not the configured Testnet signer",
+      "signer key does not match the selected wallet",
       expect.objectContaining({ selectedWalletId: "wallet-2", signingMode: "browser-wallet" }),
     );
     expectNoLivePayment(mocks);

@@ -29,6 +29,10 @@ const contentRules = [
     label: "non-empty operator token",
     pattern: /^CASPER_GW_OPERATOR_TOKEN[^\S\r\n]*=[^\S\r\n]*(?!$|changeme$|<|#).+/m,
   },
+  {
+    label: "non-empty wallet encryption key",
+    pattern: /^CASPER_GW_WALLET_ENCRYPTION_KEY[^\S\r\n]*=[^\S\r\n]*(?!$|changeme$|<|#).+/m,
+  },
 ];
 
 function shouldSkipPath(path) {

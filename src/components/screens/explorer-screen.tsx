@@ -1,4 +1,5 @@
-import { Panel, ProofPanel, TabButton } from "@/components/screen-primitives";
+import { Panel, TabButton } from "@/components/screen-primitives";
+import { ReceiptProofGrid } from "@/components/receipt/receipt-detail-view";
 import { Chip, StatusChip } from "@/components/ui";
 import { statusMeta } from "@/lib/fixtures";
 import type { ExplorerSearchSource, Receipt, ReceiptDetail, ReceiptStatus } from "@/lib/types";
@@ -171,12 +172,7 @@ export function ExplorerScreen({
 
       <div className="stack">
         <Panel title={`${selectedReceipt.id} receipt`} action={<StatusChip status={selectedReceipt.status} />}>
-          <div className="proofGrid">
-            <ProofPanel title="Gateway context" rows={receiptDetail.gateway} />
-            <ProofPanel title="Policy decision" note={receiptDetail.policyNote} rows={receiptDetail.policy} />
-            <ProofPanel title="x402 verify / settle" note={receiptDetail.x402Note} rows={receiptDetail.x402} />
-            <ProofPanel title="Casper proof" note={receiptDetail.casperNote} rows={receiptDetail.casper} />
-          </div>
+          <ReceiptProofGrid detail={receiptDetail} />
         </Panel>
         <div className="notice">
           Chain proof covers payment settlement only. Provider, resource URL, pricing rule,

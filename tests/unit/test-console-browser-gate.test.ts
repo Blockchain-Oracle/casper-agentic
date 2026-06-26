@@ -23,9 +23,10 @@ describe("paid-console browser signing gate", () => {
       browserRunDisabled: true,
       browserSigningState: browserState({ providerSupportsTypedData: false }),
       busy: false,
+      canPayAgentWallet: true,
       onConnectBrowser: vi.fn(),
+      onPayAgentWallet: vi.fn(),
       onRunBrowser: vi.fn(),
-      onRunSigner: vi.fn(),
       runDisabled: false,
       selectedWallet: wallet,
     }));

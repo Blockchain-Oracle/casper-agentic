@@ -36,7 +36,7 @@ describe("CSPR.click browser adapter boundary", () => {
       appName: "Casper GW",
       chainName: "casper-test",
       contentMode: "iframe",
-      providers: ["csprclick-w3a-google", "csprclick-w3a-apple", "casper-wallet"],
+      providers: ["casper-wallet"],
       status: "configured",
     });
     expect(JSON.stringify(config)).not.toContain("do-not-include");
@@ -55,7 +55,7 @@ describe("CSPR.click browser adapter boundary", () => {
     expect(win.clickSDKOptions).toMatchObject({
       appId: "casper-gw-test",
       contentMode: "iframe",
-      providers: ["csprclick-w3a-google", "csprclick-w3a-apple", "casper-wallet", "ledger", "metamask-snap"],
+      providers: ["casper-wallet", "ledger", "metamask-snap"],
     });
     expect(win.clickUIOptions).toMatchObject({
       rootAppElement: "#app",
