@@ -18,7 +18,6 @@ describe("receipt store", () => {
 
     expect(details.length).toBeGreaterThan(0);
     expect(details[0]).toHaveProperty("gateway");
-    expect(details[0]).toHaveProperty("policy");
     expect(details[0]).toHaveProperty("x402");
     expect(details[0]).toHaveProperty("casper");
     expect(receiptStoreSource()).toBe("fixture");

@@ -37,10 +37,8 @@ export function buildExternalAccountDetail(input: ExternalAccountInput): Receipt
   return {
     receipt,
     gateway: gatewayRows(input.accountHash),
-    policy: unavailableRows("Policy decision", "The account did not resolve to a Casper GW receipt match."),
     x402: unavailableRows("x402 verify / settle", "No Casper GW x402 facilitator record is attached to this account lookup."),
     casper: casperRows(input, latest),
-    policyNote: "External account proof does not include Casper GW wallet-policy context.",
     x402Note: "External account lookup proves account/token-action facts only. It does not prove the x402 resource, facilitator verification, provider, or tool result.",
     casperNote: latest
       ? "CSPR.cloud returned recent configured payment-token actions for this account."

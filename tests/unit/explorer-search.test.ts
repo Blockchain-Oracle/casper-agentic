@@ -119,7 +119,6 @@ describe("explorer search", () => {
 
     expect(result.source).toBe("external_casper_proof");
     expect(result.detail?.gateway.find((row) => row.key === "result source")?.value).toBe("External Casper proof");
-    expect(result.detail?.policy.find((row) => row.key === "status")?.value).toBe("unavailable");
     expect(result.detail?.x402.find((row) => row.key === "status")?.value).toBe("unavailable");
     expect(result.detail?.casper.find((row) => row.key === "payer")?.value).toBe("account-hash-payer");
   });

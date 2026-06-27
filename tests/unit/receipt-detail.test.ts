@@ -70,7 +70,6 @@ describe("receipt proof rendering", () => {
 
     const detail = buildReceiptDetail(receipt);
 
-    expect(detail.policy.find((row) => row.key === "decision")?.value).toBe("PENDING");
     expect(detail.x402.find((row) => row.key === "settle")?.value).toBe("not attempted");
     expect(detail.casper).toEqual([]);
     expect(detail.casperNote).toContain("no transaction exists on Casper");
@@ -102,11 +101,6 @@ describe("receipt proof rendering", () => {
         },
         proofStatus: "processed",
       },
-      policyDecision: {
-        allowed: true,
-        evaluatedPolicy: { toolName: "get_quote" },
-        reason: "policy allowed before signing/payment",
-      },
       x402Records: [
         {
           facilitatorUrl: "https://x402-facilitator.cspr.cloud",
@@ -123,7 +117,6 @@ describe("receipt proof rendering", () => {
       ],
     });
 
-    expect(detail.policy.find((row) => row.key === "decision")?.value).toBe("ALLOWED");
     expect(detail.x402.find((row) => row.key === "payee")?.value).toBe("account-hash-real-payee");
     expect(detail.casper.find((row) => row.key === "payer")?.value).toBe("account-hash-real-payer");
     expect(detail.casper.find((row) => row.key === "proof status")?.value).toBe("processed");
@@ -147,11 +140,6 @@ describe("receipt proof rendering", () => {
     };
 
     const detail = buildPersistedReceiptDetail(receipt, {
-      policyDecision: {
-        allowed: true,
-        evaluatedPolicy: { toolName: "get_quote" },
-        reason: "policy allowed before signing/payment",
-      },
       x402Records: [
         {
           facilitatorUrl: "https://x402-facilitator.cspr.cloud",

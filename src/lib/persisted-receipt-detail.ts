@@ -8,11 +8,6 @@ export interface PersistedReceiptLayers {
     ftAction?: unknown;
     proofStatus?: string;
   } | null;
-  policyDecision?: {
-    allowed: boolean;
-    evaluatedPolicy?: unknown;
-    reason: string;
-  } | null;
   x402Records?: Array<{
     facilitatorUrl: string;
     paymentRequirements: unknown;
@@ -40,10 +35,8 @@ export function buildPersistedReceiptDetail(receipt: Receipt, layers: PersistedR
   return {
     receipt,
     gateway: gatewayRows(receipt),
-    policy: policyRows(layers.policyDecision),
     x402: x402Rows(receipt, x402, verify, settle, { amount, asset, network, payTo }),
     casper: casperRows(receipt, proof, { amount, asset, deployHash, payTo, payer }),
-    policyNote: policyNote(receipt, layers.policyDecision),
     x402Note: x402Note(receipt, x402, verify, settle),
     casperNote: casperNote(receipt, proof),
   };
@@ -51,21 +44,11 @@ export function buildPersistedReceiptDetail(receipt: Receipt, layers: PersistedR
 
 function gatewayRows(receipt: Receipt): KeyValueRow[] {
   return [
-    { key: "receipt id", value: receipt.id, mono: true },
     { key: "provider", value: receipt.provider },
     { key: "tool", value: receipt.tool, mono: true },
     { key: "client", value: receipt.client, mono: true },
     { key: "price", value: `${receipt.amount} ${receipt.asset}`, mono: true },
     { key: "wallet", value: receipt.wallet, mono: true },
-    { key: "request id", value: receipt.id, mono: true },
-  ];
-}
-
-function policyRows(policy: PersistedReceiptLayers["policyDecision"]): KeyValueRow[] {
-  if (!policy) return [{ key: "decision", value: "not recorded", tone: "neutral" }];
-  return [
-    { key: "decision", value: policy.allowed ? "ALLOWED" : "BLOCKED", tone: policy.allowed ? "signal" : "primary" },
-    { key: "reason", value: policy.reason, tone: policy.allowed ? "signal" : "primary" },
   ];
 }
 
@@ -120,19 +103,6 @@ function casperRows(
     { key: "proof status", value: proof.proofStatus ?? (pending ? "pending" : "processed"), tone: pending ? "warn" : "signal", mono: true },
     ...(proof.explorerUrl ? [{ key: "raw proof", value: proof.explorerUrl, mono: true } satisfies KeyValueRow] : []),
   ];
-}
-
-function policyNote(receipt: Receipt, policy: PersistedReceiptLayers["policyDecision"]) {
-  if (policy?.allowed === false) {
-    return receipt.client === "hosted-mcp-endpoint"
-      ? "Spend was stopped before settlement. A block is a successful control outcome and has no transaction."
-      : "Spend was stopped before signing. A block is a successful control outcome and has no transaction.";
-  }
-  if (receipt.status === "policy_pending" && policy?.allowed === true) {
-    return "Policy allowed. Browser wallet signing has not run yet, so no payment or Casper transaction is attached.";
-  }
-  if (receipt.status === "policy_pending") return "Policy evaluation did not complete. No payment step or Casper transaction is attached.";
-  return undefined;
 }
 
 function x402Note(

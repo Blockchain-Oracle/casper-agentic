@@ -30,10 +30,8 @@ export function buildExternalProofDetail(input: ExternalProofInput): ReceiptDeta
   return {
     receipt,
     gateway: gatewayRows(deployHash),
-    policy: unavailableRows("Policy decision", "The deploy did not resolve to a Casper GW receipt."),
     x402: unavailableRows("x402 verify / settle", "No Casper GW x402 facilitator record is attached."),
     casper: casperRows(input, action),
-    policyNote: "External Casper proof does not include Casper GW wallet-policy context.",
     x402Note: "External deploy lookup proves chain facts only. It does not prove the x402 resource, facilitator verification, or tool result unless the deploy also matches a Casper GW receipt.",
     casperNote: action
       ? "CSPR.cloud resolved the deploy and a matching payment-token action."

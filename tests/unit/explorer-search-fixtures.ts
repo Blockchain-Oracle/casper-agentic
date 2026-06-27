@@ -7,7 +7,6 @@ export function explorerReceiptDetail(id: string): ReceiptDetail {
   return {
     casper: [],
     gateway: [],
-    policy: [],
     receipt: {
       amount: "7500000000",
       asset: "WCSPR",

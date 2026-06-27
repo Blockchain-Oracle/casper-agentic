@@ -1,26 +1,34 @@
 import type { Metadata } from "next";
-import { Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/app/theme-provider";
 
-const sans = Hanken_Grotesk({
+// Proof-Print type voices: Space Grotesk (display) · Inter (UI + tabular figures)
+// · JetBrains Mono (the "proof voice" — hashes, addresses, x402 headers).
+const display = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-sans",
+  weight: ["500", "600", "700"],
+  variable: "--font-space-grotesk",
   display: "swap",
 });
 
-const mono = IBM_Plex_Mono({
+const sans = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-mono",
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-jetbrains",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Casper Agent Commerce Gateway",
+  title: "Casper GW — proof for every agent payment",
   description:
-    "Provider tools, Casper agent wallet policy, paid tool console, and public x402 receipts.",
+    "An x402 payment gateway on Casper. Publish paid tools, pay per call with an API key, and verify every settlement on-chain in the public explorer.",
 };
 
 export default function RootLayout({
@@ -29,7 +37,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${display.variable} ${sans.variable} ${mono.variable}`}
+      suppressHydrationWarning
+    >
       <body>
         <ThemeProvider>{children}</ThemeProvider>
       </body>

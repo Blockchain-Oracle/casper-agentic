@@ -1,11 +1,117 @@
-@import "./styles/base.css";
-@import "./styles/navigation.css";
-@import "./styles/app-nav.css";
-@import "./styles/layout.css";
-@import "./styles/controls.css";
-@import "./styles/surfaces.css";
-@import "./styles/receipt.css";
-@import "./styles/explorer.css";
-@import "./styles/landing.css";
-@import "./styles/utilities.css";
-@import "./styles/responsive.css";
+/* Casper GW — Proof-Print design system on Tailwind v4 (CSS-first). */
+@layer theme, base, legacy, components, utilities;
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* CONDEMNED legacy CSS — only the surfaces not yet rebuilt still render through it
+ * (explorer + receipt → deleted in P6; /app → deleted in its teardown). Each file
+ * dies the moment its surface is rebuilt; nothing here survives. The `legacy` layer
+ * just keeps these readable until then (below utilities so new classes always win). */
+@import "./styles/base.css" layer(legacy);
+@import "./styles/navigation.css" layer(legacy);
+@import "./styles/layout.css" layer(legacy);
+@import "./styles/controls.css" layer(legacy);
+@import "./styles/surfaces.css" layer(legacy);
+@import "./styles/receipt.css" layer(legacy);
+@import "./styles/explorer.css" layer(legacy);
+@import "./styles/utilities.css" layer(legacy);
+@import "./styles/responsive.css" layer(legacy);
+
+/* One global light/dark toggle — next-themes writes data-theme on <html>. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-display: var(--font-space-grotesk), "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* The one brand pop — reserved for proof stamp, the single primary CTA, settled. */
+  --color-casper: #ff473e;
+  --color-wax: #d8352d;
+
+  --radius: 0.625rem;
+  --ease-press: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Proof-Print surface + ink ramp. Namespaced --pp-* so it never clobbers legacy
+ * tokens (legacy --signal is green, --ink differs). Swaps on the global toggle.
+ * LIGHT = warm bone "receipt paper"; DARK = carbon instrument console. */
+:root {
+  --pp-surface: #f4f1e9;
+  --pp-panel: #fbfaf5;
+  --pp-well: #ebe7db;
+  --pp-hairline: #dcd6c7;
+  --pp-ink: #1a1714;
+  --pp-ink-2: #5c574c;
+  --pp-ink-3: #8a8377;
+  --pp-settled: #2f9469;
+  --pp-signal: #c0871f;
+}
+
+[data-theme="dark"] {
+  --pp-surface: #0b0c0f;
+  --pp-panel: #15171c;
+  --pp-well: #101216;
+  --pp-hairline: #23262d;
+  --pp-ink: #f1efe9;
+  --pp-ink-2: #9ba0a8;
+  --pp-ink-3: #686d75;
+  --pp-settled: #54c394;
+  --pp-signal: #e2a93c;
+}
+
+/* @theme inline so utilities reference the swapping vars directly (not a frozen
+ * value) — bg-surface/text-ink/border-hairline flip with the toggle. Also bridges
+ * shadcn's default token names onto Proof-Print so generated components inherit it. */
+@theme inline {
+  --color-surface: var(--pp-surface);
+  --color-panel: var(--pp-panel);
+  --color-well: var(--pp-well);
+  --color-hairline: var(--pp-hairline);
+  --color-ink: var(--pp-ink);
+  --color-ink-2: var(--pp-ink-2);
+  --color-ink-3: var(--pp-ink-3);
+  --color-settled: var(--pp-settled);
+  --color-signal: var(--pp-signal);
+
+  /* shadcn bridge */
+  --color-background: var(--pp-surface);
+  --color-foreground: var(--pp-ink);
+  --color-card: var(--pp-panel);
+  --color-card-foreground: var(--pp-ink);
+  --color-popover: var(--pp-panel);
+  --color-popover-foreground: var(--pp-ink);
+  --color-primary: var(--color-casper);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--pp-well);
+  --color-secondary-foreground: var(--pp-ink);
+  --color-muted: var(--pp-well);
+  --color-muted-foreground: var(--pp-ink-3);
+  --color-accent: var(--pp-well);
+  --color-accent-foreground: var(--pp-ink);
+  --color-destructive: var(--pp-signal);
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--pp-hairline);
+  --color-input: var(--pp-hairline);
+  --color-ring: var(--color-wax);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+/* Unlayered base — wins over legacy body{} so the whole app adopts Proof-Print
+ * surface/ink/fonts. Tabular figures everywhere money is rendered comes via the
+ * .tnum utility on amount cells. */
+body {
+  background: var(--pp-surface);
+  color: var(--pp-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.tnum {
+  font-feature-settings: "tnum" 1, "zero" 1;
+}

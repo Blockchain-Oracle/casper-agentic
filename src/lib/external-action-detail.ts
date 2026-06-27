@@ -33,10 +33,8 @@ export function buildExternalActionDetail(input: ExternalActionInput): ReceiptDe
   return {
     receipt,
     gateway: gatewayRows(action),
-    policy: unavailableRows("Policy decision", "The token action did not resolve to a Casper GW policy record."),
     x402: unavailableRows("x402 verify / settle", "No Casper GW x402 facilitator record is attached to this feed row."),
     casper: casperRows(input),
-    policyNote: "External WCSPR feed rows do not include Casper GW wallet-policy context.",
     x402Note:
       "The chain/indexer row proves a configured-token action only. It does not prove the x402 resource, facilitator verification, provider, or tool result.",
     casperNote: "CSPR.cloud returned this configured payment-token action from Casper Testnet.",

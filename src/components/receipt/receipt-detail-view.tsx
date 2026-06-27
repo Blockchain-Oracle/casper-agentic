@@ -11,18 +11,17 @@ const TONE_VAR: Record<NonNullable<KeyValueRow["tone"]>, string> = {
 };
 
 /**
- * The four-layer Casper receipt proof, rendered as a numbered vertical timeline
- * (gateway context → policy decision → x402 verify+settle → Casper proof), matching
- * the v3 designer prototype. Single source of truth shared by the public explorer,
- * the public `/receipt/[id]` page, and the audit failure modal. Honesty is inherited
- * from `buildReceiptDetail` — it never emits a deploy hash or "settled" without a real one.
+ * The three-layer Casper receipt proof, rendered as a numbered vertical timeline
+ * (gateway context → x402 verify+settle → Casper proof). Single source of truth
+ * shared by the public explorer and the public `/receipt/[id]` page. Honesty is
+ * inherited from the builders — it never emits a deploy hash or "settled" without a
+ * real one. (Spend policy was removed; the gateway no longer gates per-user spend.)
  */
 export function ReceiptProofTimeline({ detail }: { detail: ReceiptDetail }) {
   const layers = [
     { color: "var(--ink-2)", note: undefined as string | undefined, num: 1, rows: detail.gateway, title: "Gateway context" },
-    { color: "var(--policy)", note: detail.policyNote, num: 2, rows: detail.policy, title: "Policy decision" },
-    { color: "var(--x402)", note: detail.x402Note, num: 3, rows: detail.x402, title: "x402 verify & settle" },
-    { color: "var(--brand)", note: detail.casperNote, num: 4, rows: detail.casper, title: "Casper proof" },
+    { color: "var(--x402)", note: detail.x402Note, num: 2, rows: detail.x402, title: "x402 verify & settle" },
+    { color: "var(--brand)", note: detail.casperNote, num: 3, rows: detail.casper, title: "Casper proof" },
   ];
 
   return (
@@ -32,7 +31,7 @@ export function ReceiptProofTimeline({ detail }: { detail: ReceiptDetail }) {
           <div className="proofNum" style={{ background: layer.color }}>
             {layer.num}
           </div>
-          <div className={layer.num === 4 ? "proofCard casper" : "proofCard"}>
+          <div className={layer.num === 3 ? "proofCard casper" : "proofCard"}>
             <div className="proofCardHead">{layer.title}</div>
             {layer.rows.length ? (
               <div className="proofRows">

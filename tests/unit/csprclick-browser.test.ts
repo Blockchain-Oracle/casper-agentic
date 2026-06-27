@@ -60,7 +60,7 @@ describe("CSPR.click browser adapter boundary", () => {
     expect(win.clickUIOptions).toMatchObject({
       rootAppElement: "#app",
       show1ClickModal: true,
-      showTopBar: true,
+      showTopBar: false,
       uiContainer: "csprclick-ui",
     });
   });

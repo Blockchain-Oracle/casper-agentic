@@ -67,7 +67,6 @@ describe("external account history", () => {
     expect(result.source).toBe("cspr_cloud");
     expect(result.pagination).toMatchObject({ page: 2, pageSize: 2, totalCount: 6, totalPages: 3 });
     expect(result.matches[0]?.receipt.id).toBe(`external-account:${accountHash}:${deployHash}:4`);
-    expect(result.matches[0]?.policy.find((row) => row.key === "status")?.value).toBe("unavailable");
     expect(result.matches[0]?.casper.find((row) => row.key === "action page")?.value).toBe("2 of 3");
   });
 

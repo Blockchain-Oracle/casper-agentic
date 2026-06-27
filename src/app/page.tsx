@@ -1,161 +1,103 @@
 import Link from "next/link";
+import { ArrowRight, KeyRound, Plug, ScanLine } from "lucide-react";
 
-import { ThemeToggle } from "@/components/app/theme-toggle";
-import { StatusChip } from "@/components/ui";
-import { formatReceiptId } from "@/lib/format-address";
-import { receipts } from "@/lib/fixtures";
+import { SiteNav } from "@/components/site/site-nav";
+import { ProofStamp } from "@/components/site/proof-stamp";
+import { Button } from "@/components/ui/button";
+
+const STEPS = [
+  {
+    icon: Plug,
+    title: "Register a tool",
+    body: "Point the gateway at an MCP server or API. It discovers the tools and you price each one in WCSPR.",
+  },
+  {
+    icon: KeyRound,
+    title: "Pay with an API key",
+    body: "Agents call with a casper_ key. The gateway settles each call on Casper — no wallet pop-ups, no per-user custody.",
+  },
+  {
+    icon: ScanLine,
+    title: "Verify the proof",
+    body: "Every paid call lands a real Casper deploy. Anyone can open the receipt and the on-chain proof on cspr.live.",
+  },
+] as const;
 
 export default function Home() {
-  const latest = receipts.find((receipt) => receipt.hash) ?? receipts[0];
-  const recent = receipts.slice(0, 3);
-  const settledCount = receipts.filter((receipt) => receipt.status === "settled").length;
-  const unsettledCount = receipts.length - settledCount;
-  const providerCount = new Set(receipts.map((receipt) => receipt.provider)).size;
-  const flow: Array<[string, string, string]> = [
-    ["01 Source", "Provider connects an API, OpenAPI spec, or MCP server.", "var(--ink)"],
-    ["02 Tool", "Discovered tools get priced and published as x402.", "var(--ink)"],
-    ["03 Policy", "Spend policy runs before any signing or payment.", "var(--policy)"],
-    ["04 x402", "Wallet signs; facilitator verifies and settles.", "var(--x402)"],
-    ["05 Casper proof", "A real deploy hash lands on Casper Testnet.", "var(--brand)"],
-    ["06 Receipt", "Four layers assembled into a verifiable receipt.", "var(--settled)"],
-  ];
-
   return (
-    <main className="landingShell">
-      <header className="landingTopbar">
-        <Link className="landingBrand" href="/">
-          <span className="landingBrandMark" />
-          <span>Casper GW</span>
-          <span className="landingTestnetPill">TESTNET</span>
-        </Link>
-        <nav className="landingTopNav" aria-label="Public">
-          <Link className="landingNavLink" href="/explorer">Explorer</Link>
-          <Link className="landingNavLink" href="#how-it-works">How it works</Link>
-          <ThemeToggle />
-          <Link className="landingOpenAppBtn" href="/app">Open app →</Link>
-        </nav>
-      </header>
+    <div className="min-h-dvh bg-surface text-ink">
+      <SiteNav />
 
-      <section className="landingHero">
-        <div>
-          <div className="landingEyebrow">Agent commerce · Casper native</div>
-          <h1 className="landingTitle">Pay-per-call proof for agent tools.</h1>
-          <p className="landingSubhead">
-            Providers publish APIs and MCP servers as paid x402 endpoints. Operators govern Casper
-            wallets with spend policy. Every paid call settles on-chain and produces a receipt
-            anyone can verify — no account required.
-          </p>
-          <div className="landingCtaRow">
-            <Link className="landingCtaPrimary" href="/explorer">
-              Open explorer <span className="arrow">↗</span>
-            </Link>
-            <Link className="landingCtaSecondary" href="/app">Connect wallet</Link>
-          </div>
-        </div>
-        <div className="landingProofCard">
-          <div className="landingProofHead">
-            <span className="landingProofTag">LATEST PROOF</span>
-            <StatusChip status={latest.status} />
-          </div>
-          <div className="landingProofBody">
-            <div style={{ font: "600 13.5px/1 var(--sans)" }}>
-              {latest.tool} <span style={{ color: "var(--ink-3)" }}>·</span> {latest.provider}
+      <main className="mx-auto max-w-6xl px-5">
+        {/* Hero */}
+        <section className="grid items-center gap-10 py-16 md:grid-cols-[1.15fr_0.85fr] md:py-24">
+          <div>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-hairline bg-panel px-3 py-1 font-mono text-[11px] tracking-wider text-ink-3">
+              <span className="size-1.5 rounded-full bg-casper" />
+              AGENT PAYMENTS · CASPER NATIVE
             </div>
-            <div className="landingProofPills">
-              <span className="pillGw">GATEWAY</span>
-              <span className="pillPol">POLICY</span>
-              <span className="pillX402">x402</span>
-              <span className="pillCs">PROOF</span>
+            <h1 className="font-display text-4xl font-bold leading-[1.04] tracking-tight text-ink sm:text-5xl lg:text-6xl">
+              Proof for every
+              <br />
+              agent payment.
+            </h1>
+            <p className="mt-5 max-w-md text-[15px] leading-relaxed text-ink-2">
+              Casper GW is an x402 payment gateway on Casper. Publish paid tools, let agents pay
+              per call with an API key, and verify every settlement on-chain — no account required
+              to look.
+            </p>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Button asChild size="lg" className="gap-2">
+                <Link href="/explorer">
+                  Open the explorer
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link href="/register">Register a tool</Link>
+              </Button>
             </div>
-            <div className="landingProofHashLabel">{latest.hash ? "DEPLOY HASH" : "RECEIPT ID"}</div>
-            <div className="landingProofHash">{latest.hash ?? latest.id}</div>
-            <div className="landingProofMeta">
-              <div>
-                <div className="landingProofHashLabel">AMOUNT</div>
-                <div style={{ marginTop: 5, font: "600 14.5px/1 var(--mono)" }}>
-                  {latest.amount} {latest.asset}
+          </div>
+
+          <div className="flex justify-center md:justify-end">
+            <div className="relative grid place-items-center">
+              <div
+                className="absolute size-72 rounded-full opacity-60 blur-2xl"
+                style={{ background: "radial-gradient(circle, var(--color-casper) 0%, transparent 68%)", opacity: 0.12 }}
+              />
+              <ProofStamp size={232} />
+            </div>
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section className="border-t border-hairline py-16">
+          <div className="mb-9 font-mono text-[11px] tracking-widest text-ink-3">
+            HOW A PAID CALL BECOMES PROOF
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {STEPS.map(({ icon: Icon, title, body }, i) => (
+              <div key={title} className="rounded-lg border border-hairline bg-panel p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="grid size-9 place-items-center rounded-md bg-well text-ink">
+                    <Icon className="size-4.5" />
+                  </span>
+                  <span className="font-mono text-xs text-ink-3">0{i + 1}</span>
                 </div>
-              </div>
-              {latest.hash ? (
-                <a className="mono" href={`https://testnet.cspr.live/deploy/${latest.hash}`} rel="noopener noreferrer" style={{ color: "var(--brand)", fontWeight: 600, fontSize: 12 }} target="_blank">cspr.live ↗</a>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="landingBand" id="how-it-works">
-        <div className="landingBandInner">
-          <div className="landingBandLabel">HOW A PAID CALL BECOMES PROOF</div>
-          <div className="landingFlow">
-            {flow.map(([step, desc, color]) => (
-              <div key={step}>
-                <div className="landingFlowStep" style={{ color }}>{step}</div>
-                <div className="landingFlowDesc">{desc}</div>
+                <h3 className="font-display text-base font-semibold text-ink">{title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-ink-2">{body}</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      <section className="landingZones">
-        <div className="landingZone">
-          <div className="landingZoneHead">
-            <span className="landingZoneDot outline" />
-            <span className="landingZoneTitle">Public explorer</span>
-          </div>
-          <p className="landingZoneBody">
-            Anyone can verify Casper payment proof — no sign-in, no wallet. Search receipts, deploy
-            hashes, and accounts; open raw proof on cspr.live.
-          </p>
-          <Link className="landingZoneCta" href="/explorer">Open explorer →</Link>
+      <footer className="border-t border-hairline">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-7 text-sm text-ink-3 sm:flex-row">
+          <span className="font-mono text-xs tracking-wider">CASPER GW · x402 ON CASPER TESTNET</span>
+          <Link href="/explorer" className="hover:text-ink">Explorer</Link>
         </div>
-        <div className="landingZone">
-          <div className="landingZoneHead">
-            <span className="landingZoneDot brand" />
-            <span className="landingZoneTitle">Operator app 🔒</span>
-          </div>
-          <p className="landingZoneBody">
-            Wallet-gated. Publish paid tools, govern wallet readiness and spend policy, and run
-            paid calls through the x402 console.
-          </p>
-          <Link className="landingZoneCta" href="/app">Connect wallet →</Link>
-        </div>
-      </section>
-
-      <section className="landingVitality">
-        <div className="landingVitalityHead">
-          <span className="landingVitalityTitle">Gateway activity</span>
-          <span className="landingSampleChip">SAMPLE · FIXTURE</span>
-        </div>
-        <div className="landingStats">
-          <div className="landingStat"><div className="label">RECEIPTS</div><div className="num">{receipts.length}</div></div>
-          <div className="landingStat"><div className="label">SETTLED</div><div className="num settled">{settledCount}</div></div>
-          <div className="landingStat"><div className="label">UNSETTLED</div><div className="num warn">{unsettledCount}</div></div>
-          <div className="landingStat"><div className="label">PROVIDERS</div><div className="num">{providerCount}</div></div>
-          <div className="landingStat"><div className="label">LATEST</div><div className="num">{receipts[0].time}</div><div className="sub">most recent fixture</div></div>
-        </div>
-        <div className="landingRecent">
-          <div className="landingRecentHead">
-            <div>Status</div><div>Receipt</div><div>Tool · Provider</div>
-            <div style={{ textAlign: "right" }}>Amount</div>
-            <div style={{ textAlign: "right" }}>Proof</div>
-          </div>
-          {recent.map((r) => (
-            <div className="landingRecentRow" key={r.id}>
-              <StatusChip status={r.status} />
-              <span className="mono" style={{ fontSize: 12.5 }}>{formatReceiptId(r.id)}</span>
-              <span style={{ fontWeight: 600, fontSize: 13 }}>
-                {r.tool} <span style={{ color: "var(--ink-3)", fontWeight: 500 }}>· {r.provider}</span>
-              </span>
-              <span className="mono" style={{ textAlign: "right", fontSize: 12.5 }}>{r.amount} {r.asset}</span>
-              <span className="mono" style={{ textAlign: "right", fontSize: 12, color: r.hash ? "var(--brand)" : "var(--ink-3)" }}>
-                {r.hash ? `${r.hash.slice(0, 6)}…${r.hash.slice(-2)} ↗` : "no tx"}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
-    </main>
+      </footer>
+    </div>
   );
 }

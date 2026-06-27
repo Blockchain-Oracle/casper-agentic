@@ -23,28 +23,6 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
         ? "warn"
         : "signal";
 
-  const policy =
-    isAuth
-      ? [{ key: "decision", value: "Not reached - MCP client auth failed first", tone: "neutral" as const }]
-      : isPolicyPending
-        ? [
-            { key: "decision", value: "PENDING", tone: "warn" as const },
-            { key: "reason", value: receipt.reason ?? "Policy evaluation did not complete", tone: "warn" as const },
-          ]
-      : isBlocked
-        ? [
-            { key: "decision", value: "BLOCKED", tone: "primary" as const },
-            { key: "reason", value: receipt.reason ?? "Policy blocked the call", tone: "primary" as const },
-            { key: "matched", value: "provider ok - tool ok - network ok - asset ok" },
-            { key: "failed rule", value: "max-per-call 0.08 < requested 0.10", tone: "primary" as const },
-          ]
-        : [
-            { key: "decision", value: "ALLOWED", tone: "signal" as const },
-            { key: "matched rules", value: "provider ok - tool ok - network ok - asset ok - limit ok" },
-            { key: "max-per-call", value: `${receipt.amount} <= 0.08 WCSPR` },
-            { key: "daily remaining", value: "1.78 / 2.00 WCSPR" },
-          ];
-
   const x402 =
     isAuth || isBlocked || isPolicyPending
       ? [
@@ -121,28 +99,15 @@ export function buildReceiptDetail(receipt: Receipt): ReceiptDetail {
   return {
     receipt,
     gateway: [
-      { key: "receipt id", value: receipt.id, mono: true },
       { key: "provider", value: receipt.provider },
       { key: "tool", value: receipt.tool, mono: true },
       { key: "client", value: receipt.client, mono: true },
       { key: "endpoint", value: endpoint, mono: true },
-      { key: "resource", value: `/tools/${receipt.tool}`, mono: true },
       { key: "price", value: `${receipt.amount} ${receipt.asset}`, mono: true },
       { key: "wallet", value: receipt.wallet, mono: true },
-      { key: "request id", value: `req_${receipt.id.slice(4)}`, mono: true },
     ],
-    policy,
     x402,
     casper,
-    policyNote: isBlocked
-      ? receipt.client === "hosted-mcp-endpoint"
-        ? "Spend was stopped before settlement. A block is a successful control outcome and has no transaction."
-        : "Spend was stopped before signing. A block is a successful control outcome and has no transaction."
-      : isPolicyPending
-        ? "Policy evaluation did not complete. No payment step or Casper transaction is attached."
-        : isAuth
-          ? "The request was rejected at the MCP client-access boundary before policy or payment."
-          : undefined,
     x402Note:
       isAuth || isBlocked || isPolicyPending
         ? "No payment step ran - the call never reached the facilitator."

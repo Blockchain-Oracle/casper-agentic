@@ -80,7 +80,6 @@ describe("external action feed", () => {
       status: "external_proof",
     });
     expect(result.matches[0]?.gateway.find((row) => row.key === "gateway receipt")?.value).toBe("not found");
-    expect(result.matches[0]?.policy.find((row) => row.key === "status")?.value).toBe("unavailable");
     expect(result.matches[0]?.x402.find((row) => row.key === "status")?.value).toBe("unavailable");
     expect(result.matches[0]?.casper.find((row) => row.key === "action page")?.value).toBe("1 of 1218");
   });

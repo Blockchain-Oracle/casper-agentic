@@ -49,3 +49,8 @@ bun.lockb
 *.tsbuildinfo
 next-env.d.ts
 .screenshots/
+
+# local screenshot/verification artifacts
+.playwright-mcp/
+.thoughts/screenshots/
+/p1-landing-*.png

@@ -115,10 +115,8 @@ export interface KeyValueRow {
 export interface ReceiptDetail {
   receipt: Receipt;
   gateway: KeyValueRow[];
-  policy: KeyValueRow[];
   x402: KeyValueRow[];
   casper: KeyValueRow[];
-  policyNote?: string;
   x402Note?: string;
   casperNote?: string;
 }

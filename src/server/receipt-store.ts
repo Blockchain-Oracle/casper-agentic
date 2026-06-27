@@ -7,7 +7,6 @@ import { receipts as fixtureReceipts } from "@/lib/fixtures";
 import { buildReceiptDetail } from "@/lib/receipt-detail";
 import { buildPersistedReceiptDetail } from "@/lib/persisted-receipt-detail";
 import type { Receipt, ReceiptDetail, ReceiptStatus } from "@/lib/types";
-import { latestPolicyDecisionForAttempt } from "./receipt-policy-selection";
 
 export interface PersistAttemptInput {
   amount: string;
@@ -34,9 +33,6 @@ export async function detailsForAttemptRows(rows: (typeof paidCallAttempts.$infe
   const proofs = ids.length
     ? await getDb().select().from(casperProofs).where(inArray(casperProofs.attemptId, ids))
     : [];
-  const policies = ids.length
-    ? await getDb().select().from(policyDecisions).where(inArray(policyDecisions.attemptId, ids))
-    : [];
   const x402s = ids.length
     ? await getDb().select().from(x402Records).where(inArray(x402Records.attemptId, ids)).orderBy(desc(x402Records.createdAt))
     : [];
@@ -44,7 +40,6 @@ export async function detailsForAttemptRows(rows: (typeof paidCallAttempts.$infe
     const proof = proofs.find((item) => item.attemptId === row.id);
     return buildPersistedReceiptDetail(fromAttemptRow(row, proof?.deployHash ?? null), {
       casperProof: proof,
-      policyDecision: latestPolicyDecisionForAttempt(policies, row.id),
       x402Records: x402s.filter((item) => item.attemptId === row.id),
     });
   });
@@ -97,10 +92,6 @@ export async function listReceiptDetailsByWallet(accountHash: string) {
 
 async function detailForAttempt(attempt: typeof paidCallAttempts.$inferSelect) {
   const [proof] = await getDb().select().from(casperProofs).where(eq(casperProofs.attemptId, attempt.id)).limit(1);
-  const [policy] = await getDb().select().from(policyDecisions)
-    .where(eq(policyDecisions.attemptId, attempt.id))
-    .orderBy(desc(policyDecisions.createdAt))
-    .limit(1);
   const x402s = await getDb()
     .select()
     .from(x402Records)
@@ -108,7 +99,6 @@ async function detailForAttempt(attempt: typeof paidCallAttempts.$inferSelect) {
     .orderBy(desc(x402Records.createdAt));
   return buildPersistedReceiptDetail(fromAttemptRow(attempt, proof?.deployHash ?? null), {
     casperProof: proof,
-    policyDecision: policy,
     x402Records: x402s,
   });
 }
