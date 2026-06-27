@@ -38,7 +38,7 @@ describe("provider source routes", () => {
     const { GET } = await import("@/app/api/provider/sources/route");
     mocks.listProviderSources.mockResolvedValue([]);
 
-    const response = await GET(request("https://gw.test/api/provider/sources"));
+    const response = await GET();
 
     expect(response.status).toBe(200);
     expect(mocks.listProviderSources).toHaveBeenCalled();

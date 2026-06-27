@@ -2,125 +2,84 @@
 
 ## Project Snapshot
 
-Casper GW / Casper Agent Commerce Gateway is a Next.js App Router prototype for the Casper Agentic Buildathon. Current prototype work is still under Context Engineering review; do not treat any downloaded prototype as accepted product truth until prototype-discovery and prototype-reintegration artifacts say so.
+Casper GW (Casper Agent Commerce Gateway) is a Next.js App Router app for the Casper Agentic Buildathon. It **is MCPay, on Casper** (Abu's framing): a public gateway where you register an MCP/API server, price its tools in WCSPR, and agents pay per call with an API key; the gateway signs each x402 payment with its own funded Testnet wallet, settles on Casper, and produces a real deploy hash anyone can verify in the public explorer.
 
-Authoritative context lives in `.thoughts/`: wiki, research, raw reports, cloned reference repos, quality profile, spec, stories, designer brief, prototype discovery, prototype reintegration, and research-backed plan. Start with `.thoughts/README.md` for the current read order and stage status before opening deeper artifacts.
+Active rebuild plan: `/Users/abu/.claude/plans/now-i-m-trying-to-delegated-lampson.md` (companion `.thoughts/plans/2026-06-27-casper-gw-mcpay-rebuild-plan.md`). Deeper context in `.thoughts/` (wiki, research, raw reports, cloned reference repos, spec, stories) — start at `.thoughts/README.md`.
+
+## Reference Repos — READ THE SOURCE, don't guess
+
+The clones in `.thoughts/raw/repos/` are the product blueprint: **MCPay** (`MCPay/apps/app`) and **Cronos402** (`cronos402/app`) for the gateway UX/flows, **x402scan** (`x402scan/apps/scan`) for the explorer, **casper-x402** for the x402/Casper protocol, **csprclick-examples** for wallet connect.
+
+- **Before implementing any UI, flow, or pattern that mirrors a reference, open and READ the actual reference source file(s) for that exact surface — in the same turn — and state which files you read.** A sub-agent summary, an earlier digest, or your memory is NOT a substitute for the primary source at implementation time.
+- "Take inspiration from X" / "check X" means: read X's source for the thing you are building, **now, before building**. "Don't copy" means don't paste their code — it does NOT mean don't read it closely. Match their proven structure, then adapt to Casper.
+- Saying "I'll check MCPay" is not checking MCPay. Reading the file is. When unsure about a surface, the answer is in the reference's source, not your interpretation of it.
+
+## Current Product Shape (post 2026-06-27 pivot)
+
+- **Public-first, NO authenticated `/app`** (MCPay has none). Every route is public: `/` landing, `/servers` (browse MCP servers) → `/servers/[id]` (a server's tools + inline Run/Pay accordion), `/explorer` (x402 settlement ledger), `/receipt/[id]` (public proof), `/register` (add a server). Sign-in/keys are modals, not pages.
+- **Payment = API-key / managed-wallet model.** The gateway signs every x402 payment with ONE funded Testnet wallet (env PEM). There are **NO per-user agent wallets and NO spend policy** — removed in the pivot. The only pre-settlement gate is a funding-readiness check.
+- **Receipt = 3 real layers**: gateway context → x402 verify/settle → Casper proof. (The old "policy decision" layer was removed.)
+- **Asset = WCSPR** — the only settle-able Casper x402 asset (native CSPR is wrapped 1:1 to WCSPR; paying WCSPR IS paying CSPR). USDC does not exist on Casper. `tool_prices` holds asset/network/payTo per tool, so multi-asset is a future config change, not a rewrite.
+- **Design = "Proof-Print"**: Tailwind v4 + shadcn/ui, Casper red `#FF473E`, dark console + bone receipt-paper surfaces, the proof-stamp signature. One global light/dark toggle (next-themes `data-theme`).
 
 ## Working Pace And Quality Bar
 
-- The June 30, 2026 qualification deadline is NOT a working constraint. Abu builds fast with AI agents and has capacity; never invoke the deadline to justify cutting scope, skipping gates, or rushing.
-- Deadline pressure never licenses mediocre work, skipped best practices, half-finished slices, fake/stubbed product behavior, or mock/placeholder/aspirational documentation.
-- Documentation must describe real, verified behavior only. Do not write docs for things that do not exist yet or have not been proven. Abu strongly dislikes mock/placeholder docs.
-- Default to doing it right over doing it fast-and-wrong. Follow the Context Engineering gates and the Quality Gates below fully, every time.
+- The June 30, 2026 deadline is NOT a working constraint. Never invoke it to justify cutting scope, skipping gates, or rushing.
+- Deadline pressure never licenses mediocre work, half-finished slices, fake/stubbed product behavior, or mock/placeholder/aspirational docs.
+- Documentation must describe real, verified behavior only. Abu strongly dislikes mock/placeholder docs.
+- Default to doing it right over fast-and-wrong. Verify (lint/typecheck/build/test, and a real run where relevant) before claiming progress is stable.
 
 ## Research Source Order
 
-- For Casper GW product, UX, MCP Pay/x402 inspiration, wallet-policy, registry, explorer, or hackathon-positioning questions, inspect local project context first:
-  - `.thoughts/wiki/`
-  - `.thoughts/research/`
-  - `.thoughts/raw/`
-  - `.thoughts/raw/repos/`
-  - `.thoughts/prototype-discovery/`
-  - `.thoughts/prototype-reintegration/`
-- Do not browse the web for MCP Pay, x402 agent patterns, Casper GW product direction, or prior reference projects until local reports and cloned repos have been checked.
-- If local context is insufficient, say exactly what was checked and ask Abu before doing broad web research, unless Abu explicitly requested online research in that turn.
-- Context7 is still required for current library/API/SDK/CLI syntax, but it does not replace local `.thoughts/` research for product decisions.
-- Do not make product decisions from memory when `.thoughts/` contains relevant research.
-- Before any meaningful implementation change, do a short local-reference checkpoint and mention which artifacts informed the decision. At minimum, check `.thoughts/README.md`, the active spec/plan/audit for the slice, and any relevant `.thoughts/raw/` or `.thoughts/raw/repos/` references for MCP Pay-style flows, x402 agent/payment patterns, provider discovery, receipt behavior, and UX patterns.
-- Use cloned/reference repos as practical pattern references, not source to copy. Prefer their proven flow shape over inventing new product behavior, then use Context7/current docs for the exact SDK/API syntax needed to implement that flow.
-- For CSPR.click work, check the installed official skill first at `/Users/abu/.codex/skills/csprclick-skill/SKILL.md`, then the local upstream examples clone at `.thoughts/raw/repos/csprclick-examples/`, then the Casper x402 CSPR.click reference under `.thoughts/raw/repos/casper-x402/go/examples/csprclick-x402/`, then Context7/direct CSPR.click docs for exact current SDK syntax.
+- For product/UX/x402/Casper questions, check local context first — **read the actual source** in `.thoughts/raw/repos/` (per the Reference Repos rule), plus `.thoughts/wiki/`, `.thoughts/research/`, `.thoughts/raw/`, and the active plan.
+- Use **Context7** for current library/API/SDK/CLI syntax. Abu actively WANTS online + library research — use it; do not reinvent solved problems by hand (API keys, schema forms, tables, etc.).
+- For CSPR.click: `/Users/abu/.codex/skills/csprclick-skill/SKILL.md`, then `.thoughts/raw/repos/csprclick-examples/`, then `.thoughts/raw/repos/casper-x402/go/examples/csprclick-x402/`, then Context7.
 
 ## Working Rules
 
-- Follow Abu Context Engineering skills for stage changes; do not skip from prototype evidence to broad implementation without an accepted plan.
-- Treat the prototype as evidence, not source code to copy blindly.
-- Keep provider upstream credentials, MCP client access auth, and x402 wallet/payment authorization separate.
-- Keep receipt layers separate: gateway context, policy decision, x402 verify/settle, and Casper proof.
-- Do not claim live Casper settlement unless a real Casper transaction/deploy hash exists.
-- Do not present `Simulated` or `Local` as user-facing product modes unless Abu explicitly re-accepts that direction. Product framing is Casper Testnet first, with Mainnet later/gated if shown.
-- Public explorer is public infrastructure: `/explorer` and receipt detail pages must be viewable without sign-in, wallet connection, or the authenticated app sidebar.
-- Authenticated `/app` is for provider setup, tool pricing/publishing, endpoints, wallet policies, paid-call testing, settings, and audit.
-- Do not invent private tools, private registries, or hidden registry modes unless accepted `.thoughts/` artifacts explicitly require them.
-- Treat any registry as optional discovery/catalogue behavior, not the source of truth for wallet allowlists.
-- Wallet policy means spend and permission controls for agent calls. Do not invent a separate "send policy" product unless Abu explicitly asks.
-- A paid-tool test console should work like an MCP/x402 tool runner: user selects or pastes an MCP/x402 endpoint URL, tools are discovered, the user selects a tool, input fields are generated only if the tool needs inputs, wallet/policy is selected, then the call is paid/signed and a receipt is produced.
+- Keep provider upstream credentials, client API-key access, and the gateway x402 signer separate.
+- Do not claim live Casper settlement unless a real Casper deploy hash exists.
+- Do not present `Simulated`/`Local` as user-facing product modes. Framing is Casper Testnet first, Mainnet later/gated.
+- Public explorer is public infrastructure: `/explorer` + receipt detail must be viewable with no sign-in or wallet.
+- Browser/CSPR.click x402 signing does NOT settle on Casper yet (the provider rejects the typed-data scheme) — it is deferred; lead with the gateway-signer/API-key path that really settles.
+- Do not re-introduce agent wallets, spend policy, the `/app` shell, or a 4th receipt layer unless Abu explicitly re-accepts them.
+- Do not invent private tools/registries, or CDR / Story Protocol / cdr-kit semantics.
 
 ## Commands
 
-Use `pnpm@10.33.0` for this project. Do not reintroduce `package-lock.json`.
+Use `pnpm@10.33.0`. Do not reintroduce `package-lock.json`.
 
 ```bash
+pnpm dev        # next dev (Turbopack) on :3000
 pnpm lint
 pnpm typecheck
 pnpm build
-pnpm dev
+pnpm test       # vitest
+
+# real Casper settlement (needs Postgres up + a funded gateway wallet):
+docker compose up -d            # Postgres (start OrbStack/Docker first: open -a OrbStack)
+pnpm db:migrate
+pnpm smoke:live                 # end-to-end real settle -> real Casper deploy hash
+CASPER_WCSPR_WRAP_AMOUNT=<motes> pnpm wrap:wcspr   # top up the gateway wallet's WCSPR
 ```
 
-Use Context7 for current framework/library/API/SDK/CLI docs:
+Context7: `eval "$(/opt/homebrew/bin/brew shellenv)" && npx ctx7@latest library <name> "<question>"`
 
-```bash
-eval "$(/opt/homebrew/bin/brew shellenv)" && npx ctx7@latest library <name> "<question>"
-eval "$(/opt/homebrew/bin/brew shellenv)" && npx ctx7@latest docs <libraryId> "<question>"
-```
+## Gotchas
+
+- **Never run `pnpm build` while `pnpm dev` is running** — it corrupts `.next` and serves stale code. Kill dev, `rm -rf .next`, restart.
+- A second `pnpm dev` silently binds port 3001; kill all `next dev` / `next-server` and free 3000 before restarting.
+- The gateway wallet must hold WCSPR (7.5/call) + CSPR gas, or every paid call returns `blocked` (not a bug — fund it). See memory `casper-gw-gateway-wallet-funding`.
+- next-themes uses `attribute="data-theme"`; the Tailwind v4 dark variant must target `[data-theme=dark]`, not `.dark`.
 
 ## Quality Gates
 
-- Run lint, typecheck, and build before claiming implementation progress is stable.
-- Browser checks must cover desktop and mobile, public explorer routes, authenticated app routes, paid-tool test-console routing, receipt proof layers, and Testnet/Mainnet labeling.
-- Source files target 200 lines, warn above 200, and hard-fail above 300 unless generated or explicitly justified in `.thoughts/quality/`.
-- Do not enforce app source rules against cloned reference repos under `.thoughts/raw/repos/`.
+- Run lint, typecheck, build (and tests) before claiming progress is stable.
+- Browser-check desktop + mobile, public routes, the settle path, and the receipt proof layers.
+- Source files target 200 lines; hard-fail above 300 unless generated or justified in `.thoughts/quality/`. Do not enforce this on `.thoughts/raw/repos/`.
 
 ## Do Not
 
 - Do not commit `.env`, wallet keys, seed phrases, CSPR.cloud tokens, provider API keys, or private keys.
 - Do not use live-looking mock secret prefixes such as `sk_live`.
-- Do not expose provider upstream credentials in client config, receipts, registry, exports, browser state, or user-facing logs.
-- Do not introduce CDR, Story Protocol, or cdr-kit product semantics into Casper GW unless Abu explicitly accepts that direction.
-
-
-<claude-mem-context>
-# Memory Context
-
-# [casper-agentic] recent context, 2026-06-21 2:06pm GMT+1
-
-Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
-Format: ID TIME TYPE TITLE
-Fetch details: get_observations([IDs]) | Search: mem-search skill
-
-Stats: 24 obs (11,909t read) | 152,931t work | 92% savings
-
-### Jun 19, 2026
-23657 10:11a 🔵 Abu Context Engineering Workflow with Prototype-Reintegration Gate
-23659 10:12a ✅ Documentation clarification: Prototype boundaries and reintegration workflow
-23661 " ✅ Prototype-reintegration skill elevated to visible documentation across plugin manifests
-23663 " ✅ Comprehensive workflow enforcement: Prototype-reintegration gate made mandatory across all skills
-23666 10:13a 🔵 Plugin validation passed for updated abu-context-engineering with prototype-reintegration enforcement
-23668 " 🔵 Plugin cachebuster updated and re-validated after workflow refactor
-23674 10:14a 🟣 Abu Context Engineering plugin deployed to Codex with prototype-reintegration enforcement
-23676 " 🔵 Deployed plugin verified in Codex cache with prototype-reintegration skill active
-23679 10:15a 🔵 Prototype-reintegration enforcement systematically integrated throughout plugin documentation
-23680 " ✅ Designer-brief skill description refined to emphasize mock boundary
-23681 " 🔵 Incremental designer-brief refinement validated and deployed to Codex
-23683 " 🔵 Final plugin state verified: prototype-reintegration workflow deployed and active in Codex
-23685 10:16a 🔵 Plugin validated for Claude Code platform with prototype-reintegration enforcement
-S2891 Update abu-context-engineering plugin to version 0.4.2 with prototype-reintegration skill and validate configuration (Jun 19 at 10:16 AM)
-S2888 Clarify and enforce the context engineering workflow: Abu brought a prototype but was not following the required prototype-discovery → prototype-reintegration → spec/story/quality deltas → plan sequence. The session addressed confusion about workflow requirements and fixed the plugin to make prototype-reintegration a mandatory, non-skippable gate. (Jun 19 at 10:16 AM)
-S2893 User providing feedback that Claude failed to follow established "context engineering skill" workflow when receiving a high-fidelity prototype for review and reintegration planning (Jun 19 at 10:25 AM)
-S2894 Abu expressed frustration that the agent forgot the Context Engineering prototype handoff workflow (discovery → reintegration → planning → implementation → verification → handoff). Created goal-writer skill to codify the post-prototype process and ensure agents follow gates in order while preserving prototype fidelity. (Jun 19 at 10:37 AM)
-23721 10:38a ✅ abu-context-engineering plugin infrastructure and skills refactor underway
-23724 10:39a 🔵 prototype-reintegration skill initialized but lacks agents/openai.yaml metadata
-23725 " 🟣 goal-writer skill scaffold created for Context Engineering plugin
-23727 " 🔵 goal-writer skill initialization has incomplete asset directory and default_prompt formatting issue
-S3056 Comprehensive audit of Casper Gateway UI redesign against actual product intent and business logic; produce audit document and copy-paste prompt for design agents (Jun 19 at 10:46 AM)
-### Jun 21, 2026
-26561 12:51p 🔵 OneMem memory system not configured in casper-agentic project
-26562 " ⚖️ Plan to reconcile explorer design with public/private route model
-26563 " ✅ Prototype reintegration audit and designer correction prompt created for Casper GW redesign
-26565 12:52p ✅ Audit and designer prompt updated with public/private explorer route model
-S3060 Casper GW redesign correction: clarify that the Casper x402 explorer must be public infrastructure, not a gated dashboard page inside the app shell (Jun 21 at 12:53 PM)
-26671 2:02p 🔵 Casper Gateway prototype audit identifies critical design misalignments requiring corrections before implementation
-26672 2:03p 🔵 Prototype registry implementation includes unsupported private tools feature; research confirms public/private tool concept was not in design discussion
-26678 2:05p ⚖️ V2 Casper Gateway prototype audit documents registry removal, blocks implementation planning until corrections accepted
-
-Access 153k tokens of past work via get_observations([IDs]) or mem-search skill.
-</claude-mem-context>
+- Do not expose provider upstream credentials in client config, receipts, exports, browser state, or user-facing logs.

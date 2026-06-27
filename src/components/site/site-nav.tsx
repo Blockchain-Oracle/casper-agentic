@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
+  { href: "/servers", label: "Servers" },
   { href: "/explorer", label: "Explorer" },
   { href: "/register", label: "Register" },
 ] as const;

@@ -103,6 +103,26 @@ export async function listPublishedEndpointTools(sourceId: string) {
   }));
 }
 
+/** Registered MCP servers that have at least one published tool — for the public /servers catalogue. */
+export async function listServerCatalog() {
+  const sources = await getDb().select().from(providerSources).orderBy(desc(providerSources.createdAt));
+  if (!sources.length) return [];
+  const published = await getDb().select().from(providerTools).where(eq(providerTools.status, "published"));
+  return sources
+    .map((source) => ({
+      ...toProviderSourceView(source),
+      toolCount: published.filter((tool) => tool.sourceId === source.id).length,
+    }))
+    .filter((server) => server.toolCount > 0);
+}
+
+/** A single server with its published tools (price-joined) — for the public /servers/[id] detail page. */
+export async function getServerWithTools(sourceId: string) {
+  const source = await getProviderSourceRecord(sourceId);
+  if (!source) return null;
+  return { source: toProviderSourceView(source), tools: await listPublishedEndpointTools(sourceId) };
+}
+
 export async function setProviderToolStatus(toolId: string, status: ProviderToolStatus) {
   assertToolStatus(status);
   const [tool] = await getDb()

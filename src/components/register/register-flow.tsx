@@ -67,8 +67,8 @@ export function RegisterFlow() {
           {tools.length} tool{tools.length > 1 ? "s are" : " is"} live and payable. Agents can call them with an API key.
         </p>
         <Button asChild className="mt-6 gap-2">
-          <Link href={sourceId ? `/tools?source=${sourceId}` : "/tools"}>
-            View in the catalogue <ArrowRight className="size-4" />
+          <Link href={sourceId ? `/servers/${sourceId}` : "/servers"}>
+            View server <ArrowRight className="size-4" />
           </Link>
         </Button>
       </div>
