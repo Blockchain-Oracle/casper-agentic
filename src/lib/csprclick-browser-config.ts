@@ -79,7 +79,9 @@ export type CSPRClickBrowserWindow = {
 export function getCSPRClickPublicConfig(
   env: Record<string, string | undefined> = process.env,
 ): CSPRClickPublicConfig {
-  const appId = clean(env.NEXT_PUBLIC_CSPR_CLICK_APP_ID);
+  // Default to the public localhost demo app id (per CSPR.click docs) so browser
+  // wallet connect works out-of-the-box; override with NEXT_PUBLIC_CSPR_CLICK_APP_ID.
+  const appId = clean(env.NEXT_PUBLIC_CSPR_CLICK_APP_ID) || "csprclick-template";
   const sdk = { scriptId: CSPRCLICK_SCRIPT_ID, scriptSrc: CSPRCLICK_SCRIPT_SRC };
   if (!appId) return { reason: "missing_app_id", sdk, status: "not_enabled" };
 

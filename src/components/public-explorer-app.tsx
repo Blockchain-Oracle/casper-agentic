@@ -3,13 +3,12 @@
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ExternalAccountHistoryBar } from "@/components/explorer/external-account-history-bar";
-import { ExternalActionFeedBar } from "@/components/explorer/external-action-feed-bar";
 import { PublicExplorerHeader } from "@/components/explorer/public-explorer-header";
 import { useExternalActionFeed } from "@/components/explorer/use-external-action-feed";
 import { useReceiptDeepLink } from "@/components/explorer/use-receipt-deep-link";
 import { useExplorerSearch } from "@/components/explorer/use-explorer-search";
 import { useReceiptHistory } from "@/components/explorer/use-receipt-history";
-import { ExplorerScreen, type ExplorerFilter } from "@/components/screens/explorer-screen";
+import { ExplorerScreen, type ExplorerFilter, type ExplorerHistoryControls } from "@/components/screens/explorer-screen";
 import { receipts } from "@/lib/fixtures";
 import { buildReceiptDetail, receiptById } from "@/lib/receipt-detail";
 
@@ -140,6 +139,55 @@ export function PublicExplorerApp() {
 
   function previousExternalFeedPage() { setSelectedReceiptOverride(null); externalFeed.previousPage(); }
 
+  const isExternalView = viewMode === "external-feed";
+  const feedTab: "local" | "external" = isExternalView ? "external" : "local";
+  const isSample = !isExternalView && receiptHistory.source === "fixture";
+  const externalPagination = externalFeed.result?.pagination;
+  const sourceNote = isExternalView
+    ? externalFeed.result?.source === "cspr_cloud"
+      ? `External CSPR.cloud proof carries Casper settlement only — no gateway, policy, or x402 layer.${
+          externalFeed.result.cache ? ` · cache ${externalFeed.result.cache.status}` : ""
+        }`
+      : externalFeed.result?.message ?? "Browse configured WCSPR token actions from CSPR.cloud."
+    : receiptHistory.source === "postgres"
+      ? "source: Casper GW gateway receipts · live"
+      : "Showing sample gateway receipts — connect Postgres for live settlement.";
+  const historyControls: ExplorerHistoryControls = isExternalView
+    ? {
+        canNext: externalPagination?.hasNextPage ?? false,
+        canPrevious: externalPagination?.hasPreviousPage ?? false,
+        from: historyFrom,
+        loading: externalFeed.loading,
+        onFrom: changeHistoryFrom,
+        onNext: nextExternalFeedPage,
+        onPrevious: previousExternalFeedPage,
+        onQuery: changeHistoryQuery,
+        onTo: changeHistoryTo,
+        pageLabel: externalPagination
+          ? `${externalPagination.totalCount} WCSPR action${
+              externalPagination.totalCount === 1 ? "" : "s"
+            } · page ${externalPagination.page} of ${externalPagination.totalPages}`
+          : externalFeed.result?.message ?? "WCSPR token actions",
+        query: historyQuery,
+        to: historyTo,
+      }
+    : {
+        canNext: receiptHistory.pagination.hasNextPage,
+        canPrevious: receiptHistory.pagination.hasPreviousPage,
+        from: historyFrom,
+        loading: receiptHistory.loading,
+        onFrom: changeHistoryFrom,
+        onNext: nextHistoryPage,
+        onPrevious: previousHistoryPage,
+        onQuery: changeHistoryQuery,
+        onTo: changeHistoryTo,
+        pageLabel: `${receiptHistory.pagination.totalCount} result${
+          receiptHistory.pagination.totalCount === 1 ? "" : "s"
+        } - page ${receiptHistory.pagination.page} of ${receiptHistory.pagination.totalPages}`,
+        query: historyQuery,
+        to: historyTo,
+      };
+
   return (
     <main className="app">
       <PublicExplorerHeader receiptSource={receiptHistory.source} />
@@ -150,37 +198,18 @@ export function PublicExplorerApp() {
           onNext={nextExternalPage}
           onPrevious={previousExternalPage}
         />
-        <ExternalActionFeedBar
-          active={viewMode === "external-feed"}
-          feed={feedResult}
-          loading={externalFeed.loading}
-          onNext={nextExternalFeedPage}
-          onOpen={openExternalFeed}
-          onPrevious={previousExternalFeedPage}
-        />
         <ExplorerScreen
           explorerFilter={explorerFilter}
+          feedTab={feedTab}
           filteredReceipts={filteredReceipts}
-          historyControls={{
-            canNext: receiptHistory.pagination.hasNextPage,
-            canPrevious: receiptHistory.pagination.hasPreviousPage,
-            from: historyFrom,
-            loading: receiptHistory.loading,
-            onFrom: changeHistoryFrom,
-            onNext: nextHistoryPage,
-            onPrevious: previousHistoryPage,
-            onQuery: changeHistoryQuery,
-            onTo: changeHistoryTo,
-            pageLabel: `${receiptHistory.pagination.totalCount} result${
-              receiptHistory.pagination.totalCount === 1 ? "" : "s"
-            } - page ${receiptHistory.pagination.page} of ${receiptHistory.pagination.totalPages}`,
-            query: historyQuery,
-            to: historyTo,
-          }}
+          historyControls={historyControls}
+          isSample={isSample}
           onFilter={changeFilter}
           onReceipt={selectReceipt}
           onSearch={searchExplorerFirstPage}
           onSearchQuery={explorerSearch.setQuery}
+          onShowExternal={openExternalFeed}
+          onShowLocal={beginHistoryBrowse}
           receiptDetail={receiptDetail}
           searchMessage={searchResult?.message}
           searchQuery={explorerSearch.query}
@@ -188,6 +217,7 @@ export function PublicExplorerApp() {
           searching={explorerSearch.searching}
           selectedReceipt={selectedReceipt}
           selectedReceiptId={selectedReceipt.id}
+          sourceNote={sourceNote}
         />
       </section>
     </main>

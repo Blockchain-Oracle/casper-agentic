@@ -3,9 +3,19 @@
 import { useWorkspace } from "./workspace-provider";
 
 /**
- * Wallet-connection gate for /app. When no Casper wallet is connected the
- * workspace renders blurred behind a connect overlay; connecting unlocks it.
- * (Phase 2 will expand the connection-state machine — mismatch/switched/etc.)
+ * Wallet-connection gate for /app. Renders a blurred workspace behind a static
+ * connect card until a Casper wallet connects.
+ *
+ * The CSPR.click provider chooser mounts at #csprclick-ui (z-index 200, see
+ * base.css) — ABOVE this scrim (z-index 60) — so it owns the screen while open
+ * and stays fully interactive. The gate is therefore a pure function of
+ * connection state: there is NO transparent re-arm layer and nothing toggles.
+ * Once `connected`, the gate unmounts and reveals the workspace.
+ *
+ * (The previous design used a `signInRequested` boolean plus a transparent
+ * full-screen re-arm button; outside clicks toggled it and the connect modal
+ * flickered up and down against the chooser. That whole mechanism was both buggy
+ * and redundant once the chooser mount was raised to z-index 200.)
  */
 export function AppGate({ children }: { children: React.ReactNode }) {
   const { browserWallet } = useWorkspace();
@@ -15,10 +25,22 @@ export function AppGate({ children }: { children: React.ReactNode }) {
 
   return (
     <div style={{ position: "relative", minHeight: "70vh" }}>
-      <div aria-hidden style={{ filter: "blur(7px)", opacity: 0.45, pointerEvents: "none", userSelect: "none" }}>
+      <div aria-hidden style={{ filter: "blur(7px)", opacity: 0.4, pointerEvents: "none", userSelect: "none" }}>
         {children}
       </div>
-      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 60,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+          background: "rgb(7 8 10 / 0.5)",
+          backdropFilter: "blur(2px)",
+        }}
+      >
         <div
           style={{
             width: "100%",
@@ -46,7 +68,9 @@ export function AppGate({ children }: { children: React.ReactNode }) {
           >
             ⬡
           </div>
-          <h2 style={{ font: "800 22px/1.12 var(--sans)", margin: 0 }}>Connect a Casper wallet to enter the app</h2>
+          <h2 style={{ font: "800 22px/1.12 var(--sans)", margin: 0, color: "var(--ink)" }}>
+            Connect a Casper wallet to enter the app
+          </h2>
           <p style={{ font: "500 14px/1.55 var(--sans)", color: "var(--ink-2)", marginTop: 12 }}>
             Wallet connection unlocks the operator workspace. We never ask for a seed phrase, private key, or provider
             secret — your profile stores public identity only.

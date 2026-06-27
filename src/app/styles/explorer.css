@@ -1,0 +1,238 @@
+/* Explorer (public) — hero, search, stats, and receipt table per the v3 prototype. */
+.explorerHero h1 {
+  margin: 0;
+  font: 800 31px/1.05 var(--sans);
+  letter-spacing: -0.025em;
+}
+
+.explorerHero p {
+  margin: 11px 0 0;
+  max-width: 720px;
+  font: 500 15px/1.5 var(--sans);
+  color: var(--ink-2);
+}
+
+.explorerSearchBar {
+  display: flex;
+  gap: 10px;
+}
+
+.explorerSearchField {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  height: 50px;
+  padding: 0 16px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--card);
+}
+
+.explorerSearchField input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: 500 13.5px/1 var(--mono);
+  color: var(--ink);
+}
+
+.explorerSearchBtn {
+  display: inline-flex;
+  align-items: center;
+  height: 50px;
+  padding: 0 24px;
+  border-radius: 10px;
+  background: var(--brand);
+  color: #fff;
+  font: 600 14px/1 var(--sans);
+  white-space: nowrap;
+}
+
+.explorerSearchBtn:disabled {
+  opacity: 0.6;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.filterPill {
+  padding: 6px 13px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink-2);
+  font: 600 11.5px/1 var(--mono);
+  cursor: pointer;
+}
+
+.filterPill[data-active="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.explorerStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 12px;
+}
+
+.explorerStat {
+  padding: 15px 18px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--card);
+}
+
+.explorerStat .statLabel {
+  font: 500 10.5px/1 var(--mono);
+  color: var(--ink-3);
+}
+
+.explorerStat .statNum {
+  margin-top: 8px;
+  font: 700 23px/1 var(--mono);
+}
+
+.explorerTable {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.explorerHead,
+.explorerRow {
+  display: grid;
+  grid-template-columns:
+    minmax(104px, auto) minmax(132px, 1.1fr) minmax(0, 2fr)
+    minmax(92px, auto) minmax(52px, auto);
+  align-items: center;
+  gap: 12px;
+}
+
+.explorerHead {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-2);
+  font: 600 10.5px/1 var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+
+.explorerRow {
+  width: 100%;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.explorerRow:last-child {
+  border-bottom: 0;
+}
+
+.explorerRow:hover {
+  background: var(--paper-2);
+}
+
+.explorerRow[data-active="true"] {
+  background: var(--primary-soft);
+}
+
+
+@media (max-width: 720px) {
+  .explorerSearchBar {
+    flex-direction: column;
+  }
+
+  .explorerSearchBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .explorerHead {
+    display: none;
+  }
+
+  .explorerRow {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .explorerRow > span {
+    text-align: left !important;
+  }
+}
+
+/* Segmented feed toggle (Casper GW receipts | WCSPR token actions) + fixture tag. */
+.explorerFeedBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.explorerSeg {
+  display: inline-flex;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 10px;
+  background: var(--paper-2);
+}
+
+.explorerSegBtn {
+  padding: 8px 18px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-2);
+  font: 600 12.5px/1 var(--sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.explorerSegBtn[data-active="true"] {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(20 21 26 / 0.07);
+}
+
+.fixtureTag {
+  padding: 4px 9px;
+  border-radius: 5px;
+  background: var(--warn-soft);
+  border: 1px solid var(--warn-line);
+  color: #b5832b;
+  font: 600 10px/1 var(--mono);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.explorerSourceNote {
+  font: 500 11.5px/1.45 var(--mono);
+  color: var(--ink-3);
+}
+
+@media (max-width: 560px) {
+  .explorerSeg {
+    width: 100%;
+  }
+
+  .explorerSegBtn {
+    flex: 1;
+    text-align: center;
+    padding: 9px 8px;
+  }
+}

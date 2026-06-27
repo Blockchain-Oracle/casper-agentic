@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { ReceiptProofGrid } from "@/components/receipt/receipt-detail-view";
+import { ReceiptProofTimeline } from "@/components/receipt/receipt-detail-view";
 import { Panel } from "@/components/screen-primitives";
 import { Chip, StatusChip } from "@/components/ui";
 import { receipts } from "@/lib/fixtures";
@@ -67,7 +67,7 @@ export function AuditScreen() {
           )
         }
       >
-        {detail ? <ReceiptProofGrid detail={detail} /> : null}
+        {detail ? <ReceiptProofTimeline detail={detail} /> : null}
       </Modal>
     </div>
   );

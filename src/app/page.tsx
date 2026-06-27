@@ -1,114 +1,159 @@
 import Link from "next/link";
-import { Chip, KeyValueList, StatusChip } from "@/components/ui";
-import { receipts, tools, wallets } from "@/lib/fixtures";
+
+import { ThemeToggle } from "@/components/app/theme-toggle";
+import { StatusChip } from "@/components/ui";
+import { formatReceiptId } from "@/lib/format-address";
+import { receipts } from "@/lib/fixtures";
 
 export default function Home() {
-  const latestReceipt = receipts[0];
+  const latest = receipts.find((receipt) => receipt.hash) ?? receipts[0];
+  const recent = receipts.slice(0, 3);
+  const settledCount = receipts.filter((receipt) => receipt.status === "settled").length;
+  const unsettledCount = receipts.length - settledCount;
+  const providerCount = new Set(receipts.map((receipt) => receipt.provider)).size;
+  const flow: Array<[string, string, string]> = [
+    ["01 Source", "Provider connects an API, OpenAPI spec, or MCP server.", "var(--ink)"],
+    ["02 Tool", "Discovered tools get priced and published as x402.", "var(--ink)"],
+    ["03 Policy", "Spend policy runs before any signing or payment.", "var(--policy)"],
+    ["04 x402", "Wallet signs; facilitator verifies and settles.", "var(--x402)"],
+    ["05 Casper proof", "A real deploy hash lands on Casper Testnet.", "var(--brand)"],
+    ["06 Receipt", "Four layers assembled into a verifiable receipt.", "var(--settled)"],
+  ];
 
   return (
-    <main className="app">
-      <header className="topbar">
-        <Link className="brand" href="/">
-          <span className="brandMark" />
-          <span>
-            casper<span className="brandHyphen">-</span>gw
-          </span>
+    <main className="landingShell">
+      <header className="landingTopbar">
+        <Link className="landingBrand" href="/">
+          <span className="landingBrandMark" />
+          <span>Casper GW</span>
+          <span className="landingTestnetPill">TESTNET</span>
         </Link>
-        <nav className="nav" aria-label="Public">
-          <Link className="navButton" data-active="true" href="/">
-            <span className="dot" />
-            Overview
-          </Link>
-          <Link className="navButton" href="/explorer">
-            <span className="dot" />
-            Explorer
-          </Link>
-          <Link className="navButton" href="/app">
-            <span className="dot" />
-            App
-          </Link>
+        <nav className="landingTopNav" aria-label="Public">
+          <Link className="landingNavLink" href="/explorer">Explorer</Link>
+          <Link className="landingNavLink" href="#how-it-works">How it works</Link>
+          <ThemeToggle />
+          <Link className="landingOpenAppBtn" href="/app">Open app →</Link>
         </nav>
-        <span className="networkPill">
-          <span className="dot" style={{ background: "var(--signal)", opacity: 1 }} />
-          Testnet
-        </span>
       </header>
-      <section className="page">
-        <div className="heroBand">
-          <div className="heroCopy">
-            <div className="stack">
-              <Chip tone="primary">Casper agent commerce gateway</Chip>
-              <h1>Public x402 receipts for paid agent tool calls.</h1>
-              <p className="subhead" style={{ margin: 0 }}>
-                Providers publish paid MCP tools, operators fund policy-controlled Casper wallets,
-                and every attempt produces a four-layer receipt anyone can inspect.
-              </p>
-            </div>
-            <div className="heroActions">
-              <Link className="primaryButton" href="/explorer">Open explorer</Link>
-              <Link className="secondaryButton" href="/app">Open operator app</Link>
-            </div>
-          </div>
-          <div className="darkPanel">
-            <div className="panelHeader">
-              <div>
-                <div className="fieldLabel">Latest receipt</div>
-                <div className="panelTitle">{latestReceipt.id}</div>
-              </div>
-              <StatusChip status={latestReceipt.status} />
-            </div>
-            <div className="panelBody">
-              <KeyValueList
-                rows={[
-                  { key: "provider", value: latestReceipt.provider },
-                  { key: "tool", value: latestReceipt.tool, mono: true },
-                  { key: "amount", value: `${latestReceipt.amount} ${latestReceipt.asset}`, mono: true },
-                  { key: "proof", value: "fixture - no deploy hash claimed", tone: "warn" },
-                ]}
-              />
-            </div>
-          </div>
-        </div>
 
-        <div className="grid auto">
-          {[
-            ["Published tools", String(tools.filter((tool) => tool.published).length), "Hosted MCP/x402 endpoint tools"],
-            ["Wallet profiles", String(wallets.length), "Spend-policy controlled accounts"],
-            ["Receipt attempts", String(receipts.length), "Policy, payment, and proof outcomes"],
-            ["Live proof volume", "0.00 WCSPR", "Requires a real Testnet deploy hash"],
-          ].map(([label, value, note]) => (
-            <div className="stat" key={label}>
-              <div className="fieldLabel">{label}</div>
-              <div className="statValue">{value}</div>
-              <div className="muted" style={{ fontSize: 13 }}>
-                {note}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="stack" style={{ marginTop: 32 }}>
-          <Chip tone="primary">One signing engine, three triggers</Chip>
-          <p className="subhead" style={{ margin: 0 }}>
-            Every paid call settles a fresh per-call x402 authorization on Casper Testnet. The same
-            policy → verify → settle → Casper-proof path runs underneath all three.
+      <section className="landingHero">
+        <div>
+          <div className="landingEyebrow">Agent commerce · Casper native</div>
+          <h1 className="landingTitle">Pay-per-call proof for agent tools.</h1>
+          <p className="landingSubhead">
+            Providers publish APIs and MCP servers as paid x402 endpoints. Operators govern Casper
+            wallets with spend policy. Every paid call settles on-chain and produces a receipt
+            anyone can verify — no account required.
           </p>
-          <div className="grid auto">
-            {[
-              ["Pay with my agent wallet", "The Gateway server-signs with your selected wallet, under its spend limits and tool allowlist."],
-              ["Connect & sign", "Your own Casper wallet approves each payment via CSPR.click — Casper wallets only."],
-              ["Autonomous agent + API key", "An agent sends only a bearer token bound to a hosted wallet; the Gateway signs under policy."],
-            ].map(([title, note]) => (
-              <div className="stat" key={title}>
-                <div className="panelTitle" style={{ fontSize: 16 }}>
-                  {title}
+          <div className="landingCtaRow">
+            <Link className="landingCtaPrimary" href="/explorer">
+              Open explorer <span className="arrow">↗</span>
+            </Link>
+            <Link className="landingCtaSecondary" href="/app">Connect wallet</Link>
+          </div>
+        </div>
+        <div className="landingProofCard">
+          <div className="landingProofHead">
+            <span className="landingProofTag">LATEST PROOF</span>
+            <StatusChip status={latest.status} />
+          </div>
+          <div className="landingProofBody">
+            <div style={{ font: "600 13.5px/1 var(--sans)" }}>
+              {latest.tool} <span style={{ color: "var(--ink-3)" }}>·</span> {latest.provider}
+            </div>
+            <div className="landingProofPills">
+              <span className="pillGw">GATEWAY</span>
+              <span className="pillPol">POLICY</span>
+              <span className="pillX402">x402</span>
+              <span className="pillCs">PROOF</span>
+            </div>
+            <div className="landingProofHashLabel">{latest.hash ? "DEPLOY HASH" : "RECEIPT ID"}</div>
+            <div className="landingProofHash">{latest.hash ?? latest.id}</div>
+            <div className="landingProofMeta">
+              <div>
+                <div className="landingProofHashLabel">AMOUNT</div>
+                <div style={{ marginTop: 5, font: "600 14.5px/1 var(--mono)" }}>
+                  {latest.amount} {latest.asset}
                 </div>
-                <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
-                  {note}
-                </div>
+              </div>
+              {latest.hash ? (
+                <a className="mono" href={`https://testnet.cspr.live/deploy/${latest.hash}`} rel="noopener noreferrer" style={{ color: "var(--brand)", fontWeight: 600, fontSize: 12 }} target="_blank">cspr.live ↗</a>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="landingBand" id="how-it-works">
+        <div className="landingBandInner">
+          <div className="landingBandLabel">HOW A PAID CALL BECOMES PROOF</div>
+          <div className="landingFlow">
+            {flow.map(([step, desc, color]) => (
+              <div key={step}>
+                <div className="landingFlowStep" style={{ color }}>{step}</div>
+                <div className="landingFlowDesc">{desc}</div>
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="landingZones">
+        <div className="landingZone">
+          <div className="landingZoneHead">
+            <span className="landingZoneDot outline" />
+            <span className="landingZoneTitle">Public explorer</span>
+          </div>
+          <p className="landingZoneBody">
+            Anyone can verify Casper payment proof — no sign-in, no wallet. Search receipts, deploy
+            hashes, and accounts; open raw proof on cspr.live.
+          </p>
+          <Link className="landingZoneCta" href="/explorer">Open explorer →</Link>
+        </div>
+        <div className="landingZone">
+          <div className="landingZoneHead">
+            <span className="landingZoneDot brand" />
+            <span className="landingZoneTitle">Operator app 🔒</span>
+          </div>
+          <p className="landingZoneBody">
+            Wallet-gated. Publish paid tools, govern wallet readiness and spend policy, and run
+            paid calls through the x402 console.
+          </p>
+          <Link className="landingZoneCta" href="/app">Connect wallet →</Link>
+        </div>
+      </section>
+
+      <section className="landingVitality">
+        <div className="landingVitalityHead">
+          <span className="landingVitalityTitle">Gateway activity</span>
+          <span className="landingSampleChip">SAMPLE · FIXTURE</span>
+        </div>
+        <div className="landingStats">
+          <div className="landingStat"><div className="label">RECEIPTS</div><div className="num">{receipts.length}</div></div>
+          <div className="landingStat"><div className="label">SETTLED</div><div className="num settled">{settledCount}</div></div>
+          <div className="landingStat"><div className="label">UNSETTLED</div><div className="num warn">{unsettledCount}</div></div>
+          <div className="landingStat"><div className="label">PROVIDERS</div><div className="num">{providerCount}</div></div>
+          <div className="landingStat"><div className="label">LATEST</div><div className="num">{receipts[0].time}</div><div className="sub">most recent fixture</div></div>
+        </div>
+        <div className="landingRecent">
+          <div className="landingRecentHead">
+            <div>Status</div><div>Receipt</div><div>Tool · Provider</div>
+            <div style={{ textAlign: "right" }}>Amount</div>
+            <div style={{ textAlign: "right" }}>Proof</div>
+          </div>
+          {recent.map((r) => (
+            <div className="landingRecentRow" key={r.id}>
+              <StatusChip status={r.status} />
+              <span className="mono" style={{ fontSize: 12.5 }}>{formatReceiptId(r.id)}</span>
+              <span style={{ fontWeight: 600, fontSize: 13 }}>
+                {r.tool} <span style={{ color: "var(--ink-3)", fontWeight: 500 }}>· {r.provider}</span>
+              </span>
+              <span className="mono" style={{ textAlign: "right", fontSize: 12.5 }}>{r.amount} {r.asset}</span>
+              <span className="mono" style={{ textAlign: "right", fontSize: 12, color: r.hash ? "var(--brand)" : "var(--ink-3)" }}>
+                {r.hash ? `${r.hash.slice(0, 6)}…${r.hash.slice(-2)} ↗` : "no tx"}
+              </span>
+            </div>
+          ))}
         </div>
       </section>
     </main>

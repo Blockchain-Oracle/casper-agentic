@@ -36,7 +36,9 @@ export function prepareCSPRClickRuntime(windowLike: CSPRClickBrowserWindow, conf
     defaultTheme: "light",
     rootAppElement: config.ui.rootAppElement,
     show1ClickModal: true,
-    showTopBar: true,
+    // Casper GW renders its own header + account chip; the CSPR.click top bar
+    // ("CSPR Products / Sign in / docs") otherwise bleeds in above our shell.
+    showTopBar: false,
     uiContainer: config.ui.uiContainer,
   };
   windowLike.clickUIOptions = uiOptions;

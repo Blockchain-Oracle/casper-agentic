@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     ".thoughts/**",
     "node_modules/**",
+    "**/node_modules/**",
+    // Claude/Codex agent worktrees + caches carry their own node_modules; never lint them.
+    ".claude/**",
   ]),
 ]);
 

@@ -1,50 +1,46 @@
 import Link from "next/link";
 
-import { Chip } from "@/components/ui";
+import { ThemeToggle } from "@/components/app/theme-toggle";
 
 interface PublicExplorerHeaderProps {
   receiptSource: "fixture" | "postgres";
 }
 
+/**
+ * Explorer top bar — matches v3 prototype tile "Casper GW – Explorer". Public surface,
+ * no wallet UI; the operator app is reached via the right-side button.
+ */
 export function PublicExplorerHeader({ receiptSource }: PublicExplorerHeaderProps) {
   return (
     <>
-      <header className="topbar">
-        <Link className="brand" href="/">
-          <span className="brandMark" />
-          <span>
-            casper<span className="brandHyphen">-</span>gw
-          </span>
+      <header className="landingTopbar">
+        <Link className="landingBrand" href="/">
+          <span className="landingBrandMark" />
+          <span>Casper GW</span>
+          <span style={{ marginLeft: 4, font: "600 14px/1 var(--sans)", color: "var(--ink-2)" }}>Explorer</span>
+          <span className="landingTestnetPill">TESTNET</span>
         </Link>
-        <nav className="nav" aria-label="Public">
-          <Link className="navButton" data-active="true" href="/explorer">
-            <span className="dot" />
-            Explorer
+        <div className="landingTopNav" aria-label="Public">
+          <span className="landingNavLink" style={{ display: "inline-flex", alignItems: "center", gap: 7, font: "600 11.5px/1 var(--mono)", color: "var(--ink-3)" }}>
+            <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--settled)" }} />
+            PUBLIC · NO SIGN-IN
+          </span>
+          <ThemeToggle />
+          <Link className="landingCtaPrimary" href="/app" style={{ padding: "10px 18px", fontSize: 13.5 }}>
+            Open app ↗
           </Link>
-          <Link className="navButton" href="/app">
-            <span className="dot" />
-            App
-          </Link>
-        </nav>
-        <span className="networkPill">
-          <span className="dot" style={{ background: "var(--signal)", opacity: 1 }} />
-          Testnet
-        </span>
-      </header>
-      <header className="pageHeader">
-        <div className="eyebrow">Public infrastructure</div>
-        <h1>Casper x402 Explorer</h1>
-        <p className="subhead">
-          Public receipt inspection for rich Casper GW records plus external deploy, account, and payment-asset proof lookup. External proofs show chain facts only.
-        </p>
-        <div className="buttonRow" style={{ marginTop: 14 }}>
-          <Chip tone={receiptSource === "postgres" ? "primary" : "warn"}>
-            {receiptSource === "postgres" ? "Gateway receipts" : "Sample receipts"}
-          </Chip>
-          <Chip tone="warn">External proof is limited</Chip>
-          <Chip tone="signal">No sign-in required</Chip>
         </div>
       </header>
+      <div className="explorerHero" style={{ marginTop: 28 }}>
+        <h1>Verify any Casper payment proof</h1>
+        <p>
+          Search Casper GW receipts and live Testnet WCSPR activity.
+          {" "}
+          {receiptSource === "postgres"
+            ? "Gateway receipts carry all four layers (gateway, policy, x402, Casper proof); external proof carries Casper settlement only."
+            : "Showing sample receipts — Postgres unavailable, switch to a live database to see real settlement."}
+        </p>
+      </div>
     </>
   );
 }

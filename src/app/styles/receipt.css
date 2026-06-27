@@ -1,0 +1,84 @@
+/* Four-layer Casper receipt proof, rendered as a numbered vertical timeline. */
+.proofTimeline {
+  position: relative;
+  display: grid;
+  gap: 14px;
+}
+
+.proofTimeline::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 16px;
+  bottom: 44px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--ink-3), var(--policy) 32%, var(--x402) 64%, var(--brand));
+  opacity: 0.35;
+}
+
+.proofLayer {
+  position: relative;
+  display: flex;
+  gap: 16px;
+}
+
+.proofNum {
+  z-index: 1;
+  display: grid;
+  flex: 0 0 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  font: 600 13px/1 var(--mono);
+}
+
+.proofCard {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+}
+
+.proofCard.casper {
+  border-color: var(--brand);
+}
+
+.proofCardHead {
+  padding: 11px 15px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-2);
+  font: 700 13.5px/1 var(--sans);
+}
+
+.proofRows {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  row-gap: 9px;
+  align-items: baseline;
+  padding: 13px 15px;
+}
+
+.proofRowKey {
+  font: 500 11.5px/1.3 var(--mono);
+  color: var(--ink-3);
+}
+
+.proofRowVal {
+  font: 600 12.5px/1.4 var(--sans);
+  word-break: break-word;
+}
+
+.proofRowVal.mono {
+  font-family: var(--mono);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.proofNote {
+  padding: 0 15px 13px;
+  font: 500 12px/1.5 var(--sans);
+  color: var(--ink-2);
+}

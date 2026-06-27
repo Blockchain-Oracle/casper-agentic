@@ -1,38 +1,4 @@
 @media (max-width: 980px) {
-  .nav,
-  .networkPill,
-  .runButton {
-    display: none;
-  }
-
-  .mobileMenuButton {
-    display: flex;
-  }
-
-  .mobilePanel {
-    display: block;
-    position: fixed;
-    inset: 64px 0 auto;
-    z-index: 25;
-    max-height: calc(100vh - 64px);
-    overflow: auto;
-    border-bottom: 1px solid var(--line);
-    background: var(--paper);
-    padding: 16px;
-  }
-
-  .mobilePanel[hidden] {
-    display: none;
-  }
-
-  .mobilePanel .navButton,
-  .mobilePanel .runButton {
-    display: flex;
-    width: 100%;
-    justify-content: flex-start;
-    border-radius: 10px;
-  }
-
   .grid.two,
   .grid.three,
   .receiptLayout,

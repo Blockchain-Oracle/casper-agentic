@@ -74,7 +74,7 @@ describe("integration health route", () => {
     const serialized = JSON.stringify(body);
 
     expect(body.walletSigning).toMatchObject({
-      browserWallet: { provider: "CSPR.click", status: "not_enabled" },
+      browserWallet: { provider: "CSPR.click", status: "configured" },
       currentPath: {
         mode: "testnet_signer",
         purpose: "integration_verification_only",

@@ -3,7 +3,7 @@
   border: 1px solid var(--warn-line);
   border-radius: 10px;
   background: var(--warn-soft);
-  color: #6c4300;
+  color: var(--warn-ink);
   font-size: 13px;
   line-height: 1.45;
 }
@@ -11,13 +11,13 @@
 .notice.signal {
   border-color: var(--signal-line);
   background: var(--signal-soft);
-  color: #0c5330;
+  color: var(--signal-ink);
 }
 
 .notice.danger {
   border-color: var(--danger-line);
   background: var(--danger-soft);
-  color: #84241f;
+  color: var(--danger-ink);
 }
 
 .emptyState {

@@ -24,13 +24,13 @@ const baseConfig = {
 };
 
 describe("wallet signing readiness", () => {
-  it("marks the Testnet signer as integration-only and browser signing as deferred", () => {
+  it("marks the Testnet signer as integration-only and exposes the CSPR.click default appId", () => {
     const readiness = getWalletSigningReadiness(baseConfig);
 
     expect(readiness).toMatchObject({
       browserWallet: {
         provider: "CSPR.click",
-        status: "not_enabled",
+        status: "configured",
       },
       currentPath: {
         mode: "testnet_signer",
@@ -57,7 +57,7 @@ describe("wallet signing readiness", () => {
     expect(serialized).not.toContain("payer.pem");
   });
 
-  it("reports missing signer config without enabling browser signing", () => {
+  it("reports missing signer config independently of the CSPR.click browser signing path", () => {
     const readiness = getWalletSigningReadiness({
       ...baseConfig,
       signerPrivateKeyPem: undefined,
@@ -65,7 +65,7 @@ describe("wallet signing readiness", () => {
     });
 
     expect(readiness.currentPath.status).toBe("missing_config");
-    expect(readiness.browserWallet.status).toBe("not_enabled");
+    expect(readiness.browserWallet.status).toBe("configured");
   });
 
   it("reports CSPR.click public runtime config without claiming live proof", () => {

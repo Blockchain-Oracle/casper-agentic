@@ -8,6 +8,7 @@ const extensions = new Set([".css", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"
 const excludedDirs = new Set([
   ".git",
   ".next",
+  ".claude", // agent worktrees + caches carry their own node_modules
   ".thoughts/raw/repos",
   "coverage",
   "node_modules",
@@ -19,6 +20,8 @@ const excludedFiles = new Set(["pnpm-lock.yaml", "next-env.d.ts"]);
 function shouldSkipPath(path) {
   const rel = relative(root, path).replaceAll("\\", "/");
   if (!rel || excludedFiles.has(rel)) return true;
+  // Skip nested node_modules anywhere (e.g. worktrees), not just the top level.
+  if (rel === "node_modules" || rel.includes("/node_modules/") || rel.endsWith("/node_modules")) return true;
   return [...excludedDirs].some((dir) => rel === dir || rel.startsWith(`${dir}/`));
 }
 

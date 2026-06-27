@@ -61,7 +61,7 @@ export function KeyValueList({
             <span
               className={row.mono ? "mono" : undefined}
               style={{
-                color: row.tone ? `var(--${row.tone})` : "var(--ink)",
+                color: row.tone && row.tone !== "neutral" ? `var(--${row.tone}-ink)` : "var(--ink)",
                 textAlign: "right",
                 overflowWrap: "anywhere",
               }}

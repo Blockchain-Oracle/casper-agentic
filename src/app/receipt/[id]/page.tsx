@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { ReceiptProofGrid, RECEIPT_PROOF_NOTE } from "@/components/receipt/receipt-detail-view";
+import { ReceiptProofTimeline, RECEIPT_PROOF_NOTE } from "@/components/receipt/receipt-detail-view";
 import { Panel } from "@/components/screen-primitives";
 import { StatusChip } from "@/components/ui";
 import { getReceiptDetail } from "@/server/receipt-store";
@@ -46,7 +46,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
 
         <div className="stack">
           <Panel title={`${detail.receipt.id} receipt`} action={<StatusChip status={detail.receipt.status} />}>
-            <ReceiptProofGrid detail={detail} />
+            <ReceiptProofTimeline detail={detail} />
           </Panel>
           <div className="notice">{RECEIPT_PROOF_NOTE}</div>
         </div>

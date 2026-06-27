@@ -11,13 +11,13 @@ import {
 } from "@/lib/csprclick-browser";
 
 describe("CSPR.click browser adapter boundary", () => {
-  it("stays not enabled until a public app id is configured", () => {
+  it("defaults to the public localhost template app id when none is configured", () => {
     const config = getCSPRClickPublicConfig({
       CSPR_CLOUD_API_KEY: "secret-cspr-cloud-token",
       NEXT_PUBLIC_CSPR_CLICK_APP_NAME: "Casper GW",
     });
 
-    expect(config).toMatchObject({ reason: "missing_app_id", status: "not_enabled" });
+    expect(config).toMatchObject({ appId: "csprclick-template", status: "configured" });
     expect(JSON.stringify(config)).not.toContain("secret-cspr-cloud-token");
   });
 

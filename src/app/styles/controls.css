@@ -19,7 +19,7 @@
 
 .segmented button[data-active="true"] {
   border: 1px solid var(--line-2);
-  background: white;
+  background: var(--card);
   color: var(--ink);
   box-shadow: var(--shadow);
 }
@@ -39,8 +39,8 @@
 
 .primaryButton {
   padding: 9px 15px;
-  background: var(--dark);
-  color: white;
+  background: var(--ink);
+  color: var(--card);
 }
 
 .primaryButton:disabled {
@@ -52,7 +52,7 @@
 .secondaryButton,
 .copyButton {
   border: 1px solid var(--line-2);
-  background: white;
+  background: var(--card);
   color: var(--ink-2);
 }
 
@@ -167,7 +167,7 @@
 
 .timelineDot.active {
   border-color: var(--primary);
-  background: white;
+  background: var(--card);
   color: var(--primary);
   animation: pulse 1.4s infinite;
 }
