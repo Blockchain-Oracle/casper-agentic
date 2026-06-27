@@ -8,25 +8,33 @@ import {
   requireLivePaidCallInput,
   type PaidCallInput,
 } from "./live-paid-call-input";
-import { evaluateLivePaidCallPolicy } from "./live-paid-call-policy";
 import { callMcpTool, discoverMcpTools } from "./mcp-client";
 import {
   persistAttempt,
-  persistAudit,
   persistCasperProof,
-  persistPolicyDecision,
   persistX402Record,
   updateAttemptStatus,
 } from "./receipt-store";
-import { buildSignerForWallet } from "./wallet-signer";
-import { getAgentWalletRecord } from "./wallet-store";
 import { X402FacilitatorClient } from "./x402-facilitator";
-import { buildPaymentRequirements, createCasperPaymentPayload, type ClientCasperSigner } from "./x402-payment";
+import {
+  buildPaymentRequirements,
+  createCasperPaymentPayload,
+  getConfiguredSignerAddress,
+} from "./x402-payment";
 
 export { PaidCallInputError, isPaidCallInputError } from "./live-paid-call-input";
 export type { PaidCallInput } from "./live-paid-call-input";
 
-export async function runLivePaidToolCall(input: PaidCallInput) {
+/** Gas floor (motes) the gateway wallet must keep to cover a settle deploy. */
+const MIN_GAS_MOTES = BigInt("5000000000");
+
+/**
+ * Run a paid tool call settled by the GATEWAY's own Testnet wallet (the env PEM
+ * signer). The API key authorizes the caller; the gateway pays. No per-user
+ * wallet selection and no spend policy — the funding-readiness guard below is the
+ * only pre-settlement gate. Proven verify → settle → Casper proof flow.
+ */
+export async function runGatewayPaidCall(input: PaidCallInput) {
   const config = requireIntegrationConfig();
   const facilitator = new X402FacilitatorClient(config);
   const csprCloud = new CsprCloudClient(config);
@@ -35,83 +43,48 @@ export async function runLivePaidToolCall(input: PaidCallInput) {
     throw new Error(`CSPR.cloud facilitator does not advertise ${config.casperNetwork} exact support`);
   }
 
-  const { args, endpointUrl, toolName, walletId } = requireLivePaidCallInput(input);
+  const { args, endpointUrl, toolName } = requireLivePaidCallInput(input);
   if (endpointUrl !== config.mcpUrl) {
-    throw new PaidCallInputError("Phase 3 paid execution is limited to the configured MCP endpoint");
+    throw new PaidCallInputError("Paid execution is limited to the configured MCP endpoint");
   }
 
   const tools = await discoverMcpTools(endpointUrl);
   const tool = tools.find((item) => item.name === toolName);
   if (!tool) throw new Error(`Remote MCP endpoint did not expose ${toolName}`);
 
-  const selectedWallet = await getAgentWalletRecord(walletId);
-  if (!selectedWallet) throw new PaidCallInputError("selected wallet not found");
-  const walletAccountHash = normalizeCasperAccountHash(selectedWallet.accountHash);
-  const paymentRequirements = buildPaymentRequirements(config);
+  const gatewayHash = normalizeCasperAccountHash(getConfiguredSignerAddress(config));
+  const requirements = buildPaymentRequirements(config);
   const attempt = await persistAttempt({
-    amount: paymentRequirements.amount,
-    asset: paymentRequirements.asset,
-    client: "phase-3-console",
-    network: paymentRequirements.network,
+    amount: requirements.amount,
+    asset: requirements.asset,
+    client: input.client ?? "gateway-console",
+    network: requirements.network,
     providerName: "CSPR.trade MCP",
     redactedInput: redactLiveInput(args),
     status: "policy_pending",
     toolName,
-    walletAccountHash,
+    walletAccountHash: gatewayHash,
   });
 
-  const blockAttempt = async (reason: string, audit: string, evidence: Record<string, unknown> = {}) => {
-    await persistPolicyDecision(attempt.id, false, reason, {
-      selectedWalletId: input.walletId,
-      signingMode: selectedWallet.signingMode,
-      walletAccountHash,
-      ...evidence,
-    });
+  const blocked = async (reason: string) => {
     await updateAttemptStatus(attempt.id, "blocked", reason);
-    await persistAudit(attempt.id, "block", audit, { reason, selectedWalletId: input.walletId });
-    return { attemptId: attempt.id, policy: { allowed: false, reason }, status: "blocked" as const };
+    return { attemptId: attempt.id, reason, status: "blocked" as const };
   };
 
-  // Signer for the selected wallet: hosted = its own decrypted key, test-signer = env PEM.
-  // The signer's account hash must equal the selected wallet — replaces the old single-signer gate.
-  let signer: ClientCasperSigner;
-  try {
-    signer = await buildSignerForWallet(config, selectedWallet);
-  } catch (error) {
-    return blockAttempt(
-      error instanceof Error ? error.message : "selected wallet cannot sign server-side",
-      "Selected wallet cannot sign server-side",
-    );
-  }
-  const signerHash = normalizeCasperAccountHash(signer.accountAddress());
-  if (signerHash !== walletAccountHash) {
-    return blockAttempt("signer key does not match the selected wallet", "Signer key does not match selected wallet", {
-      signerAccountHash: signerHash,
-    });
-  }
-
-  const account = await csprCloud.getAccount(walletAccountHash);
+  // Funding readiness — the gateway wallet must hold WCSPR (asset) + CSPR (gas).
+  const account = await csprCloud.getAccount(gatewayHash);
   const ownerships = await csprCloud.getFTOwnerships(account.account_hash, config.paymentAsset);
   const assetBalance = BigInt(ownerships[0]?.balance ?? "0");
   const gasBalance = BigInt(account.balance ?? "0");
-
-  const { evidence, policy } = await evaluateLivePaidCallPolicy({
-    assetBalance,
-    config,
-    gasBalance,
-    toolName,
-    walletAccountHash,
-  });
-  await persistPolicyDecision(attempt.id, policy.allowed, policy.reason, evidence);
-
-  if (!policy.allowed) {
-    await updateAttemptStatus(attempt.id, "blocked", policy.reason);
-    await persistAudit(attempt.id, "block", "Spend policy blocked before signing", { reason: policy.reason });
-    return { attemptId: attempt.id, policy, status: "blocked" };
+  if (assetBalance < BigInt(requirements.amount)) {
+    return blocked("Gateway settlement wallet is low on WCSPR — top up or wrap CSPR.");
+  }
+  if (gasBalance < MIN_GAS_MOTES) {
+    return blocked("Gateway settlement wallet is low on CSPR for gas.");
   }
 
   const resourceUrl = `${endpointUrl}#${toolName}`;
-  const payment = await createCasperPaymentPayload(config, resourceUrl, signer);
+  const payment = await createCasperPaymentPayload(config, resourceUrl);
   const verifyResponse = await facilitator.verify({
     paymentPayload: payment.paymentPayload,
     paymentRequirements: payment.paymentRequirements,
@@ -123,12 +96,10 @@ export async function runLivePaidToolCall(input: PaidCallInput) {
     paymentRequirements: payment.paymentRequirements,
     verifyResponse,
   });
-
   if (!verifyResponse.isValid) {
     const reason = verifyResponse.invalidReason ?? "verify_failed";
     await updateAttemptStatus(attempt.id, "verify_failed", reason);
-    await persistAudit(attempt.id, "fail", "x402 verify failed", { reason });
-    return { attemptId: attempt.id, status: "verify_failed", verifyResponse };
+    return { attemptId: attempt.id, status: "verify_failed" as const, verifyResponse };
   }
 
   const settleResponse = await facilitator.settle({
@@ -143,12 +114,10 @@ export async function runLivePaidToolCall(input: PaidCallInput) {
     settleResponse,
     verifyResponse,
   });
-
   if (!settleResponse.success || !settleResponse.transaction) {
     const reason = settleResponse.errorReason ?? "settle_failed";
     await updateAttemptStatus(attempt.id, "settle_failed", reason);
-    await persistAudit(attempt.id, "fail", "x402 settle failed", { reason });
-    return { attemptId: attempt.id, settleResponse, status: "settle_failed" };
+    return { attemptId: attempt.id, settleResponse, status: "settle_failed" as const };
   }
 
   const explorerUrl = `https://testnet.cspr.live/deploy/${settleResponse.transaction}`;
@@ -165,11 +134,7 @@ export async function runLivePaidToolCall(input: PaidCallInput) {
       proofStatus: "pending_indexing",
     });
     await updateAttemptStatus(attempt.id, "raw_proof_unavailable", "Casper proof pending CSPR.cloud indexing");
-    await persistAudit(attempt.id, "warn", "Casper proof pending after settlement", {
-      deployHash: settleResponse.transaction,
-      reason: proof.error,
-    });
-    return { attemptId: attempt.id, explorerUrl, status: "raw_proof_unavailable" };
+    return { attemptId: attempt.id, explorerUrl, status: "raw_proof_unavailable" as const };
   }
 
   await persistCasperProof({
@@ -184,14 +149,9 @@ export async function runLivePaidToolCall(input: PaidCallInput) {
   const result = await callMcpTool(endpointUrl, toolName, args);
   if (result.isError) {
     await updateAttemptStatus(attempt.id, "upstream_failed", "MCP tool returned an error", { text: result.text });
-    await persistAudit(attempt.id, "fail", "Upstream MCP tool failed after settlement", { toolName });
-    return { attemptId: attempt.id, explorerUrl, status: "upstream_failed" };
+    return { attemptId: attempt.id, explorerUrl, status: "upstream_failed" as const };
   }
 
   await updateAttemptStatus(attempt.id, "settled", undefined, { text: result.text });
-  await persistAudit(attempt.id, "ok", "Paid tool call settled with Casper proof", {
-    deployHash: settleResponse.transaction,
-    toolName,
-  });
-  return { attemptId: attempt.id, explorerUrl, status: "settled" };
+  return { attemptId: attempt.id, explorerUrl, status: "settled" as const };
 }

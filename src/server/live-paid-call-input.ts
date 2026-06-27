@@ -1,15 +1,14 @@
 export interface PaidCallInput {
   args: Record<string, unknown>;
+  client?: string;
   endpointUrl: string;
   toolName: string;
-  walletId: string;
 }
 
 export interface ParsedPaidCallInput {
   args: Record<string, unknown>;
   endpointUrl: string;
   toolName: string;
-  walletId: string;
 }
 
 export class PaidCallInputError extends Error {
@@ -25,7 +24,6 @@ export function requireLivePaidCallInput(input: PaidCallInput): ParsedPaidCallIn
     args: requireArgs(input.args),
     endpointUrl: requireText(input.endpointUrl, "endpointUrl"),
     toolName: requireText(input.toolName, "toolName"),
-    walletId: requireText(input.walletId, "walletId"),
   };
 }
 

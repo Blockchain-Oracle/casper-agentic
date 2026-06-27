@@ -1,158 +1,111 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  expectNoLivePayment,
-  livePaidCallInput,
-  setLivePaidCallDefaults,
-} from "./live-paid-call-fixtures";
-
-const mocks = vi.hoisted(() => ({
+const m = vi.hoisted(() => ({
   buildPaymentRequirements: vi.fn(),
   callMcpTool: vi.fn(),
   createCasperPaymentPayload: vi.fn(),
   discoverMcpTools: vi.fn(),
   getAccount: vi.fn(),
-  getContractPackageTokenActions: vi.fn(),
-  getDeploy: vi.fn(),
-  buildSignerForWallet: vi.fn(),
+  getConfiguredSignerAddress: vi.fn(),
   getFTOwnerships: vi.fn(),
-  getAgentWalletRecord: vi.fn(),
-  getSpendPolicyForWallet: vi.fn(),
-  getWalletDailySpend: vi.fn(),
   persistAttempt: vi.fn(),
-  persistAudit: vi.fn(),
   persistCasperProof: vi.fn(),
-  persistPolicyDecision: vi.fn(),
   persistX402Record: vi.fn(),
+  resolveCasperProof: vi.fn(),
   settle: vi.fn(),
   supported: vi.fn(),
   updateAttemptStatus: vi.fn(),
   verify: vi.fn(),
 }));
 
+vi.mock("@/server/x402-facilitator", () => ({
+  X402FacilitatorClient: class {
+    settle = m.settle;
+    supported = m.supported;
+    verify = m.verify;
+  },
+}));
+vi.mock("@/server/cspr-cloud", () => ({
+  CsprCloudClient: class {
+    getAccount = m.getAccount;
+    getFTOwnerships = m.getFTOwnerships;
+  },
+}));
+vi.mock("@/server/mcp-client", () => ({ callMcpTool: m.callMcpTool, discoverMcpTools: m.discoverMcpTools }));
+vi.mock("@/server/receipt-store", () => ({
+  persistAttempt: m.persistAttempt,
+  persistCasperProof: m.persistCasperProof,
+  persistX402Record: m.persistX402Record,
+  updateAttemptStatus: m.updateAttemptStatus,
+}));
+vi.mock("@/server/x402-payment", () => ({
+  buildPaymentRequirements: m.buildPaymentRequirements,
+  createCasperPaymentPayload: m.createCasperPaymentPayload,
+  getConfiguredSignerAddress: m.getConfiguredSignerAddress,
+}));
+vi.mock("@/server/casper-proof", () => ({ resolveCasperProof: m.resolveCasperProof }));
 vi.mock("@/server/env", () => ({
   requireIntegrationConfig: () => ({
     casperNetwork: "casper:casper-test",
-    csprCloudApiKey: "token",
-    csprCloudRestBaseUrl: "https://api.testnet.cspr.cloud",
-    facilitatorUrl: "https://x402-facilitator.cspr.cloud",
+    facilitatorUrl: "https://facilitator",
     mcpUrl: "https://mcp.cspr.trade/mcp",
     paymentAmount: "5",
     paymentAsset: "asset",
-    paymentAssetDecimals: 9,
-    paymentAssetName: "Wrapped CSPR",
-    paymentAssetSymbol: "WCSPR",
-    paymentTimeoutSeconds: 900,
-    payeeAccountHash: "payee",
-    signerKeyAlgo: "secp256k1",
-    signerPrivateKeyPem: "pem",
   }),
 }));
 
-vi.mock("@/server/x402-facilitator", () => ({
-  X402FacilitatorClient: vi.fn().mockImplementation(function X402FacilitatorClient() {
-    return {
-      settle: mocks.settle,
-      supported: mocks.supported,
-      verify: mocks.verify,
-    };
-  }),
-}));
+import { runGatewayPaidCall } from "@/server/live-paid-call";
 
-vi.mock("@/server/cspr-cloud", () => ({
-  CsprCloudClient: vi.fn().mockImplementation(function CsprCloudClient() {
-    return {
-      getAccount: mocks.getAccount,
-      getContractPackageTokenActions: mocks.getContractPackageTokenActions,
-      getDeploy: mocks.getDeploy,
-      getFTOwnerships: mocks.getFTOwnerships,
-    };
-  }),
-}));
+const ENDPOINT = "https://mcp.cspr.trade/mcp";
+const GATEWAY_HASH = "9accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d";
+const input = { args: { amount: "10" }, endpointUrl: ENDPOINT, toolName: "get_quote" };
 
-vi.mock("@/server/mcp-client", () => ({
-  callMcpTool: mocks.callMcpTool,
-  discoverMcpTools: mocks.discoverMcpTools,
-}));
+function setDefaults() {
+  m.supported.mockResolvedValue({ kinds: [{ network: "casper:casper-test", scheme: "exact" }] });
+  m.discoverMcpTools.mockResolvedValue([{ name: "get_quote" }]);
+  m.getConfiguredSignerAddress.mockReturnValue(`00${GATEWAY_HASH}`);
+  m.buildPaymentRequirements.mockReturnValue({ amount: "5", asset: "asset", network: "casper:casper-test" });
+  m.getAccount.mockResolvedValue({ account_hash: GATEWAY_HASH, balance: "10000000000" });
+  m.getFTOwnerships.mockResolvedValue([{ balance: "10" }]);
+  m.createCasperPaymentPayload.mockResolvedValue({
+    paymentPayload: { p: 1 },
+    paymentRequirements: { amount: "5", asset: "asset", network: "casper:casper-test" },
+  });
+  m.verify.mockResolvedValue({ isValid: true });
+  m.settle.mockResolvedValue({ success: true, transaction: "deploy-1" });
+  m.resolveCasperProof.mockResolvedValue({ deploy: { deploy_hash: "deploy-1", status: "processed" }, ftAction: { a: 1 } });
+  m.callMcpTool.mockResolvedValue({ isError: false, text: "quote" });
+  m.persistAttempt.mockResolvedValue({ id: "attempt-1" });
+}
 
-vi.mock("@/server/wallet-store", () => ({
-  getAgentWalletRecord: mocks.getAgentWalletRecord,
-}));
-
-vi.mock("@/server/receipt-store", () => ({
-  persistAttempt: mocks.persistAttempt,
-  persistAudit: mocks.persistAudit,
-  persistCasperProof: mocks.persistCasperProof,
-  persistPolicyDecision: mocks.persistPolicyDecision,
-  persistX402Record: mocks.persistX402Record,
-  updateAttemptStatus: mocks.updateAttemptStatus,
-}));
-
-vi.mock("@/server/spend-policy-store", () => ({
-  getSpendPolicyForWallet: mocks.getSpendPolicyForWallet,
-  getWalletDailySpend: mocks.getWalletDailySpend,
-}));
-
-vi.mock("@/server/x402-payment", () => ({
-  buildPaymentRequirements: mocks.buildPaymentRequirements,
-  createCasperPaymentPayload: mocks.createCasperPaymentPayload,
-}));
-
-vi.mock("@/server/wallet-signer", () => ({
-  buildSignerForWallet: mocks.buildSignerForWallet,
-}));
-
-import { runLivePaidToolCall } from "@/server/live-paid-call";
-
-describe("live paid-call orchestration", () => {
+describe("runGatewayPaidCall (gateway-signer settle)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.unstubAllEnvs();
-    setLivePaidCallDefaults(mocks);
+    setDefaults();
   });
 
-  it("blocks before payment when no persisted spend policy exists", async () => {
-    mocks.getSpendPolicyForWallet.mockResolvedValue(null);
-
-    await expect(runLivePaidToolCall(livePaidCallInput())).resolves.toMatchObject({ attemptId: "attempt-1", status: "blocked" });
-    expectNoLivePayment(mocks);
-    expect(mocks.persistAttempt).toHaveBeenCalledWith(expect.objectContaining({ status: "policy_pending" }));
-    expect(mocks.updateAttemptStatus).toHaveBeenCalledWith("attempt-1", "blocked", "no active spend policy for wallet");
+  it("settles via the gateway wallet and records a Casper deploy", async () => {
+    const result = await runGatewayPaidCall(input);
+    expect(result.status).toBe("settled");
+    if (result.status !== "settled") throw new Error(`expected settled, got ${result.status}`);
+    expect(result.explorerUrl).toContain("deploy-1");
+    expect(m.verify).toHaveBeenCalledOnce();
+    expect(m.settle).toHaveBeenCalledOnce();
+    expect(m.persistCasperProof).toHaveBeenCalled();
   });
 
-  it("fails closed when the selected wallet is not the configured signer", async () => {
-    const otherHash = "1accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d";
-    mocks.getAgentWalletRecord.mockResolvedValue({
-      accountHash: otherHash,
-      id: "wallet-2",
-      label: "Browser wallet",
-      signingMode: "browser-wallet",
-    });
+  it("blocks without paying when the gateway wallet is low on WCSPR", async () => {
+    m.getFTOwnerships.mockResolvedValue([{ balance: "1" }]);
+    const result = await runGatewayPaidCall(input);
+    expect(result.status).toBe("blocked");
+    expect(m.verify).not.toHaveBeenCalled();
+    expect(m.settle).not.toHaveBeenCalled();
+  });
 
-    await expect(
-      runLivePaidToolCall({
-        ...livePaidCallInput(),
-        walletId: "wallet-2",
-      }),
-    ).resolves.toMatchObject({
-      attemptId: "attempt-1",
-      status: "blocked",
-    });
-
-    expect(mocks.persistAttempt).toHaveBeenCalledWith(
-      expect.objectContaining({
-        redactedInput: { amount: "10", token_in: "CSPR", token_out: "WCSPR", type: "exact_in" },
-        status: "policy_pending",
-        walletAccountHash: otherHash,
-      }),
-    );
-    expect(mocks.persistPolicyDecision).toHaveBeenCalledWith(
-      "attempt-1",
-      false,
-      "signer key does not match the selected wallet",
-      expect.objectContaining({ selectedWalletId: "wallet-2", signingMode: "browser-wallet" }),
-    );
-    expectNoLivePayment(mocks);
-    expect(mocks.getAccount).not.toHaveBeenCalled();
+  it("does not settle when verify fails", async () => {
+    m.verify.mockResolvedValue({ invalidReason: "expired", isValid: false });
+    const result = await runGatewayPaidCall(input);
+    expect(result.status).toBe("verify_failed");
+    expect(m.settle).not.toHaveBeenCalled();
   });
 });
