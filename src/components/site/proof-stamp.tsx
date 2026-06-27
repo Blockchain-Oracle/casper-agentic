@@ -1,5 +1,17 @@
 import { cn } from "@/lib/utils";
 
+/** Compact brand mark (the proof-stamp distilled): a red ring + the Casper angle
+ * mark. Used as the nav symbol and favicon — the logo IS the proof motif. */
+export function BrandMark({ size = 22, className }: { size?: number; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} className={cn("text-casper", className)} aria-hidden>
+      <circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor" strokeWidth="1.2" opacity="0.5" />
+      <circle cx="12" cy="12" r="7.6" fill="none" stroke="currentColor" strokeWidth="0.6" opacity="0.35" />
+      <rect x="7.6" y="7.6" width="8.8" height="8.8" transform="rotate(45 12 12)" fill="none" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
 /**
  * The Proof-Print signature: a circular halftone "settlement seal" in Casper red.
  * Static brand form here (a logo/marker); the P6 settle animation will stamp it

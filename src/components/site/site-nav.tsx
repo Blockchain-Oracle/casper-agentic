@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { KeyRound, Moon, Sun } from "lucide-react";
 
+import { BrandMark } from "@/components/site/proof-stamp";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -22,9 +23,7 @@ export function SiteNav() {
     <header className="sticky top-0 z-40 border-b border-hairline bg-surface/85 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-5">
         <Link href="/" className="flex items-center gap-2 font-display text-[15px] font-bold text-ink">
-          <span className="grid size-5 place-items-center">
-            <span className="block size-3 rotate-45 border-[1.6px] border-casper" />
-          </span>
+          <BrandMark size={22} />
           Casper GW
           <span className="rounded-sm border border-hairline px-1.5 py-0.5 font-mono text-[9px] font-medium tracking-widest text-ink-3">
             TESTNET
