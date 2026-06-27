@@ -34,13 +34,14 @@ afterEach(() => {
 });
 
 describe("provider source routes", () => {
-  it("requires operator access before listing provider sources", async () => {
+  it("lists provider sources without an operator token (public gateway)", async () => {
     const { GET } = await import("@/app/api/provider/sources/route");
+    mocks.listProviderSources.mockResolvedValue([]);
 
     const response = await GET(request("https://gw.test/api/provider/sources"));
 
-    expect(response.status).toBe(403);
-    expect(mocks.listProviderSources).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(mocks.listProviderSources).toHaveBeenCalled();
   });
 
   it("creates provider sources with operator access", async () => {

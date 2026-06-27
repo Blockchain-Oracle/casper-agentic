@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { DEFAULT_CASPER_NETWORK, DEFAULT_WCSPR_PACKAGE, getRuntimeConfig } from "@/server/env";
-import { isOperatorAccessError, requireOperatorRequest } from "@/server/operator-access";
 import { saveToolPrice } from "@/server/provider-store";
 import { buildPaymentRequirements } from "@/server/x402-payment";
 
@@ -10,7 +9,6 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const body = await request.json().catch(() => ({}));
   try {
-    requireOperatorRequest(request);
     const { id } = await context.params;
     const config = getRuntimeConfig();
     const payeeAccountHash = assertServerPaymentDefaults(body, config);
@@ -30,7 +28,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const message = error instanceof Error ? error.message : "provider_tool_price_failed";
     return NextResponse.json(
       { error: message },
-      { status: isOperatorAccessError(error) ? error.status : 400 },
+      { status: 400 },
     );
   }
 }

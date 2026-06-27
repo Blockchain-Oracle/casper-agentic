@@ -53,4 +53,4 @@ next-env.d.ts
 # local screenshot/verification artifacts
 .playwright-mcp/
 .thoughts/screenshots/
-/p1-landing-*.png
+/p[0-9]-*.png

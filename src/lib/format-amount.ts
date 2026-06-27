@@ -18,6 +18,18 @@ export function formatTokenAmount(value: string | null | undefined): string {
   return fraction ? `${whole}.${fraction}` : `${whole}`;
 }
 
+/** Inverse of formatTokenAmount: a decimal token amount ("7.5") → raw motes ("7500000000"). */
+export function parseTokenToMotes(value: string): string {
+  const trimmed = value.trim();
+  if (!/^\d+(\.\d{1,9})?$/.test(trimmed)) {
+    throw new Error("amount must be a positive number with up to 9 decimals");
+  }
+  const [whole, fraction = ""] = trimmed.split(".");
+  const motes = BigInt(whole) * MOTES_PER_TOKEN + BigInt((fraction + "000000000").slice(0, 9));
+  if (motes <= BigInt(0)) throw new Error("amount must be greater than zero");
+  return motes.toString();
+}
+
 /**
  * Display symbol for the payment asset. WCSPR is the gateway's only payment
  * asset; Postgres records it as the token contract hash, so a hash-like asset
