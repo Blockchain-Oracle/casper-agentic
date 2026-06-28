@@ -1,56 +1,52 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowUpRight } from "lucide-react";
 
-import { ReceiptProofTimeline, RECEIPT_PROOF_NOTE } from "@/components/receipt/receipt-detail-view";
-import { Panel } from "@/components/screen-primitives";
-import { StatusChip } from "@/components/ui";
+import { ReceiptProofTimeline, RECEIPT_PROOF_NOTE, StatusBadge } from "@/components/receipt/receipt-detail-view";
+import { SiteNav } from "@/components/site/site-nav";
 import { getReceiptDetail } from "@/server/receipt-store";
 
 export const dynamic = "force-dynamic";
 
-// Public, no-sign-in receipt proof page. Resolves a real receipt server-side
-// (falls back to labeled fixture data only when DATABASE_URL is unset, inside
-// getReceiptDetail); a genuinely unknown id is a 404, never a stand-in receipt.
+// Public, no-sign-in Casper x402 payment proof. A genuinely unknown id is a 404.
 export default async function ReceiptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const detail = await getReceiptDetail(id);
   if (!detail) notFound();
-
   const deployHash = detail.receipt.hash;
 
   return (
-    <main className="app">
-      <section className="page">
-        <header className="pageHeader">
-          <div className="eyebrow">Public receipt · no sign-in</div>
-          <h1 className="mono">{detail.receipt.id}</h1>
-          <p className="subhead">Casper x402 payment proof. Anyone can verify this — no wallet or account required.</p>
-          <div className="buttonRow" style={{ marginTop: 14, alignItems: "center", gap: 12 }}>
-            <StatusChip status={detail.receipt.status} />
-            <Link className="mono" href="/explorer" style={{ color: "var(--ink-2)", fontSize: 13 }}>
-              ← Explorer
-            </Link>
-            {deployHash ? (
-              <a
-                className="mono"
-                href={`https://testnet.cspr.live/deploy/${deployHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "var(--brand)", fontSize: 13 }}
-              >
-                Open raw proof on testnet.cspr.live ↗
-              </a>
-            ) : null}
-          </div>
-        </header>
+    <div className="min-h-dvh bg-surface text-ink">
+      <SiteNav />
+      <main className="mx-auto max-w-2xl px-5 py-12">
+        <Link href="/explorer" className="font-mono text-xs text-ink-3 hover:text-ink">← Explorer</Link>
+        <div className="mt-4 font-mono text-[11px] uppercase tracking-widest text-ink-3">Public receipt · no sign-in</div>
+        <h1 className="mt-1.5 break-all font-mono text-lg text-ink">{detail.receipt.id}</h1>
+        <p className="mt-2 text-[15px] leading-relaxed text-ink-2">
+          Casper x402 payment proof. Anyone can verify this — no wallet or account required.
+        </p>
 
-        <div className="stack">
-          <Panel title={`${detail.receipt.id} receipt`} action={<StatusChip status={detail.receipt.status} />}>
-            <ReceiptProofTimeline detail={detail} />
-          </Panel>
-          <div className="notice">{RECEIPT_PROOF_NOTE}</div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <StatusBadge status={detail.receipt.status} />
+          {deployHash ? (
+            <a
+              className="inline-flex items-center gap-1 font-mono text-xs text-casper hover:underline"
+              href={`https://testnet.cspr.live/deploy/${deployHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open raw proof on testnet.cspr.live <ArrowUpRight className="size-3.5" />
+            </a>
+          ) : null}
         </div>
-      </section>
-    </main>
+
+        <div className="mt-8">
+          <ReceiptProofTimeline detail={detail} />
+        </div>
+        <p className="mt-4 rounded-lg border border-hairline bg-well px-4 py-3 text-xs leading-relaxed text-ink-3">
+          {RECEIPT_PROOF_NOTE}
+        </p>
+      </main>
+    </div>
   );
 }

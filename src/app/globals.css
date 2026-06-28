@@ -1,21 +1,9 @@
-/* Casper GW — Proof-Print design system on Tailwind v4 (CSS-first). */
-@layer theme, base, legacy, components, utilities;
+/* Casper GW — Proof-Print design system on Tailwind v4 (CSS-first).
+ * 100% Tailwind/Proof-Print — all legacy hand-rolled CSS has been removed. */
+@layer theme, base, components, utilities;
 
 @import "tailwindcss";
 @import "tw-animate-css";
-
-/* CONDEMNED legacy CSS — only the surfaces not yet rebuilt still render through it
- * (explorer + receipt → deleted in P6; /app → deleted in its teardown). Each file
- * dies the moment its surface is rebuilt; nothing here survives. The `legacy` layer
- * just keeps these readable until then (below utilities so new classes always win). */
-@import "./styles/base.css" layer(legacy);
-@import "./styles/navigation.css" layer(legacy);
-@import "./styles/layout.css" layer(legacy);
-@import "./styles/controls.css" layer(legacy);
-@import "./styles/surfaces.css" layer(legacy);
-@import "./styles/receipt.css" layer(legacy);
-@import "./styles/utilities.css" layer(legacy);
-@import "./styles/responsive.css" layer(legacy);
 
 /* One global light/dark toggle — next-themes writes data-theme on <html>. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

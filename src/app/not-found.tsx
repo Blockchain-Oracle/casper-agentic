@@ -1,81 +1,40 @@
 import Link from "next/link";
 
+import { BrandMark } from "@/components/site/proof-stamp";
+import { Button } from "@/components/ui/button";
+
 /**
- * Custom 404 — framed in the product's own language. A missing route is a proof
- * lookup that found nothing, so it reads like a failed receipt (verify-fail chip,
- * the diamond mark) and points the visitor at the explorer. Token-driven, so it
- * renders correctly in both themes.
+ * Custom 404, framed in the product's own language: a missing route is a proof
+ * lookup that found nothing, so it reads like a failed verify (ochre, never red —
+ * red is reserved for positive proof) and points to the explorer. Proof-Print.
  */
 export default function NotFound() {
   return (
-    <main className="app" style={{ display: "grid", placeItems: "center", minHeight: "100vh", padding: 24 }}>
-      <section style={{ width: "100%", maxWidth: 560, textAlign: "center" }}>
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 9,
-            font: "600 12px/1 var(--mono)",
-            letterSpacing: "0.16em",
-            color: "var(--brand-ink)",
-            textTransform: "uppercase",
-          }}
-        >
-          <span style={{ width: 11, height: 11, background: "var(--brand)", transform: "rotate(45deg)", borderRadius: 2 }} />
-          Proof not found
+    <main className="grid min-h-dvh place-items-center bg-surface px-6 text-ink">
+      <section className="w-full max-w-lg text-center">
+        <div className="inline-flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-3">
+          <BrandMark size={14} /> Proof not found
         </div>
 
-        <div style={{ font: "800 clamp(72px, 16vw, 104px)/1 var(--sans)", letterSpacing: "-0.04em", color: "var(--ink)", marginTop: 16 }}>
-          404
-        </div>
+        <div className="mt-4 font-display text-[clamp(72px,16vw,104px)] font-bold leading-none tracking-tight text-ink">404</div>
 
-        <h1 style={{ font: "700 24px/1.15 var(--sans)", letterSpacing: "-0.02em", color: "var(--ink)", margin: "12px 0 0" }}>
-          No receipt at this address
-        </h1>
-        <p style={{ font: "500 15px/1.6 var(--sans)", color: "var(--ink-2)", margin: "12px auto 0", maxWidth: 440 }}>
-          The page, receipt, or deploy you&rsquo;re looking for doesn&rsquo;t exist — or never settled. Verify a proof in the
-          explorer, or head back to the gateway.
+        <h1 className="mt-3 font-display text-2xl font-bold tracking-tight text-ink">No receipt at this address</h1>
+        <p className="mx-auto mt-3 max-w-sm text-[15px] leading-relaxed text-ink-2">
+          The page, receipt, or deploy you&rsquo;re looking for doesn&rsquo;t exist — or never settled. Verify a proof in
+          the explorer, or head back to the gateway.
         </p>
 
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            marginTop: 22,
-            padding: "6px 12px",
-            borderRadius: 999,
-            background: "var(--danger-soft)",
-            border: "1px solid var(--danger-line)",
-            font: "600 11px/1 var(--mono)",
-            letterSpacing: "0.04em",
-            color: "var(--brand-ink)",
-          }}
-        >
-          <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--brand)" }} />
-          VERIFY FAIL · 404
+        <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-signal/40 bg-signal/10 px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-signal">
+          <span className="size-1.5 rounded-full bg-signal" /> Verify fail · 404
         </div>
 
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginTop: 26 }}>
-          <Link
-            href="/explorer"
-            style={{ padding: "13px 22px", borderRadius: 9, background: "var(--ink)", color: "var(--paper)", font: "600 14px/1 var(--sans)" }}
-          >
-            Open explorer →
-          </Link>
-          <Link
-            href="/"
-            style={{
-              padding: "13px 22px",
-              borderRadius: 9,
-              background: "var(--card)",
-              border: "1px solid var(--line-2)",
-              color: "var(--ink)",
-              font: "600 14px/1 var(--sans)",
-            }}
-          >
-            Back home
-          </Link>
+        <div className="mt-7 flex flex-wrap justify-center gap-3">
+          <Button asChild>
+            <Link href="/explorer">Open explorer →</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/">Back home</Link>
+          </Button>
         </div>
       </section>
     </main>
