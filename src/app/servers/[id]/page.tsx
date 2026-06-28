@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 
+import { ConnectDialog } from "@/components/connect/connect-dialog";
 import { SiteNav } from "@/components/site/site-nav";
 import { ServerTools } from "@/components/tools/server-tools";
 import { formatAsset, formatTokenAmount } from "@/lib/format-amount";
@@ -28,8 +29,13 @@ export default async function ServerDetailPage({ params }: { params: Promise<{ i
           ← Servers
         </Link>
 
-        <h1 className="mt-4 font-display text-3xl font-bold tracking-tight text-ink">{server.source.name}</h1>
-        <div className="mt-2 font-mono text-xs text-ink-3">{server.source.endpointUrl}</div>
+        <div className="mt-4 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{server.source.name}</h1>
+            <div className="mt-2 break-all font-mono text-xs text-ink-3">{server.source.endpointUrl}</div>
+          </div>
+          <ConnectDialog sourceId={server.source.id} serverName={server.source.name} />
+        </div>
 
         <section className="mt-8">
           <div className="mb-3 font-mono text-[11px] uppercase tracking-widest text-ink-3">
