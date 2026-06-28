@@ -1,11 +1,8 @@
 import { NextRequest } from "next/server";
 
-export function hostedEndpointPostRequest(init: { body: unknown; paymentSignature?: string }) {
-  const headers = new Headers({
-    authorization: "Bearer cgw_test_limited",
-    "content-type": "application/json",
-  });
-  if (init.paymentSignature) headers.set("payment-signature", init.paymentSignature);
+export function hostedEndpointPostRequest(init: { body: unknown; apiKey?: string }) {
+  const headers = new Headers({ "content-type": "application/json" });
+  if (init.apiKey) headers.set("x-api-key", init.apiKey);
 
   return new NextRequest("https://gw.test/api/mcp/source-1", {
     body: JSON.stringify(init.body),

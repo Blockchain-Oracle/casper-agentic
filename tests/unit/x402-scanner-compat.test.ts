@@ -47,12 +47,10 @@ describe("x402 scanner compatibility preflight", () => {
     const manifest = buildHostedDiscoveryManifest({
       endpoint,
       requestUrl: "https://gw.test/api/mcp/source-1/discovery",
-      scope: { sourceId: "source-1", toolIds: ["tool-1"] },
     });
 
     expect(metadata.scannerCompatibility.publicDiscovery).toBe("not_enabled");
     expect(metadata.scannerCompatibility.endpointOnlyProbe).toBe("blocked_by_client_access");
-    expect(manifest.scannerCompatibility).toEqual(metadata.scannerCompatibility);
     expect(JSON.stringify({ manifest, metadata })).not.toContain("https://mcp.cspr.trade/mcp");
     expect(JSON.stringify({ manifest, metadata })).not.toContain("credentialRef");
     expect(JSON.stringify({ manifest, metadata })).not.toContain("tokenHash");

@@ -4,48 +4,30 @@ import { hostedEndpointPostRequest, hostedEndpointPostView } from "./hosted-endp
 
 const mocks = vi.hoisted(() => ({
   getHostedEndpoint: vi.fn(),
-  requireEndpointAccess: vi.fn(),
-  runHostedPaidToolCall: vi.fn(),
+  runGatewayPaidCall: vi.fn(),
 }));
-
-vi.mock("@/server/endpoint-access", async () => {
-  const actual = await vi.importActual<typeof import("@/server/endpoint-access")>("@/server/endpoint-access");
-  return {
-    ...actual,
-    requireEndpointAccess: mocks.requireEndpointAccess,
-  };
-});
 
 vi.mock("@/server/hosted-endpoint", async () => {
   const actual = await vi.importActual<typeof import("@/server/hosted-endpoint")>("@/server/hosted-endpoint");
-  return {
-    ...actual,
-    getHostedEndpoint: mocks.getHostedEndpoint,
-  };
+  return { ...actual, getHostedEndpoint: mocks.getHostedEndpoint };
 });
 
-vi.mock("@/server/hosted-paid-call", async () => {
-  const actual = await vi.importActual<typeof import("@/server/hosted-paid-call")>("@/server/hosted-paid-call");
-  return {
-    ...actual,
-    runHostedPaidToolCall: mocks.runHostedPaidToolCall,
-  };
+vi.mock("@/server/live-paid-call", async () => {
+  const actual = await vi.importActual<typeof import("@/server/live-paid-call")>("@/server/live-paid-call");
+  return { ...actual, runGatewayPaidCall: mocks.runGatewayPaidCall };
 });
 
 const originalEnv = { ...process.env };
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
-
+beforeEach(() => vi.clearAllMocks());
 afterEach(() => {
   process.env = { ...originalEnv };
 });
 
+const DEPLOY = "4ab57794dc8e2f36cba9144b088a20e67815a750b2289cb1210804b1d5cedc83";
+
 describe("hosted MCP endpoint POST route", () => {
-  it("returns MCP tools/list metadata with x402 payment requirements", async () => {
+  it("returns MCP tools/list metadata with x402 payment requirements (open, no key)", async () => {
     const { POST } = await import("@/app/api/mcp/[sourceId]/route");
-    mockScopedAccess();
     mocks.getHostedEndpoint.mockResolvedValue(hostedEndpointPostView());
 
     const response = await POST(
@@ -55,11 +37,8 @@ describe("hosted MCP endpoint POST route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(mocks.getHostedEndpoint).toHaveBeenCalledWith("source-1", ["tool-1"]);
-    expect(body.result.tools[0]).toMatchObject({
-      _meta: { "casperGw/toolId": "tool-1" },
-      name: "get_quote",
-    });
+    expect(mocks.getHostedEndpoint).toHaveBeenCalledWith("source-1");
+    expect(body.result.tools[0]).toMatchObject({ _meta: { "casperGw/toolId": "tool-1" }, name: "get_quote" });
     expect(body.result.tools[0]._meta["casperGw/paymentRequirements"]).toMatchObject({
       amount: "7500000000",
       network: "casper:casper-test",
@@ -69,130 +48,71 @@ describe("hosted MCP endpoint POST route", () => {
     expect(JSON.stringify(body)).not.toContain("tokenHash");
   });
 
-  it("returns a real x402 402 challenge for unpaid priced tool calls", async () => {
-    const { decodePaymentRequiredHeader } = await import("@x402/core/http");
+  it("rejects tools/call without an API key (401), never settling", async () => {
     const { POST } = await import("@/app/api/mcp/[sourceId]/route");
-    mockScopedAccess();
     mocks.getHostedEndpoint.mockResolvedValue(hostedEndpointPostView());
 
     const response = await POST(
       hostedEndpointPostRequest({
-        body: {
-          id: "call-1",
-          jsonrpc: "2.0",
-          method: "tools/call",
-          params: { arguments: { amount: "1" }, name: "get_quote" },
-        },
+        body: { id: "call-1", jsonrpc: "2.0", method: "tools/call", params: { arguments: { amount: "1" }, name: "get_quote" } },
       }),
       { params: Promise.resolve({ sourceId: "source-1" }) },
     );
     const body = await response.json();
-    const requiredHeader = response.headers.get("PAYMENT-REQUIRED");
 
-    expect(response.status).toBe(402);
-    expect(requiredHeader).toBeTruthy();
-    expect(decodePaymentRequiredHeader(requiredHeader ?? "")).toEqual(body);
-    expect(body).toMatchObject({
-      accepts: [
-        {
-          amount: "7500000000",
-          asset: "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e",
-          network: "casper:casper-test",
-          payTo: "009accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d",
-          scheme: "exact",
-        },
-      ],
-      error: "PAYMENT-SIGNATURE header is required",
-      resource: {
-        mimeType: "application/json",
-        url: "https://gw.test/api/mcp/source-1#get_quote",
-      },
-      x402Version: 2,
-    });
-    expect(JSON.stringify(body)).not.toContain("settled");
-    expect(JSON.stringify(body)).not.toContain("deploy");
+    expect(response.status).toBe(401);
+    expect(body.error.code).toBe(-32001);
+    expect(mocks.runGatewayPaidCall).not.toHaveBeenCalled();
   });
 
-  it("delegates signed payment calls and returns payment response headers on success", async () => {
+  it("settles a keyed tools/call and returns the result + payment-response + receipt header", async () => {
     const { POST } = await import("@/app/api/mcp/[sourceId]/route");
-    mockScopedAccess();
     mocks.getHostedEndpoint.mockResolvedValue(hostedEndpointPostView());
-    mocks.runHostedPaidToolCall.mockResolvedValue({
+    mocks.runGatewayPaidCall.mockResolvedValue({
       attemptId: "attempt-1",
-      kind: "success",
-      paymentResponseHeader: "encoded-settlement",
+      explorerUrl: `https://testnet.cspr.live/deploy/${DEPLOY}`,
       result: { content: [{ text: "quote", type: "text" }] },
+      status: "settled",
     });
 
     const response = await POST(
       hostedEndpointPostRequest({
-        body: {
-          id: "call-1",
-          jsonrpc: "2.0",
-          method: "tools/call",
-          params: { arguments: {}, name: "get_quote" },
-        },
-        paymentSignature: "base64-payment-payload",
+        apiKey: "casper_demo",
+        body: { id: "call-1", jsonrpc: "2.0", method: "tools/call", params: { arguments: {}, name: "get_quote" } },
       }),
       { params: Promise.resolve({ sourceId: "source-1" }) },
     );
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("PAYMENT-RESPONSE")).toBe("encoded-settlement");
     expect(response.headers.get("x-casper-gw-receipt-id")).toBe("attempt-1");
-    expect(body).toEqual({
-      id: "call-1",
-      jsonrpc: "2.0",
-      result: { content: [{ text: "quote", type: "text" }] },
-    });
-    expect(mocks.runHostedPaidToolCall).toHaveBeenCalledWith({
+    expect(body.result.content).toEqual([{ text: "quote", type: "text" }]);
+    expect(body.result._meta["x402/payment-response"]).toMatchObject({ success: true, transaction: DEPLOY });
+    expect(mocks.runGatewayPaidCall).toHaveBeenCalledWith({
+      apiKey: "casper_demo",
       args: {},
-      endpoint: hostedEndpointPostView(),
-      paymentHeader: "base64-payment-payload",
-      requestUrl: "https://gw.test/api/mcp/source-1",
-      tool: hostedEndpointPostView().tools[0],
+      client: "hosted-mcp-endpoint",
+      endpointUrl: "https://mcp.cspr.trade/mcp",
+      toolName: "get_quote",
     });
   });
 
-  it("returns JSON-RPC for malformed payment signatures after request id parsing", async () => {
-    const { HostedPaidCallInputError } = await import("@/server/hosted-paid-call");
+  it("returns a 402 JSON-RPC error when settlement does not succeed", async () => {
     const { POST } = await import("@/app/api/mcp/[sourceId]/route");
-    mockScopedAccess();
     mocks.getHostedEndpoint.mockResolvedValue(hostedEndpointPostView());
-    mocks.runHostedPaidToolCall.mockRejectedValue(new HostedPaidCallInputError("invalid payment signature header"));
+    mocks.runGatewayPaidCall.mockResolvedValue({ attemptId: "attempt-2", status: "settle_failed" });
 
     const response = await POST(
       hostedEndpointPostRequest({
-        body: {
-          id: "call-1",
-          jsonrpc: "2.0",
-          method: "tools/call",
-          params: { arguments: {}, name: "get_quote" },
-        },
-        paymentSignature: "not-valid",
+        apiKey: "casper_demo",
+        body: { id: "call-1", jsonrpc: "2.0", method: "tools/call", params: { arguments: {}, name: "get_quote" } },
       }),
       { params: Promise.resolve({ sourceId: "source-1" }) },
     );
     const body = await response.json();
 
-    expect(response.status).toBe(400);
-    expect(body).toEqual({
-      error: {
-        code: -32012,
-        data: { status: "invalid_payment" },
-        message: "invalid payment signature header",
-      },
-      id: "call-1",
-      jsonrpc: "2.0",
-    });
+    expect(response.status).toBe(402);
+    expect(body.error.code).toBe(-32010);
+    expect(body.error.data).toMatchObject({ attemptId: "attempt-2", status: "settle_failed" });
   });
 });
-
-function mockScopedAccess() {
-  mocks.requireEndpointAccess.mockResolvedValue({
-    id: "key-1",
-    scope: { sourceId: "source-1", toolIds: ["tool-1"] },
-    sourceId: "source-1",
-  });
-}

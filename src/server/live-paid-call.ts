@@ -52,12 +52,16 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
   // operation stored at register time. Settlement (x402) is identical either way.
   const source = await getSourceByEndpoint(endpointUrl);
   const providerName = source?.name ?? "MCP source";
-  let execute: () => Promise<{ isError: boolean; text?: string }>;
+  let execute: () => Promise<{ isError: boolean; text?: string; result?: unknown }>;
   if (source?.sourceType === "openapi") {
     const toolRow = await getToolByName(source.id, toolName);
     const operation = toolRow ? parseRestOperation(toolRow.upstreamTarget) : null;
     if (!operation) throw new Error(`OpenAPI source did not expose ${toolName}`);
-    execute = () => callRestTool(operation, args);
+    execute = async () => {
+      const rest = await callRestTool(operation, args);
+      // Shape a REST response as an MCP CallToolResult so the hosted MCP server can return it.
+      return { isError: rest.isError, result: { content: [{ text: rest.text, type: "text" }] }, text: rest.text };
+    };
   } else {
     const tools = await discoverMcpTools(endpointUrl);
     if (!tools.some((item) => item.name === toolName)) {
@@ -145,37 +149,42 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
   }
 
   const explorerUrl = `https://testnet.cspr.live/deploy/${settleResponse.transaction}`;
+
+  // Payment settled on-chain — run the upstream tool NOW, independent of explorer
+  // proof indexing, so the caller always gets the result they paid for.
+  const result = await execute();
+
+  // Resolve + persist the Casper proof (best-effort; indexing can lag the settle).
   const proof = await resolveCasperProof(csprCloud, {
     asset: config.paymentAsset,
     deployHash: settleResponse.transaction,
   });
-
-  if (!proof.deploy) {
+  if (proof.deploy) {
+    await persistCasperProof({
+      attemptId: attempt.id,
+      deploy: proof.deploy,
+      deployHash: proof.deploy.deploy_hash,
+      explorerUrl,
+      ftAction: proof.ftAction,
+      proofStatus: proof.deploy.status,
+    });
+  } else {
     await persistCasperProof({
       attemptId: attempt.id,
       deployHash: settleResponse.transaction,
       explorerUrl,
       proofStatus: "pending_indexing",
     });
-    await updateAttemptStatus(attempt.id, "raw_proof_unavailable", "Casper proof pending CSPR.cloud indexing");
-    return { attemptId: attempt.id, explorerUrl, status: "raw_proof_unavailable" as const };
   }
 
-  await persistCasperProof({
-    attemptId: attempt.id,
-    deploy: proof.deploy,
-    deployHash: proof.deploy.deploy_hash,
-    explorerUrl,
-    ftAction: proof.ftAction,
-    proofStatus: proof.deploy.status,
-  });
-
-  const result = await execute();
   if (result.isError) {
-    await updateAttemptStatus(attempt.id, "upstream_failed", "MCP tool returned an error", { text: result.text });
-    return { attemptId: attempt.id, explorerUrl, status: "upstream_failed" as const };
+    await updateAttemptStatus(attempt.id, "upstream_failed", "tool returned an error", { text: result.text });
+    return { attemptId: attempt.id, explorerUrl, result: result.result, status: "upstream_failed" as const };
   }
-
+  if (!proof.deploy) {
+    await updateAttemptStatus(attempt.id, "raw_proof_unavailable", "Casper proof pending CSPR.cloud indexing", { text: result.text });
+    return { attemptId: attempt.id, explorerUrl, result: result.result, status: "raw_proof_unavailable" as const };
+  }
   await updateAttemptStatus(attempt.id, "settled", undefined, { text: result.text });
-  return { attemptId: attempt.id, explorerUrl, status: "settled" as const };
+  return { attemptId: attempt.id, explorerUrl, result: result.result, status: "settled" as const };
 }

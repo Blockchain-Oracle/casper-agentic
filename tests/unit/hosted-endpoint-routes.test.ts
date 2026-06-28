@@ -65,26 +65,9 @@ describe("endpoint access-key route", () => {
   });
 });
 
-describe("hosted endpoint route", () => {
-  it("requires scoped client access before returning endpoint metadata", async () => {
+describe("hosted endpoint route (GET, public metadata)", () => {
+  it("returns public endpoint metadata + API-key auth info without provider credentials", async () => {
     const { GET } = await import("@/app/api/mcp/[sourceId]/route");
-    const { EndpointAccessError } =
-      await vi.importActual<typeof import("@/server/endpoint-access")>("@/server/endpoint-access");
-    mocks.requireEndpointAccess.mockRejectedValue(
-      new EndpointAccessError("client access bearer token required", 401),
-    );
-
-    const response = await GET(request("https://gw.test/api/mcp/source-1"), {
-      params: Promise.resolve({ sourceId: "source-1" }),
-    });
-
-    expect(response.status).toBe(401);
-    expect(mocks.getHostedEndpoint).not.toHaveBeenCalled();
-  });
-
-  it("returns published tools and payment requirements without provider credentials", async () => {
-    const { GET } = await import("@/app/api/mcp/[sourceId]/route");
-    mocks.requireEndpointAccess.mockResolvedValue({ id: "key-1", scope: { sourceId: "source-1" }, sourceId: "source-1" });
     mocks.getHostedEndpoint.mockResolvedValue({
       source: {
         authMode: "bearer",
@@ -107,72 +90,38 @@ describe("hosted endpoint route", () => {
       ],
     });
 
-    const response = await GET(
-      request("https://gw.test/api/mcp/source-1", { bearer: "cgw_test_once" }),
-      { params: Promise.resolve({ sourceId: "source-1" }) },
-    );
+    const response = await GET(request("https://gw.test/api/mcp/source-1"), {
+      params: Promise.resolve({ sourceId: "source-1" }),
+    });
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(mocks.requireEndpointAccess).toHaveBeenCalledWith("source-1", "Bearer cgw_test_once");
-    expect(mocks.getHostedEndpoint).toHaveBeenCalledWith("source-1", undefined);
-    expect(JSON.stringify(body)).not.toContain("credentialRef");
-    expect(JSON.stringify(body)).not.toContain("tokenHash");
-    expect(JSON.stringify(body)).not.toContain("cgw_test_once");
-    expect(JSON.stringify(body)).not.toContain("authMode");
-    expect(JSON.stringify(body)).not.toContain("credentialConfigured");
-    expect(JSON.stringify(body)).not.toContain("upstreamTarget");
-    expect(JSON.stringify(body)).not.toContain("https://mcp.cspr.trade/mcp");
-    expect(body.client).toMatchObject({
-      auth: {
-        header: "Authorization",
-        scheme: "Bearer",
-        tokenPresented: false,
-        valueFormat: "Bearer <client-access-token>",
-      },
-      discovery: {
-        manifestUrl: "https://gw.test/api/mcp/source-1/discovery",
-        scope: "authorized-source",
-        visibility: "authorized-source",
-      },
-      endpointUrl: "https://gw.test/api/mcp/source-1",
-      payment: {
-        challengeHeader: "PAYMENT-REQUIRED",
-        protected: true,
-        requestHeader: "PAYMENT-SIGNATURE",
-        responseHeader: "PAYMENT-RESPONSE",
-        x402Version: 2,
-      },
-      transport: {
-        jsonRpc: "2.0",
-        strategy: "http-first",
-        type: "streamable-http",
-      },
-    });
+    expect(mocks.getHostedEndpoint).toHaveBeenCalledWith("source-1");
+    expect(body.auth).toMatchObject({ mode: "api_key", prefix: "casper_" });
+    expect(body.payment).toMatchObject({ asset: "WCSPR", settledBy: "casper-gw-gateway-signer" });
+    expect(body.transport).toBe("streamable-http");
+    expect(body.endpoint.source).toEqual({ id: "source-1", name: "CSPR Trade", sourceType: "mcp" });
     expect(body.endpoint.tools[0].paymentRequirements).toMatchObject({
       amount: "7500000000",
       network: "casper:casper-test",
       scheme: "exact",
     });
-    expect(body.endpoint.source).toEqual({ id: "source-1", name: "CSPR Trade", sourceType: "mcp" });
+    expect(JSON.stringify(body)).not.toContain("credentialRef");
+    expect(JSON.stringify(body)).not.toContain("tokenHash");
+    expect(JSON.stringify(body)).not.toContain("credentialConfigured");
+    expect(JSON.stringify(body)).not.toContain("upstreamTarget");
+    expect(JSON.stringify(body)).not.toContain("https://mcp.cspr.trade/mcp");
   });
 
-  it("passes limited tool scopes to hosted endpoint metadata", async () => {
+  it("404s when the source does not exist", async () => {
     const { GET } = await import("@/app/api/mcp/[sourceId]/route");
-    mocks.requireEndpointAccess.mockResolvedValue({
-      id: "key-1",
-      scope: { sourceId: "source-1", toolIds: ["tool-allowed"] },
-      sourceId: "source-1",
+    mocks.getHostedEndpoint.mockRejectedValue(new Error("hosted endpoint not found"));
+
+    const response = await GET(request("https://gw.test/api/mcp/missing"), {
+      params: Promise.resolve({ sourceId: "missing" }),
     });
-    mocks.getHostedEndpoint.mockResolvedValue({ source: { id: "source-1" }, tools: [] });
 
-    const response = await GET(
-      request("https://gw.test/api/mcp/source-1", { bearer: "cgw_test_limited" }),
-      { params: Promise.resolve({ sourceId: "source-1" }) },
-    );
-
-    expect(response.status).toBe(200);
-    expect(mocks.getHostedEndpoint).toHaveBeenCalledWith("source-1", ["tool-allowed"]);
+    expect(response.status).toBe(404);
   });
 });
 

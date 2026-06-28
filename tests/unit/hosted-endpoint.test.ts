@@ -102,16 +102,16 @@ describe("hosted endpoint model", () => {
     const manifest = buildHostedDiscoveryManifest({
       endpoint: hostedEndpointFixture(),
       requestUrl: "https://gw.test/api/mcp/source-1/discovery?debug=1",
-      scope: { sourceId: "source-1", toolIds: ["tool-1"] },
     });
 
     expect(manifest).toMatchObject({
+      auth: { mode: "api_key", prefix: "casper_" },
       endpointUrl: "https://gw.test/api/mcp/source-1",
-      manifest: { scope: "authorized-source", visibility: "authorized-source", version: 1 },
+      manifest: { version: 2, visibility: "public" },
       payment: {
-        challengeHeader: "PAYMENT-REQUIRED",
-        requestHeader: "PAYMENT-SIGNATURE",
-        responseHeader: "PAYMENT-RESPONSE",
+        asset: "WCSPR",
+        responseMeta: "x402/payment-response",
+        settledBy: "casper-gw-gateway-signer",
         x402Version: 2,
       },
       source: { id: "source-1", name: "CSPR Trade" },

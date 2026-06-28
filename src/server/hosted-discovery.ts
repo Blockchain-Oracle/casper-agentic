@@ -1,79 +1,56 @@
-import type { EndpointAccessScope } from "./endpoint-access";
 import type { HostedEndpointView } from "./hosted-endpoint";
-import { buildX402ScannerCompatibility, type X402ScannerCompatibility } from "./x402-scanner-compat";
 
+// Discovery manifest for the hosted MCP server. Auth = casper_ API key (tools/list
+// public, tools/call requires the key); payment is settled by the gateway signer on
+// Casper, surfaced in the tool result's _meta["x402/payment-response"]. No caller
+// signing, so there is no PAYMENT-SIGNATURE challenge.
 export interface HostedDiscoveryManifest {
   auth: {
-    header: "Authorization";
-    scheme: "Bearer";
-    tokenPresented: false;
-    valueFormat: "Bearer <client-access-token>";
+    header: "x-api-key | Authorization: Bearer";
+    mode: "api_key";
+    note: string;
+    prefix: "casper_";
   };
   endpointUrl: string;
-  manifest: {
-    scope: "authorized-source";
-    visibility: "authorized-source";
-    version: 1;
-  };
+  manifest: { version: 2; visibility: "public" };
   payment: {
-    challengeHeader: "PAYMENT-REQUIRED";
-    requestHeader: "PAYMENT-SIGNATURE";
-    responseHeader: "PAYMENT-RESPONSE";
+    asset: "WCSPR";
+    responseMeta: "x402/payment-response";
+    settledBy: "casper-gw-gateway-signer";
     x402Version: 2;
   };
-  scannerCompatibility: X402ScannerCompatibility;
-  scope: EndpointAccessScope;
-  source: {
-    id: string;
-    name: string;
-    sourceType: string;
-  };
+  source: { id: string; name: string; sourceType: string };
   tools: Array<{
     description: string | null;
     id: string;
     inputSchema: unknown;
     name: string;
     paymentRequirements: unknown;
-    resource: {
-      mimeType: "application/json";
-      serviceName: "Casper GW";
-      url: string;
-    };
+    resource: { mimeType: "application/json"; serviceName: "Casper GW"; url: string };
   }>;
-  transport: {
-    jsonRpc: "2.0";
-    methods: ["initialize", "tools/list", "tools/call"];
-    type: "streamable-http";
-  };
+  transport: { jsonRpc: "2.0"; methods: ["initialize", "tools/list", "tools/call"]; type: "streamable-http" };
 }
 
 export function buildHostedDiscoveryManifest(input: {
   endpoint: HostedEndpointView;
   requestUrl: string;
-  scope: EndpointAccessScope;
 }): HostedDiscoveryManifest {
   const endpointUrl = hostedEndpointUrl(input.requestUrl);
   return {
     auth: {
-      header: "Authorization",
-      scheme: "Bearer",
-      tokenPresented: false,
-      valueFormat: "Bearer <client-access-token>",
+      header: "x-api-key | Authorization: Bearer",
+      mode: "api_key",
+      note: "tools/list is public; tools/call requires a casper_ key",
+      prefix: "casper_",
     },
     endpointUrl,
-    manifest: {
-      scope: "authorized-source",
-      visibility: "authorized-source",
-      version: 1,
-    },
+    manifest: { version: 2, visibility: "public" },
     payment: {
-      challengeHeader: "PAYMENT-REQUIRED",
-      requestHeader: "PAYMENT-SIGNATURE",
-      responseHeader: "PAYMENT-RESPONSE",
+      asset: "WCSPR",
+      responseMeta: "x402/payment-response",
+      settledBy: "casper-gw-gateway-signer",
       x402Version: 2,
     },
-    scannerCompatibility: buildX402ScannerCompatibility(input.endpoint),
-    scope: input.scope,
     source: {
       id: input.endpoint.source.id,
       name: input.endpoint.source.name,
