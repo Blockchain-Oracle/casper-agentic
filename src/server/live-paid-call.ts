@@ -4,12 +4,13 @@ import { normalizeCasperAccountHash } from "./casper-account";
 import { resolveCasperProof } from "./casper-proof";
 import { requireIntegrationConfig } from "./env";
 import {
-  PaidCallInputError,
   redactLiveInput,
   requireLivePaidCallInput,
   type PaidCallInput,
 } from "./live-paid-call-input";
 import { callMcpTool, discoverMcpTools } from "./mcp-client";
+import { getSourceByEndpoint, getToolByName } from "./provider-store";
+import { callRestTool, parseRestOperation } from "./rest-tool";
 import {
   persistAttempt,
   persistCasperProof,
@@ -45,13 +46,25 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
   }
 
   const { args, endpointUrl, toolName } = requireLivePaidCallInput(input);
-  if (endpointUrl !== config.mcpUrl) {
-    throw new PaidCallInputError("Paid execution is limited to the configured MCP endpoint");
-  }
 
-  const tools = await discoverMcpTools(endpointUrl);
-  const tool = tools.find((item) => item.name === toolName);
-  if (!tool) throw new Error(`Remote MCP endpoint did not expose ${toolName}`);
+  // Resolve the registered source to dispatch the tool execution: MCP sources are
+  // discovered + called over JSON-RPC; OpenAPI sources run a REST call from the
+  // operation stored at register time. Settlement (x402) is identical either way.
+  const source = await getSourceByEndpoint(endpointUrl);
+  const providerName = source?.name ?? "MCP source";
+  let execute: () => Promise<{ isError: boolean; text?: string }>;
+  if (source?.sourceType === "openapi") {
+    const toolRow = await getToolByName(source.id, toolName);
+    const operation = toolRow ? parseRestOperation(toolRow.upstreamTarget) : null;
+    if (!operation) throw new Error(`OpenAPI source did not expose ${toolName}`);
+    execute = () => callRestTool(operation, args);
+  } else {
+    const tools = await discoverMcpTools(endpointUrl);
+    if (!tools.some((item) => item.name === toolName)) {
+      throw new Error(`Remote MCP endpoint did not expose ${toolName}`);
+    }
+    execute = () => callMcpTool(endpointUrl, toolName, args);
+  }
 
   const gatewayHash = normalizeCasperAccountHash(getConfiguredSignerAddress(config));
   const requirements = buildPaymentRequirements(config);
@@ -70,7 +83,7 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
     asset: requirements.asset,
     client,
     network: requirements.network,
-    providerName: "CSPR.trade MCP",
+    providerName,
     redactedInput: redactLiveInput(args),
     status: "policy_pending",
     toolName,
@@ -157,7 +170,7 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
     proofStatus: proof.deploy.status,
   });
 
-  const result = await callMcpTool(endpointUrl, toolName, args);
+  const result = await execute();
   if (result.isError) {
     await updateAttemptStatus(attempt.id, "upstream_failed", "MCP tool returned an error", { text: result.text });
     return { attemptId: attempt.id, explorerUrl, status: "upstream_failed" as const };

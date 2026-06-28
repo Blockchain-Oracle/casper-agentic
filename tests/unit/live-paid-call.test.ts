@@ -8,6 +8,8 @@ const m = vi.hoisted(() => ({
   getAccount: vi.fn(),
   getConfiguredSignerAddress: vi.fn(),
   getFTOwnerships: vi.fn(),
+  getSourceByEndpoint: vi.fn(),
+  getToolByName: vi.fn(),
   persistAttempt: vi.fn(),
   persistCasperProof: vi.fn(),
   persistX402Record: vi.fn(),
@@ -32,6 +34,7 @@ vi.mock("@/server/cspr-cloud", () => ({
   },
 }));
 vi.mock("@/server/mcp-client", () => ({ callMcpTool: m.callMcpTool, discoverMcpTools: m.discoverMcpTools }));
+vi.mock("@/server/provider-store", () => ({ getSourceByEndpoint: m.getSourceByEndpoint, getToolByName: m.getToolByName }));
 vi.mock("@/server/receipt-store", () => ({
   persistAttempt: m.persistAttempt,
   persistCasperProof: m.persistCasperProof,
@@ -62,6 +65,7 @@ const input = { args: { amount: "10" }, endpointUrl: ENDPOINT, toolName: "get_qu
 
 function setDefaults() {
   m.supported.mockResolvedValue({ kinds: [{ network: "casper:casper-test", scheme: "exact" }] });
+  m.getSourceByEndpoint.mockResolvedValue({ id: "src-1", name: "CSPR.trade MCP", sourceType: "mcp" });
   m.discoverMcpTools.mockResolvedValue([{ name: "get_quote" }]);
   m.getConfiguredSignerAddress.mockReturnValue(`00${GATEWAY_HASH}`);
   m.buildPaymentRequirements.mockReturnValue({ amount: "5", asset: "asset", network: "casper:casper-test" });

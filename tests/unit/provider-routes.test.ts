@@ -4,10 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   createProviderSource: vi.fn(),
   discoverMcpTools: vi.fn(),
+  discoverOpenApiTools: vi.fn(),
   getProviderSourceRecord: vi.fn(),
   listProviderSources: vi.fn(),
   listProviderTools: vi.fn(),
   persistDiscoveredMcpTools: vi.fn(),
+  persistOpenApiTools: vi.fn(),
 }));
 
 vi.mock("@/server/provider-store", () => ({
@@ -16,10 +18,15 @@ vi.mock("@/server/provider-store", () => ({
   listProviderSources: mocks.listProviderSources,
   listProviderTools: mocks.listProviderTools,
   persistDiscoveredMcpTools: mocks.persistDiscoveredMcpTools,
+  persistOpenApiTools: mocks.persistOpenApiTools,
 }));
 
 vi.mock("@/server/mcp-client", () => ({
   discoverMcpTools: mocks.discoverMcpTools,
+}));
+
+vi.mock("@/server/openapi-discovery", () => ({
+  discoverOpenApiTools: mocks.discoverOpenApiTools,
 }));
 
 const originalEnv = { ...process.env };
@@ -81,7 +88,7 @@ describe("provider source routes", () => {
 });
 
 describe("provider discovery route", () => {
-  it("rejects unsupported source types without calling MCP discovery", async () => {
+  it("routes OpenAPI sources to OpenAPI discovery, not MCP discovery", async () => {
     const { POST } = await import("@/app/api/provider/sources/[id]/discover/route");
     mocks.getProviderSourceRecord.mockResolvedValue({
       authMode: "none",
@@ -91,12 +98,15 @@ describe("provider discovery route", () => {
       name: "Example",
       sourceType: "openapi",
     });
+    mocks.discoverOpenApiTools.mockResolvedValue([{ method: "get", name: "getTodo", pathTemplate: "/todos/{id}" }]);
+    mocks.persistOpenApiTools.mockResolvedValue([{ id: "tool-1", name: "getTodo" }]);
 
     const response = await POST(request("https://gw.test/api/provider/sources/source-1/discover", { token: "operator-token" }), {
       params: Promise.resolve({ id: "source-1" }),
     });
 
-    expect(response.status).toBe(422);
+    expect(response.status).toBe(200);
+    expect(mocks.discoverOpenApiTools).toHaveBeenCalledWith("https://api.example.com/openapi.json");
     expect(mocks.discoverMcpTools).not.toHaveBeenCalled();
   });
 

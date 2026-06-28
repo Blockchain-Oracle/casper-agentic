@@ -31,10 +31,10 @@ async function get<T>(url: string): Promise<T> {
   return json as T;
 }
 
-export function createSource(input: { name: string; endpointUrl: string }) {
+export function createSource(input: { name: string; endpointUrl: string; sourceType?: "mcp" | "openapi" }) {
   return post<{ source: { id: string; name: string; endpointUrl: string } }>("/api/provider/sources", {
-    ...input,
     sourceType: "mcp",
+    ...input,
   });
 }
 

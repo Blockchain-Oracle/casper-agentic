@@ -19,12 +19,13 @@ export function RegisterFlow() {
   const [tools, setTools] = useState<DiscoveredTool[]>([]);
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [sourceId, setSourceId] = useState<string | null>(null);
+  const [kind, setKind] = useState<"mcp" | "openapi">("mcp");
 
   async function discover() {
-    if (!name.trim() || !url.trim()) return toast.error("Add a name and an MCP endpoint URL.");
+    if (!name.trim() || !url.trim()) return toast.error("Add a name and an endpoint URL.");
     setPhase("discovering");
     try {
-      const { source } = await createSource({ endpointUrl: url.trim(), name: name.trim() });
+      const { source } = await createSource({ endpointUrl: url.trim(), name: name.trim(), sourceType: kind });
       const { tools: found } = await discoverSource(source.id);
       if (!found.length) {
         toast.error("No tools found at that endpoint.");
@@ -78,10 +79,35 @@ export function RegisterFlow() {
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-hairline bg-panel p-5">
+        <div className="mb-4 inline-flex rounded-md border border-hairline bg-well p-0.5">
+          {([["mcp", "MCP Server"], ["openapi", "API (OpenAPI)"]] as const).map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => setKind(value)}
+              disabled={phase !== "form"}
+              className={`rounded px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors ${kind === value ? "bg-panel text-ink shadow-sm" : "text-ink-3 hover:text-ink"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <label className="mb-1.5 block font-mono text-[11px] uppercase tracking-widest text-ink-3">Source name</label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="CSPR.trade MCP" disabled={phase !== "form"} />
-        <label className="mb-1.5 mt-4 block font-mono text-[11px] uppercase tracking-widest text-ink-3">MCP endpoint URL</label>
-        <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://mcp.cspr.trade/mcp" disabled={phase !== "form"} className="font-mono text-sm" />
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === "mcp" ? "CSPR.trade MCP" : "FakeREST API"} disabled={phase !== "form"} />
+        <label className="mb-1.5 mt-4 block font-mono text-[11px] uppercase tracking-widest text-ink-3">
+          {kind === "mcp" ? "MCP endpoint URL" : "OpenAPI / Swagger spec URL"}
+        </label>
+        <Input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder={kind === "mcp" ? "https://mcp.cspr.trade/mcp" : "https://api.example.com/openapi.json"}
+          disabled={phase !== "form"}
+          className="font-mono text-sm"
+        />
+        {kind === "openapi" ? (
+          <p className="mt-2 text-xs leading-relaxed text-ink-3">
+            We convert the spec to paid tools and execute each as a real REST call after settlement — no code, hosted by the gateway.
+          </p>
+        ) : null}
         {phase === "form" || phase === "discovering" ? (
           <Button onClick={discover} disabled={phase === "discovering"} className="mt-5 gap-2">
             {phase === "discovering" ? <Loader2 className="size-4 animate-spin" /> : <Plug className="size-4" />}

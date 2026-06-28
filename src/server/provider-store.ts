@@ -43,6 +43,60 @@ export async function getProviderSourceRecord(sourceId: string) {
   return source ?? null;
 }
 
+/** Resolve a registered source by its endpoint URL — used to dispatch a paid call (MCP vs REST). */
+export async function getSourceByEndpoint(endpointUrl: string) {
+  const [source] = await getDb().select().from(providerSources).where(eq(providerSources.endpointUrl, endpointUrl)).limit(1);
+  return source ?? null;
+}
+
+/** Look up a published tool's REST operation (openapi sources store it on upstreamTarget). */
+export async function getToolByName(sourceId: string, name: string) {
+  const [tool] = await getDb()
+    .select()
+    .from(providerTools)
+    .where(and(eq(providerTools.sourceId, sourceId), eq(providerTools.name, name)))
+    .limit(1);
+  return tool ? toProviderToolView(tool) : null;
+}
+
+/** Persist OpenAPI-derived tools (from openapi-mcp-generator). The REST operation
+ * is stored as JSON on upstreamTarget so the settle path can execute it. */
+export async function persistOpenApiTools(
+  sourceId: string,
+  tools: Array<{
+    name: string;
+    description?: string;
+    inputSchema?: unknown;
+    method: string;
+    baseUrl?: string;
+    pathTemplate: string;
+    executionParameters?: Array<{ name: string; in: string }>;
+    requestBodyContentType?: string;
+  }>,
+) {
+  if (!tools.length) {
+    await logProviderAudit("warn", "OpenAPI discovery returned no tools", { sourceId });
+    return [];
+  }
+  const rows = tools.map((tool) => ({
+    description: tool.description ?? null,
+    inputSchema: tool.inputSchema && typeof tool.inputSchema === "object" ? tool.inputSchema : {},
+    name: tool.name,
+    sourceId,
+    status: "draft" as const,
+    upstreamTarget: JSON.stringify({
+      baseUrl: tool.baseUrl ?? "",
+      executionParameters: tool.executionParameters ?? [],
+      method: tool.method,
+      pathTemplate: tool.pathTemplate,
+      requestBodyContentType: tool.requestBodyContentType,
+    }),
+  }));
+  const inserted = await getDb().insert(providerTools).values(rows).returning();
+  await logProviderAudit("info", "OpenAPI tools discovered", { count: inserted.length, sourceId });
+  return inserted.map(toProviderToolView);
+}
+
 export async function persistDiscoveredMcpTools(sourceId: string, endpointUrl: string, tools: DiscoveredMcpTool[]) {
   if (!tools.length) {
     await logProviderAudit("warn", "Provider source discovery returned no tools", { sourceId });

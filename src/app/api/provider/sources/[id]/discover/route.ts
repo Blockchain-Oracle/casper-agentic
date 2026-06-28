@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { discoverMcpTools } from "@/server/mcp-client";
-import { getProviderSourceRecord, persistDiscoveredMcpTools } from "@/server/provider-store";
+import { discoverOpenApiTools } from "@/server/openapi-discovery";
+import { getProviderSourceRecord, persistDiscoveredMcpTools, persistOpenApiTools } from "@/server/provider-store";
 import { toProviderSourceView } from "@/server/provider-model";
 
 export const dynamic = "force-dynamic";
@@ -11,8 +12,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const { id } = await context.params;
     const source = await getProviderSourceRecord(id);
     if (!source) return NextResponse.json({ error: "provider_source_not_found" }, { status: 404 });
-    if (source.sourceType !== "mcp") {
-      return NextResponse.json({ error: "source_type_not_supported_for_discovery" }, { status: 422 });
+
+    if (source.sourceType === "openapi") {
+      const discovered = await discoverOpenApiTools(source.endpointUrl);
+      const tools = await persistOpenApiTools(source.id, discovered);
+      return NextResponse.json({ source: toProviderSourceView(source), tools });
     }
 
     const discovered = await discoverMcpTools(source.endpointUrl);
