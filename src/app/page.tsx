@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, KeyRound, Plug, ScanLine } from "lucide-react";
 
 import { ServerCard } from "@/components/servers/server-card";
+import { ClientLogos } from "@/components/site/client-logos";
 import { ProofStamp } from "@/components/site/proof-stamp";
 import { SiteNav } from "@/components/site/site-nav";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,8 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        <ClientLogos />
 
         {/* Featured servers (real) */}
         {servers.length > 0 ? (
