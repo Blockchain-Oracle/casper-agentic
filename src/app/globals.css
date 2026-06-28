@@ -14,7 +14,6 @@
 @import "./styles/controls.css" layer(legacy);
 @import "./styles/surfaces.css" layer(legacy);
 @import "./styles/receipt.css" layer(legacy);
-@import "./styles/explorer.css" layer(legacy);
 @import "./styles/utilities.css" layer(legacy);
 @import "./styles/responsive.css" layer(legacy);
 
