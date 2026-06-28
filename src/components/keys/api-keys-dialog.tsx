@@ -29,6 +29,7 @@ export function ApiKeysDialog() {
   const [name, setName] = useState("");
   const [allowed, setAllowed] = useState<Set<string>>(new Set());
   const [maxSpend, setMaxSpend] = useState("");
+  const [lang, setLang] = useState<"curl" | "ts" | "python">("curl");
 
   useEffect(() => {
     if (!open) return;
@@ -65,10 +66,26 @@ export function ApiKeysDialog() {
     refresh();
   }
 
-  const snippet = `curl -X POST ${typeof window !== "undefined" ? window.location.origin : ""}/api/paid-calls/run \\
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const body = `{"endpointUrl":"https://mcp.cspr.trade/mcp","toolName":"get_quote","args":{"amount":"10","token_in":"CSPR","token_out":"WCSPR","type":"exact_in"}}`;
+  const snippets: Record<typeof lang, string> = {
+    curl: `curl -X POST ${origin}/api/paid-calls/run \\
   -H "x-api-key: ${token}" \\
   -H "content-type: application/json" \\
-  -d '{"endpointUrl":"https://mcp.cspr.trade/mcp","toolName":"get_quote","args":{"amount":"10","token_in":"CSPR","token_out":"WCSPR","type":"exact_in"}}'`;
+  -d '${body}'`,
+    python: `import requests
+r = requests.post("${origin}/api/paid-calls/run",
+  headers={"x-api-key": "${token}"},
+  json=${body})
+print(r.json())  # -> { "status": "settled", "explorerUrl": "...cspr.live/deploy/..." }`,
+    ts: `const r = await fetch("${origin}/api/paid-calls/run", {
+  method: "POST",
+  headers: { "x-api-key": "${token}", "content-type": "application/json" },
+  body: JSON.stringify(${body}),
+});
+console.log(await r.json()); // { status: "settled", explorerUrl: "...cspr.live/deploy/..." }`,
+  };
+  const snippet = snippets[lang];
 
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setView("list"); setToken(""); } }}>
@@ -149,6 +166,14 @@ export function ApiKeysDialog() {
               <div className="mb-1.5 flex items-center justify-between">
                 <span className="font-mono text-[11px] uppercase tracking-wider text-ink-3">Use it anywhere</span>
                 <Button size="sm" variant="ghost" className="h-6 gap-1 text-xs" onClick={() => copy(snippet, "Snippet")}><Copy className="size-3" /> Copy</Button>
+              </div>
+              <div className="mb-1.5 inline-flex rounded-md border border-hairline bg-well p-0.5">
+                {([["curl", "cURL"], ["ts", "TypeScript"], ["python", "Python"]] as const).map(([value, label]) => (
+                  <button key={value} onClick={() => setLang(value)}
+                    className={`rounded px-2 py-1 font-mono text-[10px] uppercase tracking-wider transition-colors ${lang === value ? "bg-panel text-ink shadow-sm" : "text-ink-3 hover:text-ink"}`}>
+                    {label}
+                  </button>
+                ))}
               </div>
               <pre className="overflow-x-auto rounded-md border border-hairline bg-well p-3 font-mono text-[11px] leading-relaxed text-ink-2">{snippet}</pre>
             </div>
