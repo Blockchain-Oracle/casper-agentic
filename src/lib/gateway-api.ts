@@ -81,6 +81,12 @@ export function claimDepositReq(input: { keyId: string; deployHash: string }) {
   );
 }
 
+export function getGatewayBalance() {
+  return get<{ accountHash: string; payee: string; wcspr: string; csprGas: string; perCall: string; ready: boolean }>(
+    "/api/gateway/balance",
+  );
+}
+
 export function listApiKeys() {
   return get<{ keys: ApiKeyView[] }>("/api/keys");
 }

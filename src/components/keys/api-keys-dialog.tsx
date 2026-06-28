@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { formatTokenAmount, parseTokenToMotes } from "@/lib/format-amount";
-import { createApiKeyReq, listApiKeys, listTools, revokeApiKeyReq, type ApiKeyView } from "@/lib/gateway-api";
+import { claimDepositReq, createApiKeyReq, getGatewayBalance, listApiKeys, listTools, revokeApiKeyReq, type ApiKeyView } from "@/lib/gateway-api";
 
 type View = "list" | "create" | "created";
 
@@ -31,11 +31,34 @@ export function ApiKeysDialog() {
   const [maxSpend, setMaxSpend] = useState("");
   const [lang, setLang] = useState<"curl" | "ts" | "python">("curl");
 
+  // fund affordance
+  const [depositAddr, setDepositAddr] = useState("");
+  const [fundId, setFundId] = useState<string | null>(null);
+  const [claimHash, setClaimHash] = useState("");
+  const [claiming, setClaiming] = useState(false);
+
   useEffect(() => {
     if (!open) return;
     listApiKeys().then((r) => setKeys(r.keys)).catch(() => setKeys([]));
     listTools().then((r) => setTools([...new Set(r.tools.filter((t) => t.status === "published").map((t) => t.name))])).catch(() => setTools([]));
+    getGatewayBalance().then((b) => setDepositAddr(b.payee)).catch(() => setDepositAddr(""));
   }, [open]);
+
+  async function claim(keyId: string) {
+    if (!claimHash.trim()) return toast.error("Paste the deposit deploy hash");
+    setClaiming(true);
+    try {
+      const r = await claimDepositReq({ deployHash: claimHash.trim(), keyId });
+      if (r.status === "credited") toast.success(`Credited ${formatTokenAmount(r.amount ?? "0")} WCSPR`);
+      else if (r.status === "already_claimed") toast.info("Already claimed");
+      else toast.error(r.reason ?? r.status);
+      setClaimHash("");
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Claim failed");
+    }
+    setClaiming(false);
+  }
 
   async function refresh() {
     const r = await listApiKeys().catch(() => ({ keys: [] }));
@@ -114,13 +137,33 @@ console.log(await r.json()); // { status: "settled", explorerUrl: "...cspr.live/
                   <div className="flex items-center justify-between gap-2">
                     <span className={`truncate text-sm ${k.revoked ? "text-ink-3 line-through" : "text-ink"}`}>{k.name}</span>
                     {!k.revoked ? (
-                      <button onClick={() => revoke(k.id)} className="text-ink-3 hover:text-signal" aria-label="Revoke"><Trash2 className="size-3.5" /></button>
+                      <div className="flex items-center gap-2.5">
+                        <button onClick={() => setFundId(fundId === k.id ? null : k.id)} className="font-mono text-[10px] uppercase tracking-wider text-ink-3 hover:text-ink">Fund</button>
+                        <button onClick={() => revoke(k.id)} className="text-ink-3 hover:text-signal" aria-label="Revoke"><Trash2 className="size-3.5" /></button>
+                      </div>
                     ) : <span className="font-mono text-[10px] uppercase text-ink-3">revoked</span>}
                   </div>
                   <div className="mt-1.5 flex flex-wrap gap-1 font-mono text-[10px] text-ink-3">
                     <span className="rounded-sm border border-hairline px-1.5 py-0.5">{k.scope.allowedTools?.length ? k.scope.allowedTools.join(", ") : "all tools"}</span>
-                    {k.scope.maxSpendMotes ? <span className="rounded-sm border border-hairline px-1.5 py-0.5">{formatTokenAmount(k.scope.maxSpendMotes)} WCSPR cap</span> : null}
+                    {BigInt(k.credited ?? "0") > BigInt(0) ? (
+                      <span className="rounded-sm border border-settled/40 px-1.5 py-0.5 text-settled">{formatTokenAmount(k.available ?? "0")} WCSPR available</span>
+                    ) : k.scope.maxSpendMotes ? (
+                      <span className="rounded-sm border border-hairline px-1.5 py-0.5">{formatTokenAmount(k.scope.maxSpendMotes)} WCSPR cap</span>
+                    ) : null}
                   </div>
+                  {fundId === k.id ? (
+                    <div className="mt-2.5 space-y-2 rounded-md border border-hairline bg-well p-2.5">
+                      <div className="font-mono text-[10px] uppercase tracking-wider text-ink-3">Send WCSPR to the gateway, then claim by deploy hash</div>
+                      <div className="flex items-center gap-1.5">
+                        <code className="min-w-0 flex-1 truncate rounded-sm border border-hairline bg-panel px-2 py-1 font-mono text-[11px] text-ink">{depositAddr || "…"}</code>
+                        <Button size="icon" variant="outline" onClick={() => copy(depositAddr, "Deposit address")}><Copy className="size-3" /></Button>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Input value={claimHash} onChange={(e) => setClaimHash(e.target.value)} placeholder="deposit deploy hash" className="font-mono text-xs" />
+                        <Button size="sm" onClick={() => claim(k.id)} disabled={claiming}>{claiming ? <Loader2 className="size-3.5 animate-spin" /> : "Claim"}</Button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
