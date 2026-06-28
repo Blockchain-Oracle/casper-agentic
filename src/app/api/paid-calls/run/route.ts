@@ -1,23 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { isApiKeyError } from "@/server/api-keys";
 import { isPaidCallInputError, PaidCallInputError, runGatewayPaidCall } from "@/server/live-paid-call";
 
 export const dynamic = "force-dynamic";
 
-// Runs a paid tool call settled by the gateway's own Testnet wallet. Caller
-// authorization moves to the API-key layer (P5); there is no operator-token gate.
+// Runs a paid tool call settled by the gateway's own Testnet wallet. An agent
+// authorizes with a casper_ API key (x-api-key header, ?api_key=, or body.apiKey);
+// the gateway verifies the key's scope (allowed tools / spend cap / expiry) before
+// settling. No key = operator console (UI testing). No operator-token gate.
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
+  const apiKey =
+    request.headers.get("x-api-key")?.trim() ||
+    request.nextUrl.searchParams.get("api_key")?.trim() ||
+    (typeof body.apiKey === "string" ? body.apiKey.trim() : undefined) ||
+    undefined;
   try {
-    const result = await runGatewayPaidCall(parsePaidCallBody(body));
+    const result = await runGatewayPaidCall({ ...parsePaidCallBody(body), apiKey });
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "paid_call_failed";
-    const status = isPaidCallInputError(error)
+    const status = isApiKeyError(error)
       ? error.status
-      : message.includes("Missing integration configuration")
-        ? 503
-        : 502;
+      : isPaidCallInputError(error)
+        ? error.status
+        : message.includes("Missing integration configuration")
+          ? 503
+          : 502;
     return NextResponse.json({ error: message }, { status });
   }
 }

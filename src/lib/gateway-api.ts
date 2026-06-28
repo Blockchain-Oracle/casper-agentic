@@ -61,3 +61,24 @@ export function runPaidCall(input: { endpointUrl: string; toolName: string; args
     input,
   );
 }
+
+export interface ApiKeyView {
+  id: string;
+  name: string;
+  prefix: string;
+  revoked: boolean;
+  createdAt: string;
+  scope: { allowedTools?: string[]; maxSpendMotes?: string; expiresAt?: string };
+}
+
+export function listApiKeys() {
+  return get<{ keys: ApiKeyView[] }>("/api/keys");
+}
+
+export function createApiKeyReq(input: { name?: string; allowedTools?: string[]; maxSpendMotes?: string; expiresAt?: string }) {
+  return post<{ token: string; key: ApiKeyView }>("/api/keys", input);
+}
+
+export function revokeApiKeyReq(id: string) {
+  return post<{ ok: boolean }>(`/api/keys/${id}/revoke`);
+}

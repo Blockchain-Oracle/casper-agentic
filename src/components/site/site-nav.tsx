@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { KeyRound, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 
+import { ApiKeysDialog } from "@/components/keys/api-keys-dialog";
 import { BrandMark } from "@/components/site/proof-stamp";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -50,10 +51,7 @@ export function SiteNav() {
 
         <div className="ml-auto flex items-center gap-2">
           <ThemeToggle />
-          <Button size="sm" variant="outline" className="gap-1.5 font-medium">
-            <KeyRound className="size-3.5" />
-            API keys
-          </Button>
+          <ApiKeysDialog />
         </div>
       </div>
     </header>

@@ -1,3 +1,4 @@
+import { verifyApiKey } from "./api-keys";
 import { CsprCloudClient } from "./cspr-cloud";
 import { normalizeCasperAccountHash } from "./casper-account";
 import { resolveCasperProof } from "./casper-proof";
@@ -54,10 +55,20 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
 
   const gatewayHash = normalizeCasperAccountHash(getConfiguredSignerAddress(config));
   const requirements = buildPaymentRequirements(config);
+
+  // API-key path: an agent presents a casper_ key. Verify scope (allowed tools,
+  // spend cap, expiry) BEFORE settling, and charge the call to that key. A rejected
+  // key (revoked/expired/over-cap/out-of-scope) throws an ApiKeyError with no settlement.
+  let client = input.client ?? "gateway-console";
+  if (input.apiKey) {
+    const keyId = await verifyApiKey(input.apiKey, { amountMotes: requirements.amount, toolName });
+    client = `key:${keyId}`;
+  }
+
   const attempt = await persistAttempt({
     amount: requirements.amount,
     asset: requirements.asset,
-    client: input.client ?? "gateway-console",
+    client,
     network: requirements.network,
     providerName: "CSPR.trade MCP",
     redactedInput: redactLiveInput(args),
