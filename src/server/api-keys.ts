@@ -3,7 +3,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { customAlphabet } from "nanoid";
 
 import { getDb } from "@/db/client";
-import { endpointAccessKeys, paidCallAttempts } from "@/db/schema";
+import { endpointAccessKeys, keyCredits, paidCallAttempts } from "@/db/schema";
 
 // Consumer/agent API keys: a `casper_` credential anyone can mint to let an agent
 // pay per call through the gateway. "Agent sessions with limits" — each key is
@@ -26,6 +26,10 @@ export interface ApiKeyView {
   revoked: boolean;
   createdAt: string;
   scope: ApiKeyScope;
+  // Funded balance (motes), present on list views. available = credited − spent.
+  credited?: string;
+  spent?: string;
+  available?: string;
 }
 
 export class ApiKeyError extends Error {
@@ -80,11 +84,21 @@ export async function createApiKey(input: { name?: string; scope?: ApiKeyScope }
 }
 
 export async function listApiKeys(): Promise<ApiKeyView[]> {
-  const rows = await getDb().select().from(endpointAccessKeys).where(isNull(endpointAccessKeys.sourceId));
-  return rows
+  const rows = (await getDb().select().from(endpointAccessKeys).where(isNull(endpointAccessKeys.sourceId)))
     .filter((r) => (r.scope as Record<string, unknown>)?.kind === "consumer")
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    .map(toView);
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  return Promise.all(
+    rows.map(async (row) => {
+      const credited = await creditsForKey(row.id);
+      const spent = await spendForKey(row.id);
+      return {
+        ...toView(row),
+        available: (credited - spent).toString(),
+        credited: credited.toString(),
+        spent: spent.toString(),
+      };
+    }),
+  );
 }
 
 export async function revokeApiKey(id: string) {
@@ -100,7 +114,13 @@ export async function spendForKey(id: string): Promise<bigint> {
   return rows.reduce((sum, r) => sum + BigInt(r.amount || "0"), BigInt(0));
 }
 
-/** Verify a key for a specific call. Enforces revoke/expiry/tool-allowlist/spend-cap. Returns the key id. */
+/** Prepaid WCSPR credited to a key (sum of claimed deposits, motes). */
+export async function creditsForKey(id: string): Promise<bigint> {
+  const rows = await getDb().select().from(keyCredits).where(eq(keyCredits.keyId, id));
+  return rows.reduce((sum, r) => sum + BigInt(r.amount || "0"), BigInt(0));
+}
+
+/** Verify a key for a specific call. Enforces revoke/expiry/tool-allowlist/balance-or-cap. Returns the key id. */
 export async function verifyApiKey(token: string, ctx: { toolName: string; amountMotes: string }): Promise<string> {
   const rows = await getDb().select().from(endpointAccessKeys).where(isNull(endpointAccessKeys.sourceId));
   const hash = hashToken(token);
@@ -113,7 +133,15 @@ export async function verifyApiKey(token: string, ctx: { toolName: string; amoun
   if (scope.allowedTools?.length && !scope.allowedTools.includes(ctx.toolName)) {
     throw new ApiKeyError(`API key is not scoped to call ${ctx.toolName}`, 403);
   }
-  if (scope.maxSpendMotes) {
+  const credits = await creditsForKey(match.id);
+  if (credits > BigInt(0)) {
+    // Funded (prepaid) key — enforce the deposited WCSPR balance.
+    const spent = await spendForKey(match.id);
+    if (spent + BigInt(ctx.amountMotes) > credits) {
+      throw new ApiKeyError("insufficient key balance — fund the key with WCSPR", 402);
+    }
+  } else if (scope.maxSpendMotes) {
+    // Unfunded key — fall back to the optional spend cap.
     const spent = await spendForKey(match.id);
     if (spent + BigInt(ctx.amountMotes) > BigInt(scope.maxSpendMotes)) {
       throw new ApiKeyError("API key spend cap reached", 402);

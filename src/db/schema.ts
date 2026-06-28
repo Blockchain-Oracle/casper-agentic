@@ -1,4 +1,4 @@
-import { boolean, integer, jsonb, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -53,6 +53,25 @@ export const endpointAccessKeys = pgTable("endpoint_access_keys", {
   revoked: boolean("revoked").default(false).notNull(),
   ...timestamps,
 });
+
+// Prepaid WCSPR credits for a key: a user deposits WCSPR to the gateway payee and
+// claims it by deploy hash; each transfer transform credits exactly once
+// (unique deploy_hash+transform_idx). Balance = sum(credits) − settled spend.
+export const keyCredits = pgTable(
+  "key_credits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    keyId: uuid("key_id").references(() => endpointAccessKeys.id).notNull(),
+    deployHash: text("deploy_hash").notNull(),
+    transformIdx: integer("transform_idx").notNull(),
+    amount: numeric("amount", { precision: 40, scale: 0 }).notNull(),
+    fromHash: text("from_hash"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    depositClaim: uniqueIndex("key_credits_deploy_transform_uq").on(table.deployHash, table.transformIdx),
+  }),
+);
 
 export const agentWallets = pgTable("agent_wallets", {
   id: uuid("id").primaryKey().defaultRandom(),

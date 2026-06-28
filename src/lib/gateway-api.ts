@@ -69,6 +69,16 @@ export interface ApiKeyView {
   revoked: boolean;
   createdAt: string;
   scope: { allowedTools?: string[]; maxSpendMotes?: string; expiresAt?: string };
+  credited?: string;
+  spent?: string;
+  available?: string;
+}
+
+export function claimDepositReq(input: { keyId: string; deployHash: string }) {
+  return post<{ status: string; amount?: string; fromHash?: string; reason?: string; deployHash: string }>(
+    "/api/fund/claim",
+    input,
+  );
 }
 
 export function listApiKeys() {
