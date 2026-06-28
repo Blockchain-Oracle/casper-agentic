@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
+import { CopyButton } from "@/components/primitives/copy-button";
+import { TokenIcon } from "@/components/primitives/token-icon";
 import { SiteNav } from "@/components/site/site-nav";
+import { casperExplorerUrl, truncateHash } from "@/lib/casper-explorer";
 import { formatAsset, formatTokenAmount } from "@/lib/format-amount";
 import { formatAge } from "@/lib/format-time";
 import { listReceiptDetails } from "@/server/receipt-store";
@@ -53,31 +56,39 @@ export default async function ExplorerPage() {
             <div className="bg-panel px-4 py-10 text-center text-sm text-ink-3">No paid calls yet.</div>
           ) : (
             receipts.map((r, i) => (
-              <Link
+              <div
                 key={r.receipt.id}
-                href={`/receipt/${r.receipt.id}`}
                 className={`grid grid-cols-[16px_1.6fr_1fr_1fr_0.8fr] items-center gap-3 bg-panel px-4 py-3 hover:bg-well max-sm:grid-cols-[16px_1.4fr_1fr] ${i > 0 ? "border-t border-hairline" : ""}`}
               >
                 <span className={`size-1.5 rounded-full ${STATUS_TONE[r.receipt.status] ?? "bg-signal"}`} title={r.receipt.status} />
-                <span className="min-w-0 truncate text-sm">
+                <Link href={`/receipt/${r.receipt.id}`} className="min-w-0 truncate text-sm hover:underline">
                   <span className="font-mono text-ink">{r.receipt.tool}</span>
                   <span className="text-ink-3"> · {r.receipt.provider}</span>
-                </span>
-                <span className="text-right font-mono text-xs text-ink tnum">
+                </Link>
+                <span className="flex items-center justify-end gap-1.5 font-mono text-xs text-ink tnum">
+                  <TokenIcon size={14} />
                   {formatTokenAmount(r.receipt.amount)} {formatAsset(r.receipt.asset)}
                 </span>
-                <span className="flex items-center gap-1 font-mono text-xs text-ink-3 max-sm:hidden">
+                <span className="flex items-center gap-1.5 font-mono text-xs text-ink-3 max-sm:hidden">
                   {r.receipt.hash ? (
                     <>
-                      {r.receipt.hash.slice(0, 8)}…{r.receipt.hash.slice(-6)}
-                      <ArrowUpRight className="size-3 text-casper" />
+                      <a
+                        href={casperExplorerUrl(r.receipt.hash, "deploy")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-0.5 hover:text-casper"
+                      >
+                        {truncateHash(r.receipt.hash)}
+                        <ArrowUpRight className="size-3 text-casper" />
+                      </a>
+                      <CopyButton value={r.receipt.hash} label="Deploy hash copied" />
                     </>
                   ) : (
                     <span className="text-ink-3">—</span>
                   )}
                 </span>
                 <span className="text-right font-mono text-[11px] text-ink-3 max-sm:hidden">{formatAge(r.receipt.time)}</span>
-              </Link>
+              </div>
             ))
           )}
         </div>

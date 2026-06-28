@@ -3,8 +3,11 @@ import { notFound } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 
 import { ConnectDialog } from "@/components/connect/connect-dialog";
+import { CopyButton } from "@/components/primitives/copy-button";
+import { TokenIcon } from "@/components/primitives/token-icon";
 import { SiteNav } from "@/components/site/site-nav";
 import { ServerTools } from "@/components/tools/server-tools";
+import { casperExplorerUrl, truncateHash } from "@/lib/casper-explorer";
 import { formatAsset, formatTokenAmount } from "@/lib/format-amount";
 import { formatAge } from "@/lib/format-time";
 import { getServerWithTools } from "@/server/provider-store";
@@ -62,22 +65,30 @@ export default async function ServerDetailPage({ params }: { params: Promise<{ i
           ) : (
             <div className="overflow-hidden rounded-lg border border-hairline">
               {recent.map((r, i) => (
-                <Link
+                <div
                   key={r.receipt.id}
-                  href={`/receipt/${r.receipt.id}`}
                   className={`flex items-center gap-3 bg-panel px-4 py-3 hover:bg-well ${i > 0 ? "border-t border-hairline" : ""}`}
                 >
                   <span className={`size-1.5 shrink-0 rounded-full ${r.receipt.status === "settled" ? "bg-settled" : "bg-signal"}`} />
-                  <span className="w-20 shrink-0 font-mono text-xs text-ink">{r.receipt.tool}</span>
-                  <span className="flex-1 truncate font-mono text-xs text-ink-3">
-                    {r.receipt.hash ? `${r.receipt.hash.slice(0, 12)}…` : r.receipt.status}
+                  <Link href={`/receipt/${r.receipt.id}`} className="w-20 shrink-0 font-mono text-xs text-ink hover:underline">{r.receipt.tool}</Link>
+                  <span className="flex flex-1 items-center gap-1.5 truncate font-mono text-xs text-ink-3">
+                    {r.receipt.hash ? (
+                      <>
+                        <a href={casperExplorerUrl(r.receipt.hash, "deploy")} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 hover:text-casper">
+                          {truncateHash(r.receipt.hash)} <ArrowUpRight className="size-3 text-casper" />
+                        </a>
+                        <CopyButton value={r.receipt.hash} label="Deploy hash copied" />
+                      </>
+                    ) : (
+                      r.receipt.status
+                    )}
                   </span>
-                  <span className="font-mono text-xs text-ink tnum">
+                  <span className="flex items-center gap-1.5 font-mono text-xs text-ink tnum">
+                    <TokenIcon size={14} />
                     {formatTokenAmount(r.receipt.amount)} {formatAsset(r.receipt.asset)}
                   </span>
                   <span className="w-14 text-right font-mono text-[11px] text-ink-3">{formatAge(r.receipt.time)}</span>
-                  <ArrowUpRight className="size-3.5 shrink-0 text-ink-3" />
-                </Link>
+                </div>
               ))}
             </div>
           )}
