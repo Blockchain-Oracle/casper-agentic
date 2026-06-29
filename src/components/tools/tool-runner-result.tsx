@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowUpRight, Check, Copy } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 
 import { ProofStamp } from "@/components/site/proof-stamp";
@@ -29,7 +31,11 @@ export function ToolRunnerResultPanel({
   const settled = SETTLED.has(result.status);
   const free = result.status === "free";
   const hash = result.explorerUrl?.split("/deploy/")[1];
+  // Unwrap the MCP payload once; decide JSON vs markdown/text so Formatted mode can
+  // pretty-print JSON OR render markdown (tools return different shapes).
+  const payload = useMemo(() => analyzePayload(result.result), [result.result]);
   const output = useMemo(() => formatOutput(result.result, pretty), [pretty, result.result]);
+  const showMarkdown = pretty && !payload.isJson;
 
   async function copyResult() {
     await navigator.clipboard.writeText(formatOutput(result.result, true));
@@ -68,9 +74,15 @@ export function ToolRunnerResultPanel({
               </Button>
             </div>
           </div>
-          <pre className="max-h-72 overflow-auto rounded-md border border-hairline bg-panel p-3 font-mono text-[11px] leading-relaxed text-ink-2">
-            {output}
-          </pre>
+          {showMarkdown ? (
+            <div className="markdown-body max-h-72 overflow-auto rounded-md border border-hairline bg-panel p-3 text-sm leading-relaxed text-ink-2">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{payload.text}</ReactMarkdown>
+            </div>
+          ) : (
+            <pre className="max-h-72 overflow-auto rounded-md border border-hairline bg-panel p-3 font-mono text-[11px] leading-relaxed text-ink-2">
+              {output}
+            </pre>
+          )}
         </div>
       ) : null}
 
@@ -104,6 +116,17 @@ function extractMcpText(value: unknown): string | null {
     if (parts.length) return parts.join("\n");
   }
   return null;
+}
+
+// Unwrap the payload and classify it: JSON (pretty-print) vs text/markdown (render).
+function analyzePayload(value: unknown): { text: string; isJson: boolean } {
+  const base = extractMcpText(value) ?? (typeof value === "string" ? value : JSON.stringify(value ?? null, null, 2));
+  try {
+    JSON.parse(base);
+    return { text: base, isJson: true };
+  } catch {
+    return { text: base, isJson: false };
+  }
 }
 
 function formatOutput(value: unknown, pretty: boolean) {

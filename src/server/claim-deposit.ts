@@ -19,6 +19,18 @@ export interface ClaimDepositResult {
   status: "credited" | "already_claimed" | "pending" | "no_transfer" | "failed";
 }
 
+// Turn raw Casper execution errors into something a user can act on. WCSPR/CEP-18
+// user error 60001 = insufficient balance — the #1 cause of a failed funding transfer.
+function decodeDeployError(message: string): string {
+  if (/\b60001\b/.test(message)) {
+    return "Your wallet doesn't have enough WCSPR to send this amount (on-chain error 60001).";
+  }
+  if (/\b60002\b/.test(message)) {
+    return "WCSPR transfer not authorized — insufficient allowance (on-chain error 60002).";
+  }
+  return message;
+}
+
 export async function claimDeposit(keyId: string, deployHash: string): Promise<ClaimDepositResult> {
   const config = requireIntegrationConfig();
   const csprCloud = new CsprCloudClient(config);
@@ -32,7 +44,7 @@ export async function claimDeposit(keyId: string, deployHash: string): Promise<C
     return { deployHash, reason: "deploy not indexed yet — try again shortly", status: "pending" };
   }
   if (deploy.status !== "processed") return { deployHash, reason: `deploy ${deploy.status}`, status: "pending" };
-  if (deploy.error_message) return { deployHash, reason: deploy.error_message, status: "failed" };
+  if (deploy.error_message) return { deployHash, reason: decodeDeployError(deploy.error_message), status: "failed" };
 
   const actions = await csprCloud.getContractPackageTokenActions(wcspr, deployHash);
   const inbound = actions.filter(
