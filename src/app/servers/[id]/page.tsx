@@ -23,6 +23,8 @@ export default async function ServerDetailPage({ params }: { params: Promise<{ i
   if (!server) notFound();
 
   const toolNames = new Set(server.tools.map((t) => t.name));
+  const paidCount = server.tools.filter((tool) => tool.price).length;
+  const freeCount = server.tools.length - paidCount;
   const all = await listReceiptDetails().catch(() => []);
   const recent = all.filter((r) => toolNames.has(r.receipt.tool)).slice(0, 6);
 
@@ -48,7 +50,7 @@ export default async function ServerDetailPage({ params }: { params: Promise<{ i
         <section className="mt-8">
           <div className="mb-3 flex items-center justify-between">
             <div className="font-mono text-[11px] uppercase tracking-widest text-ink-3">
-              {server.tools.length} paid tool{server.tools.length > 1 ? "s" : ""}
+              {server.tools.length} published tool{server.tools.length > 1 ? "s" : ""} · {paidCount} paid · {freeCount} free
             </div>
             <RediscoverButton sourceId={server.source.id} />
           </div>
@@ -59,7 +61,7 @@ export default async function ServerDetailPage({ params }: { params: Promise<{ i
               name: t.name,
               description: t.description,
               inputSchema: t.inputSchema,
-              price: t.price ? { amount: t.price.amount } : null,
+              price: t.price ? { amount: t.price.amount, asset: t.price.asset, network: t.price.network, payTo: t.price.payTo } : null,
             }))}
           />
         </section>

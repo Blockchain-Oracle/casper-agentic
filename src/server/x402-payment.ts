@@ -66,8 +66,9 @@ export async function createCasperPaymentPayload(
   config: IntegrationRuntimeConfig,
   resourceUrl: string,
   signer?: ClientCasperSigner,
+  requirements: PaymentRequirements = buildPaymentRequirements(config),
 ) {
-  return signPaymentPayload(buildPaymentRequirements(config), resourceUrl, signer ?? createSigner(config));
+  return signPaymentPayload(requirements, resourceUrl, signer ?? createSigner(config));
 }
 
 export function getConfiguredSignerAddress(config: IntegrationRuntimeConfig) {

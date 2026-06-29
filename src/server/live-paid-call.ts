@@ -1,4 +1,4 @@
-import { verifyApiKey } from "./api-keys";
+import { verifyApiKey, verifySelectedApiKey } from "./api-keys";
 import { CsprCloudClient } from "./cspr-cloud";
 import { normalizeCasperAccountHash } from "./casper-account";
 import { resolveCasperProof } from "./casper-proof";
@@ -29,6 +29,8 @@ export type { PaidCallInput } from "./live-paid-call-input";
 
 /** Gas floor (motes) the gateway wallet must keep to cover a settle deploy. */
 const MIN_GAS_MOTES = BigInt("5000000000");
+type ResolvedTool = NonNullable<Awaited<ReturnType<typeof getToolByName>>>;
+type ToolPrice = NonNullable<ResolvedTool["price"]>;
 
 /**
  * Run a paid tool call settled by the GATEWAY's own Testnet wallet (the env PEM
@@ -37,14 +39,6 @@ const MIN_GAS_MOTES = BigInt("5000000000");
  * only pre-settlement gate. Proven verify → settle → Casper proof flow.
  */
 export async function runGatewayPaidCall(input: PaidCallInput) {
-  const config = requireIntegrationConfig();
-  const facilitator = new X402FacilitatorClient(config);
-  const csprCloud = new CsprCloudClient(config);
-  const supported = await facilitator.supported();
-  if (!supported.kinds.some((kind) => kind.network === config.casperNetwork && kind.scheme === "exact")) {
-    throw new Error(`CSPR.cloud facilitator does not advertise ${config.casperNetwork} exact support`);
-  }
-
   const { args, endpointUrl, toolName } = requireLivePaidCallInput(input);
 
   // Resolve the registered source to dispatch the tool execution: MCP sources are
@@ -52,10 +46,14 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
   // operation stored at register time. Settlement (x402) is identical either way.
   const source = await getSourceByEndpoint(endpointUrl);
   const providerName = source?.name ?? "MCP source";
+  const registeredTool = source ? await getToolByName(source.id, toolName) : null;
+  if (source && (!registeredTool || registeredTool.status !== "published")) {
+    throw new Error(`Tool ${toolName} is not published for ${source.name}`);
+  }
+
   let execute: () => Promise<{ isError: boolean; text?: string; result?: unknown }>;
   if (source?.sourceType === "openapi") {
-    const toolRow = await getToolByName(source.id, toolName);
-    const operation = toolRow ? parseRestOperation(toolRow.upstreamTarget) : null;
+    const operation = registeredTool ? parseRestOperation(registeredTool.upstreamTarget) : null;
     if (!operation) throw new Error(`OpenAPI source did not expose ${toolName}`);
     execute = async () => {
       const rest = await callRestTool(operation, args);
@@ -70,8 +68,24 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
     execute = () => callMcpTool(endpointUrl, toolName, args);
   }
 
+  if (registeredTool && !registeredTool.price) {
+    const result = await execute();
+    if (result.isError) {
+      return { reason: "tool returned an error", result: result.result, status: "upstream_failed" as const };
+    }
+    return { result: result.result, status: "free" as const };
+  }
+
+  const config = requireIntegrationConfig();
+  const requirements = registeredTool?.price ? paymentRequirementsFromPrice(registeredTool.price) : buildPaymentRequirements(config);
+  const facilitator = new X402FacilitatorClient(config);
+  const csprCloud = new CsprCloudClient(config);
+  const supported = await facilitator.supported();
+  if (!supported.kinds.some((kind) => kind.network === requirements.network && kind.scheme === requirements.scheme)) {
+    throw new Error(`CSPR.cloud facilitator does not advertise ${requirements.network} ${requirements.scheme} support`);
+  }
+
   const gatewayHash = normalizeCasperAccountHash(getConfiguredSignerAddress(config));
-  const requirements = buildPaymentRequirements(config);
 
   // API-key path: an agent presents a casper_ key. Verify scope (allowed tools,
   // spend cap, expiry) BEFORE settling, and charge the call to that key. A rejected
@@ -79,6 +93,9 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
   let client = input.client ?? "gateway-console";
   if (input.apiKey) {
     const keyId = await verifyApiKey(input.apiKey, { amountMotes: requirements.amount, toolName });
+    client = `key:${keyId}`;
+  } else if (input.apiKeyId) {
+    const keyId = await verifySelectedApiKey(input.apiKeyId, { amountMotes: requirements.amount, toolName });
     client = `key:${keyId}`;
   }
 
@@ -101,18 +118,18 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
 
   // Funding readiness — the gateway wallet must hold WCSPR (asset) + CSPR (gas).
   const account = await csprCloud.getAccount(gatewayHash);
-  const ownerships = await csprCloud.getFTOwnerships(account.account_hash, config.paymentAsset);
+  const ownerships = await csprCloud.getFTOwnerships(account.account_hash, requirements.asset);
   const assetBalance = BigInt(ownerships[0]?.balance ?? "0");
   const gasBalance = BigInt(account.balance ?? "0");
   if (assetBalance < BigInt(requirements.amount)) {
-    return blocked("Gateway settlement wallet is low on WCSPR — top up or wrap CSPR.");
+    return blocked("This gateway cannot settle paid calls right now: the gateway payment account needs WCSPR.");
   }
   if (gasBalance < MIN_GAS_MOTES) {
-    return blocked("Gateway settlement wallet is low on CSPR for gas.");
+    return blocked("This gateway cannot settle paid calls right now: the gateway payment account needs CSPR gas.");
   }
 
   const resourceUrl = `${endpointUrl}#${toolName}`;
-  const payment = await createCasperPaymentPayload(config, resourceUrl);
+  const payment = await createCasperPaymentPayload(config, resourceUrl, undefined, requirements);
   const verifyResponse = await facilitator.verify({
     paymentPayload: payment.paymentPayload,
     paymentRequirements: payment.paymentRequirements,
@@ -156,7 +173,7 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
 
   // Resolve + persist the Casper proof (best-effort; indexing can lag the settle).
   const proof = await resolveCasperProof(csprCloud, {
-    asset: config.paymentAsset,
+    asset: requirements.asset,
     deployHash: settleResponse.transaction,
   });
   if (proof.deploy) {
@@ -187,4 +204,20 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
   }
   await updateAttemptStatus(attempt.id, "settled", undefined, { text: result.text });
   return { attemptId: attempt.id, explorerUrl, result: result.result, status: "settled" as const };
+}
+
+function paymentRequirementsFromPrice(price: ToolPrice) {
+  return {
+    amount: price.amount,
+    asset: price.asset,
+    extra: isRecord(price.extra) ? price.extra : {},
+    maxTimeoutSeconds: price.maxTimeoutSeconds,
+    network: price.network as `${string}:${string}`,
+    payTo: price.payTo,
+    scheme: price.scheme as "exact",
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

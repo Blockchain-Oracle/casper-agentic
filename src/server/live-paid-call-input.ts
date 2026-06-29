@@ -1,5 +1,6 @@
 export interface PaidCallInput {
   apiKey?: string;
+  apiKeyId?: string;
   args: Record<string, unknown>;
   client?: string;
   endpointUrl: string;

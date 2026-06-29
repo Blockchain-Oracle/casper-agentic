@@ -16,8 +16,13 @@ export async function POST(request: NextRequest) {
     request.nextUrl.searchParams.get("api_key")?.trim() ||
     (typeof body.apiKey === "string" ? body.apiKey.trim() : undefined) ||
     undefined;
+  const apiKeyId =
+    request.headers.get("x-api-key-id")?.trim() ||
+    request.nextUrl.searchParams.get("api_key_id")?.trim() ||
+    (typeof body.apiKeyId === "string" ? body.apiKeyId.trim() : undefined) ||
+    undefined;
   try {
-    const result = await runGatewayPaidCall({ ...parsePaidCallBody(body), apiKey });
+    const result = await runGatewayPaidCall({ ...parsePaidCallBody(body), apiKey, apiKeyId });
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "paid_call_failed";
