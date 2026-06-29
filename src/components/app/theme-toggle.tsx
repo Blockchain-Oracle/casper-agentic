@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/app/theme-provider";
 
 const MoonIcon = (
   <svg aria-hidden fill="none" height="16" viewBox="0 0 24 24" width="16">

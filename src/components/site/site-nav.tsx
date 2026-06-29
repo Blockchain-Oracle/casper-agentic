@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/app/theme-provider";
 import { Menu, Moon, Sun } from "lucide-react";
 
 import { AccountDialog } from "@/components/account/account-dialog";
