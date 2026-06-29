@@ -8,7 +8,7 @@ import { FundTab } from "@/components/account/fund-tab";
 import { WalletTab } from "@/components/account/wallet-tab";
 import { useCsprClick } from "@/components/csprclick/csprclick-provider";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getGatewayBalance, listApiKeys, listTools, type ApiKeyView } from "@/lib/gateway-api";
 
@@ -58,9 +58,16 @@ export function AccountDialog() {
           <UserRound className="size-3.5" /> <span className="max-sm:hidden">Account</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[92dvh] w-[calc(100vw-1rem)] max-w-4xl overflow-hidden p-0 sm:max-w-4xl">
+      <DialogContent className="max-h-[92dvh] w-[calc(100vw-1rem)] max-w-2xl overflow-hidden p-0 sm:max-w-2xl">
         <DialogHeader className="border-b border-hairline px-4 py-4 sm:px-5">
           <DialogTitle className="font-display">Account</DialogTitle>
+          <DialogDescription className="text-xs text-ink-3">
+            {tab === "wallet"
+              ? "Your wallet, owner sign-in, and the gateway's payment account."
+              : tab === "keys"
+                ? "Mint and manage casper_ API keys for paying per call."
+                : "Fund a key with WCSPR so agents can pay through it."}
+          </DialogDescription>
         </DialogHeader>
         <div className="max-h-[calc(92dvh-73px)] overflow-y-auto px-4 pb-4 sm:px-5 sm:pb-5">
           <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)} className="gap-0">

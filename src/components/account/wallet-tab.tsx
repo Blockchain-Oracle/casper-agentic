@@ -3,6 +3,7 @@
 import { OwnerSessionPanel } from "@/components/account/owner-session-panel";
 import { CopyButton } from "@/components/primitives/copy-button";
 import { TokenIcon } from "@/components/primitives/token-icon";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatTokenAmount } from "@/lib/format-amount";
 
 type GatewayBalance = {
@@ -20,11 +21,15 @@ function short(value?: string) {
   return value.length > 18 ? `${value.slice(0, 10)}...${value.slice(-8)}` : value;
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, loading }: { label: string; value: string; loading?: boolean }) {
   return (
     <div className="rounded-md border border-hairline bg-panel p-3">
       <div className="font-mono text-[10px] uppercase tracking-wider text-ink-3">{label}</div>
-      <div className="mt-1 font-mono text-sm text-ink tnum">{value}</div>
+      {loading ? (
+        <Skeleton className="mt-1.5 h-4 w-20" />
+      ) : (
+        <div className="mt-1 font-mono text-sm text-ink tnum">{value}</div>
+      )}
     </div>
   );
 }
@@ -57,9 +62,9 @@ export function WalletTab({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Gateway WCSPR" value={loading || !balance || balance.balanceUnavailable ? "..." : formatTokenAmount(balance.wcspr)} />
-        <Stat label="Gateway CSPR gas" value={loading || !balance || balance.balanceUnavailable ? "..." : formatTokenAmount(balance.csprGas)} />
-        <Stat label="Default call price" value={loading || !balance ? "..." : formatTokenAmount(balance.perCall)} />
+        <Stat label="Gateway WCSPR" loading={loading} value={!balance || balance.balanceUnavailable ? "—" : formatTokenAmount(balance.wcspr)} />
+        <Stat label="Gateway CSPR gas" loading={loading} value={!balance || balance.balanceUnavailable ? "—" : formatTokenAmount(balance.csprGas)} />
+        <Stat label="Default call price" loading={loading} value={!balance ? "—" : formatTokenAmount(balance.perCall)} />
       </div>
 
       <div
