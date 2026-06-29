@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { InlineScript } from "@/components/app/inline-script";
 import { ThemeProvider } from "@/components/app/theme-provider";
 import { CsprClickProvider } from "@/components/csprclick/csprclick-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -23,14 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Official Next.js preventing-flash-before-hydration pattern: type is
-            text/javascript on the server (runs pre-paint, no flash) and text/plain
-            on the client, so React 19 does not warn about a client-rendered script. */}
-        <script
-          type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: THEME_NO_FLASH_SCRIPT }}
-        />
+        <InlineScript html={THEME_NO_FLASH_SCRIPT} />
       </head>
       <body>
         <div id="csprclick-ui" />
