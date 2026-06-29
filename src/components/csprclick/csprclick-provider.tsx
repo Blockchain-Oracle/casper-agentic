@@ -30,7 +30,15 @@ type CsprClickContextValue = {
   connect: () => void;
   disconnect: () => void;
   sendWcsprTransfer: (input: SendWcsprTransferInput) => Promise<SendWcsprTransferResult>;
+  /** Ask the connected wallet to sign an owner sign-in message (identity only). */
+  signOwnerMessage: (message: string) => Promise<SignOwnerMessageResult>;
 };
+
+export type SignOwnerMessageResult =
+  | { status: "signed"; publicKey: string; signatureHex: string }
+  | { status: "cancelled" }
+  | { status: "needs_connection" }
+  | { status: "error"; error: string };
 
 export interface SendWcsprTransferInput {
   amountMotes: string;
@@ -214,9 +222,31 @@ export function CsprClickProvider({ children }: { children: React.ReactNode }) {
     [publicKey],
   );
 
+  const signOwnerMessage = useCallback(
+    async (message: string): Promise<SignOwnerMessageResult> => {
+      const client = clientRef.current;
+      if (!client?.signMessage) return { error: "Connected wallet does not support message signing", status: "error" };
+      const account = client.getActiveAccountAsync
+        ? await client.getActiveAccountAsync().catch(() => null)
+        : (client.getActiveAccount?.() ?? null);
+      const signingPublicKey = account?.public_key?.toLowerCase() || publicKey;
+      if (!signingPublicKey) {
+        client.signIn?.();
+        return { status: "needs_connection" };
+      }
+      const result = await client.signMessage(message, signingPublicKey);
+      if (result?.signatureHex) {
+        return { publicKey: signingPublicKey, signatureHex: result.signatureHex, status: "signed" };
+      }
+      if (result?.cancelled) return { status: "cancelled" };
+      return { error: result?.error || "Wallet did not return a signature", status: "error" };
+    },
+    [publicKey],
+  );
+
   const value = useMemo<CsprClickContextValue>(
-    () => ({ connect, disconnect, disabled, publicKey, ready, sendWcsprTransfer }),
-    [connect, disconnect, disabled, publicKey, ready, sendWcsprTransfer],
+    () => ({ connect, disconnect, disabled, publicKey, ready, sendWcsprTransfer, signOwnerMessage }),
+    [connect, disconnect, disabled, publicKey, ready, sendWcsprTransfer, signOwnerMessage],
   );
 
   return <CsprClickContext.Provider value={value}>{children}</CsprClickContext.Provider>;

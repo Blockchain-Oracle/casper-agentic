@@ -1,5 +1,6 @@
 "use client";
 
+import { OwnerSessionPanel } from "@/components/account/owner-session-panel";
 import { CopyButton } from "@/components/primitives/copy-button";
 import { TokenIcon } from "@/components/primitives/token-icon";
 import { formatTokenAmount } from "@/lib/format-amount";
@@ -39,6 +40,8 @@ export function WalletTab({
 }) {
   return (
     <div className="space-y-4">
+      <OwnerSessionPanel />
+
       <div className="rounded-md border border-hairline bg-well p-4">
         <div className="font-mono text-[10px] uppercase tracking-wider text-ink-3">Connected wallet</div>
         <div className="mt-2 flex items-center gap-2">

@@ -57,6 +57,11 @@ export type CSPRClickClient = {
   on?: (eventName: CSPRClickEventName, handler: (event?: CSPRClickAccountEvent) => void) => void;
   signIn?: () => void;
   signInWithAccount?: (account: CSPRClickAccount) => unknown;
+  // Identity-only message signing for owner sign-in (not an x402 payment path).
+  signMessage?: (
+    message: string,
+    signingPublicKey: string,
+  ) => Promise<{ cancelled?: boolean; error?: string | null; signatureHex?: string | null } | undefined>;
   signOut?: () => Promise<void> | void;
   signTypedData?: (
     params: SignTypedDataParams,
