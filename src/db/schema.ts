@@ -12,6 +12,10 @@ export const providerSources = pgTable("provider_sources", {
   endpointUrl: text("endpoint_url").notNull(),
   authMode: text("auth_mode").default("none").notNull(),
   credentialRef: text("credential_ref"),
+  // Owner = the CSPR.click wallet that registered this source. Nullable so pre-ownership
+  // (legacy) rows remain; those fall back to the admin-token destructive guard.
+  ownerPublicKey: text("owner_public_key"),
+  ownerAccountHash: text("owner_account_hash"),
   ...timestamps,
 });
 
@@ -51,6 +55,9 @@ export const endpointAccessKeys = pgTable("endpoint_access_keys", {
   label: text("label").notNull(),
   scope: jsonb("scope").default({}).notNull(),
   revoked: boolean("revoked").default(false).notNull(),
+  // Owner = the CSPR.click wallet that minted this key. Nullable for legacy rows.
+  ownerPublicKey: text("owner_public_key"),
+  ownerAccountHash: text("owner_account_hash"),
   ...timestamps,
 });
 

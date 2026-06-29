@@ -20,6 +20,8 @@ describe("endpoint access model", () => {
       createdAt: new Date(),
       id: "key-1",
       label: "Cursor",
+      ownerAccountHash: null,
+      ownerPublicKey: null,
       revoked: false,
       scope: { sourceId: "source-1" },
       sourceId: "source-1",

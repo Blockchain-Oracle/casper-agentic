@@ -30,6 +30,8 @@ describe("provider store helpers", () => {
       credentialRef: source.credentialRef ?? null,
       createdAt: new Date(),
       id: "source-1",
+      ownerAccountHash: null,
+      ownerPublicKey: null,
       updatedAt: new Date(),
     });
 
