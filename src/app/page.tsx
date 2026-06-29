@@ -85,37 +85,37 @@ export default async function Home() {
           </section>
         ) : null}
 
-        {/* How it works */}
+        {/* How it works — a numbered 01→02→03 sequence, not a card row */}
         <section className="border-t border-hairline py-14">
           <div className="mb-9 font-mono text-[11px] tracking-widest text-ink-3">HOW A PAID CALL BECOMES PROOF</div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <ol className="grid gap-px overflow-hidden rounded-lg border border-hairline bg-hairline md:grid-cols-3">
             {STEPS.map(({ icon: Icon, title, body }, i) => (
-              <div key={title} className="rounded-lg border border-hairline bg-panel p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <span className="grid size-9 place-items-center rounded-md bg-well text-ink"><Icon className="size-4.5" /></span>
-                  <span className="font-mono text-xs text-ink-3">0{i + 1}</span>
+              <li key={title} className="bg-surface p-6">
+                <div className="mb-4 flex items-baseline gap-3">
+                  <span className="font-display text-3xl font-bold leading-none text-casper tnum">0{i + 1}</span>
+                  <span className="grid size-8 place-items-center rounded-md bg-well text-ink-2"><Icon className="size-4" /></span>
                 </div>
                 <h3 className="font-display text-base font-semibold text-ink">{title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-ink-2">{body}</p>
-              </div>
+              </li>
             ))}
-          </div>
+          </ol>
         </section>
 
-        {/* Stats (real) */}
-        <section className="border-t border-hairline py-14">
-          <div className="grid grid-cols-3 gap-4">
+        {/* Stats (real) — one full-bleed band, large figures, no per-stat boxes */}
+        <section className="relative left-1/2 my-14 w-screen -translate-x-1/2 border-y border-hairline bg-well">
+          <div className="mx-auto grid max-w-6xl grid-cols-3 divide-x divide-hairline px-5 py-12 sm:py-14">
             {stats.map((s) => (
-              <div key={s.label} className="rounded-lg border border-hairline bg-panel p-5">
-                <div className="font-display text-3xl font-bold tracking-tight text-ink tnum">{s.value}</div>
-                <div className="mt-1 font-mono text-[11px] uppercase tracking-wider text-ink-3">{s.label}</div>
+              <div key={s.label} className="px-3 text-center sm:px-6">
+                <div className="font-display text-4xl font-bold tracking-tight text-ink tnum sm:text-5xl">{s.value}</div>
+                <div className="mt-2 font-mono text-[10px] uppercase tracking-wider text-ink-3 sm:text-[11px]">{s.label}</div>
               </div>
             ))}
           </div>
         </section>
 
         {/* CTA */}
-        <section className="border-t border-hairline py-16 text-center">
+        <section className="py-16 text-center">
           <h2 className="font-display text-2xl font-bold tracking-tight text-ink sm:text-3xl">Settle your first agent payment.</h2>
           <p className="mx-auto mt-2 max-w-md text-[15px] text-ink-2">Register a server, price its tools, and watch a real Casper deploy land per call.</p>
           <Button asChild size="lg" className="mt-6 gap-2">
