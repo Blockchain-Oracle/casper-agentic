@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
-    await requireSourceOwner(request, id, "admin");
+    await requireSourceOwner(request, id);
     return NextResponse.json(await deleteProviderSource(id));
   } catch (error) {
     return NextResponse.json(

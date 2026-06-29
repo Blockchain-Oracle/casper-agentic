@@ -66,6 +66,9 @@ export function toProviderSourceView(row: typeof providerSources.$inferSelect) {
     endpointUrl: row.endpointUrl,
     id: row.id,
     name: row.name,
+    // Public-key attribution so the client can show "Manage" only on servers you own.
+    // Null = unclaimed (claimable by the first signed-in wallet that manages it).
+    ownerPublicKey: row.ownerPublicKey ?? null,
     sourceType: row.sourceType as ProviderSourceType,
   };
 }

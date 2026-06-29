@@ -13,7 +13,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     // Three accepted authorizations: possession of the raw token, the owning wallet
     // session, or (for legacy owner-null keys) the admin token via requireKeyOwner.
     if (apiKeyToken) await requireApiKeyTokenForKey(id, apiKeyToken);
-    else await requireKeyOwner(request, id, "admin");
+    else await requireKeyOwner(request, id);
     await revokeApiKey(id);
     return NextResponse.json({ ok: true });
   } catch (error) {

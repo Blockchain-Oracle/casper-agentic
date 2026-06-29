@@ -41,6 +41,7 @@ describe("provider store helpers", () => {
       endpointUrl: "https://mcp.cspr.trade/mcp",
       id: "source-1",
       name: "CSPR Trade",
+      ownerPublicKey: null,
       sourceType: "mcp",
     });
     expect(view).not.toHaveProperty("credentialRef");

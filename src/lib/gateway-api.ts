@@ -40,7 +40,9 @@ export function createSource(input: { name: string; endpointUrl: string; sourceT
 }
 
 export function listSources() {
-  return get<{ sources: Array<{ endpointUrl: string; id: string; name: string; sourceType: string }> }>("/api/provider/sources");
+  return get<{
+    sources: Array<{ endpointUrl: string; id: string; name: string; sourceType: string; ownerPublicKey: string | null }>;
+  }>("/api/provider/sources");
 }
 
 export function deleteSource(sourceId: string) {
