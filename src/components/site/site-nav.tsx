@@ -23,16 +23,16 @@ export function SiteNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-hairline bg-surface/85 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-5">
-        <Link href="/" className="flex items-center gap-2 font-display text-[15px] font-bold text-ink">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-5">
+        <Link href="/" className="flex shrink-0 items-center gap-2 font-display text-[15px] font-bold text-ink">
           <BrandMark size={22} />
           Casper GW
-          <span className="rounded-sm border border-hairline px-1.5 py-0.5 font-mono text-[9px] font-medium tracking-widest text-ink-3">
+          <span className="rounded-sm border border-hairline px-1.5 py-0.5 font-mono text-[9px] font-medium tracking-widest text-ink-3 max-sm:hidden">
             TESTNET
           </span>
         </Link>
 
-        <nav className="ml-2 flex items-center gap-1" aria-label="Primary">
+        <nav className="ml-2 hidden items-center gap-1 md:flex" aria-label="Primary">
           {LINKS.map(({ href, label }) => {
             const active = pathname.startsWith(href);
             return (

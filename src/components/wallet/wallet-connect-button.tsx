@@ -65,7 +65,7 @@ export function WalletConnectButton() {
   if (!pk) {
     return (
       <Button size="sm" variant="outline" className="gap-1.5 font-medium" onClick={signIn}>
-        <Wallet className="size-3.5" /> Connect wallet
+        <Wallet className="size-3.5" /> <span className="max-sm:hidden">Connect wallet</span>
       </Button>
     );
   }

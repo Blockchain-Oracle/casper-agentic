@@ -114,7 +114,7 @@ console.log(await r.json()); // { status: "settled", explorerUrl: "...cspr.live/
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setView("list"); setToken(""); } }}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="gap-1.5 font-medium">
-          <KeyRound className="size-3.5" /> API keys
+          <KeyRound className="size-3.5" /> <span className="max-sm:hidden">API keys</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
