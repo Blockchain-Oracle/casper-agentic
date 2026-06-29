@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { formatTokenAmount, parseTokenToMotes } from "@/lib/format-amount";
 import { claimDepositReq, createApiKeyReq, getGatewayBalance, listApiKeys, listTools, revokeApiKeyReq, type ApiKeyView } from "@/lib/gateway-api";
+import { forgetApiKeyToken, readApiKeyToken, rememberApiKeyToken } from "@/lib/browser-api-key-tokens";
 
 type View = "list" | "create" | "created";
 
@@ -45,17 +46,17 @@ export function ApiKeysDialog() {
   }, [open]);
 
   async function claim(keyId: string) {
-    if (!claimHash.trim()) return toast.error("Paste the deposit deploy hash");
+    if (!claimHash.trim()) return toast.error("Paste the WCSPR transfer deploy hash");
     setClaiming(true);
     try {
       const r = await claimDepositReq({ deployHash: claimHash.trim(), keyId });
       if (r.status === "credited") toast.success(`Credited ${formatTokenAmount(r.amount ?? "0")} WCSPR`);
-      else if (r.status === "already_claimed") toast.info("Already claimed");
+      else if (r.status === "already_claimed") toast.info("Transfer already credited");
       else toast.error(r.reason ?? r.status);
       setClaimHash("");
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Claim failed");
+      toast.error(e instanceof Error ? e.message : "Could not credit transfer");
     }
     setClaiming(false);
   }
@@ -73,6 +74,7 @@ export function ApiKeysDialog() {
         maxSpendMotes: maxSpend.trim() ? parseTokenToMotes(maxSpend) : undefined,
         name: name.trim() || undefined,
       });
+      rememberApiKeyToken(res.key.id, res.token);
       setToken(res.token);
       setView("created");
       setName(""); setAllowed(new Set()); setMaxSpend("");
@@ -84,9 +86,14 @@ export function ApiKeysDialog() {
   }
 
   async function revoke(id: string) {
-    await revokeApiKeyReq(id).catch(() => {});
-    toast.success("Key revoked");
-    refresh();
+    try {
+      await revokeApiKeyReq(id, readApiKeyToken(id));
+      forgetApiKeyToken(id);
+      toast.success("Key deleted");
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete key");
+    }
   }
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -153,14 +160,14 @@ console.log(await r.json()); // { status: "settled", explorerUrl: "...cspr.live/
                   </div>
                   {fundId === k.id ? (
                     <div className="mt-2.5 space-y-2 rounded-md border border-hairline bg-well p-2.5">
-                      <div className="font-mono text-[10px] uppercase tracking-wider text-ink-3">Send WCSPR to the gateway, then claim by deploy hash</div>
+                      <div className="font-mono text-[10px] uppercase tracking-wider text-ink-3">Send WCSPR to the gateway, then credit by deploy hash</div>
                       <div className="flex items-center gap-1.5">
                         <code className="min-w-0 flex-1 truncate rounded-sm border border-hairline bg-panel px-2 py-1 font-mono text-[11px] text-ink">{depositAddr || "…"}</code>
                         <Button size="icon" variant="outline" onClick={() => copy(depositAddr, "Deposit address")}><Copy className="size-3" /></Button>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Input value={claimHash} onChange={(e) => setClaimHash(e.target.value)} placeholder="deposit deploy hash" className="font-mono text-xs" />
-                        <Button size="sm" onClick={() => claim(k.id)} disabled={claiming}>{claiming ? <Loader2 className="size-3.5 animate-spin" /> : "Claim"}</Button>
+                        <Input value={claimHash} onChange={(e) => setClaimHash(e.target.value)} placeholder="WCSPR transfer deploy hash" className="font-mono text-xs" />
+                        <Button size="sm" onClick={() => claim(k.id)} disabled={claiming}>{claiming ? <Loader2 className="size-3.5 animate-spin" /> : "Credit"}</Button>
                       </div>
                     </div>
                   ) : null}

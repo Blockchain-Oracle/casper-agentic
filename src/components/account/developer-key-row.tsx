@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatTokenAmount } from "@/lib/format-amount";
@@ -20,12 +20,14 @@ function fmtDate(value: string) {
 
 export function DeveloperKeyRow({
   apiKey,
+  deleting,
+  onDeleteKey,
   onFundKey,
-  onRevoke,
 }: {
   apiKey: ApiKeyView;
+  deleting?: boolean;
+  onDeleteKey: (key: ApiKeyView) => void;
   onFundKey: (keyId: string) => void;
-  onRevoke: (keyId: string) => void;
 }) {
   return (
     <div className="rounded-md border border-hairline bg-panel p-3">
@@ -45,8 +47,15 @@ export function DeveloperKeyRow({
             <Button size="xs" variant="outline" onClick={() => onFundKey(apiKey.id)}>
               Fund
             </Button>
-            <Button size="icon-xs" variant="ghost" onClick={() => onRevoke(apiKey.id)} aria-label="Revoke key">
-              <Trash2 className="size-3.5" />
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() => onDeleteKey(apiKey)}
+              disabled={deleting}
+              className="gap-1 text-signal hover:text-signal"
+            >
+              {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+              Delete
             </Button>
           </div>
         )}

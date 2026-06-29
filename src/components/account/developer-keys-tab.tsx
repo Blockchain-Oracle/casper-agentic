@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { parseTokenToMotes } from "@/lib/format-amount";
 import { createApiKeyReq, revokeApiKeyReq, type ApiKeyView } from "@/lib/gateway-api";
+import { forgetApiKeyToken, readApiKeyToken, rememberApiKeyToken } from "@/lib/browser-api-key-tokens";
 
 type View = "list" | "create" | "created";
 type DeveloperKeysTabProps = {
@@ -30,6 +31,7 @@ export function DeveloperKeysTab({ keys, onFundKey, onRefresh, tools }: Develope
   const [name, setName] = useState("");
   const [allowed, setAllowed] = useState<Set<string>>(new Set());
   const [maxSpend, setMaxSpend] = useState("");
+  const [deletingKeyId, setDeletingKeyId] = useState("");
 
   async function create() {
     setBusy(true);
@@ -39,6 +41,7 @@ export function DeveloperKeysTab({ keys, onFundKey, onRefresh, tools }: Develope
         maxSpendMotes: maxSpend.trim() ? parseTokenToMotes(maxSpend) : undefined,
         name: name.trim() || undefined,
       });
+      rememberApiKeyToken(res.key.id, res.token);
       setToken(res.token);
       setView("created");
       setName("");
@@ -52,10 +55,19 @@ export function DeveloperKeysTab({ keys, onFundKey, onRefresh, tools }: Develope
     }
   }
 
-  async function revoke(id: string) {
-    await revokeApiKeyReq(id).catch(() => {});
-    toast.success("Key revoked");
-    await onRefresh();
+  async function deleteKey(key: ApiKeyView) {
+    if (!window.confirm(`Delete ${key.name}? This revokes the key for future paid calls.`)) return;
+    setDeletingKeyId(key.id);
+    try {
+      await revokeApiKeyReq(key.id, readApiKeyToken(key.id));
+      forgetApiKeyToken(key.id);
+      toast.success("Key deleted");
+      await onRefresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete key");
+    } finally {
+      setDeletingKeyId("");
+    }
   }
 
   function toggleTool(tool: string) {
@@ -148,11 +160,17 @@ export function DeveloperKeysTab({ keys, onFundKey, onRefresh, tools }: Develope
         </Button>
       </div>
       <div className="max-h-[46dvh] space-y-2 overflow-y-auto pr-1">
-        {keys.length === 0 ? (
+        {keys.filter((key) => !key.revoked).length === 0 ? (
           <p className="rounded-md border border-dashed border-hairline bg-panel p-4 text-center text-sm text-ink-3">No keys yet.</p>
         ) : (
-          keys.map((key) => (
-            <DeveloperKeyRow key={key.id} apiKey={key} onFundKey={onFundKey} onRevoke={revoke} />
+          keys.filter((key) => !key.revoked).map((key) => (
+            <DeveloperKeyRow
+              key={key.id}
+              apiKey={key}
+              deleting={deletingKeyId === key.id}
+              onDeleteKey={deleteKey}
+              onFundKey={onFundKey}
+            />
           ))
         )}
       </div>

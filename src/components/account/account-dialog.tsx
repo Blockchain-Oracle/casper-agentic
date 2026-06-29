@@ -16,7 +16,7 @@ type GatewayBalance = Awaited<ReturnType<typeof getGatewayBalance>>;
 type Tab = "wallet" | "keys" | "fund";
 
 export function AccountDialog() {
-  const { publicKey } = useCsprClick();
+  const { connect, publicKey, ready, sendWcsprTransfer } = useCsprClick();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("wallet");
   const [keys, setKeys] = useState<ApiKeyView[]>([]);
@@ -54,29 +54,39 @@ export function AccountDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="gap-1.5 font-medium">
+        <Button size="sm" variant="outline" className="gap-1.5 font-medium" aria-label="Account">
           <UserRound className="size-3.5" /> <span className="max-sm:hidden">Account</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl p-0">
-        <DialogHeader className="border-b border-hairline px-5 py-4">
+      <DialogContent className="max-h-[92dvh] w-[calc(100vw-1rem)] max-w-4xl overflow-hidden p-0 sm:max-w-4xl">
+        <DialogHeader className="border-b border-hairline px-4 py-4 sm:px-5">
           <DialogTitle className="font-display">Account</DialogTitle>
         </DialogHeader>
-        <div className="px-5 pb-5">
-          <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)} className="gap-4">
+        <div className="max-h-[calc(92dvh-73px)] overflow-y-auto px-4 pb-4 sm:px-5 sm:pb-5">
+          <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)} className="gap-0">
             <TabsList className="mt-4 grid h-auto w-full grid-cols-3 bg-well">
               <TabsTrigger value="wallet">Wallet</TabsTrigger>
-              <TabsTrigger value="keys">Developer keys</TabsTrigger>
+              <TabsTrigger value="keys"><span className="sm:hidden">Keys</span><span className="max-sm:hidden">Developer keys</span></TabsTrigger>
               <TabsTrigger value="fund">Fund</TabsTrigger>
             </TabsList>
-            <TabsContent value="wallet">
+            <TabsContent value="wallet" className="mt-4">
               <WalletTab balance={balance} loading={loading} publicKey={publicKey} />
             </TabsContent>
-            <TabsContent value="keys">
+            <TabsContent value="keys" className="mt-4">
               <DeveloperKeysTab keys={keys} tools={tools} onFundKey={fundKey} onRefresh={refresh} />
             </TabsContent>
-            <TabsContent value="fund">
-              <FundTab key={fundKeyId ?? "fund"} balance={balance} initialKeyId={fundKeyId} keys={keys} onRefresh={refresh} />
+            <TabsContent value="fund" className="mt-4">
+              <FundTab
+                key={fundKeyId ?? "fund"}
+                balance={balance}
+                initialKeyId={fundKeyId}
+                keys={keys}
+                onConnectWallet={connect}
+                onRefresh={refresh}
+                onSendWcsprTransfer={sendWcsprTransfer}
+                publicKey={publicKey}
+                walletReady={ready}
+              />
             </TabsContent>
           </Tabs>
         </div>

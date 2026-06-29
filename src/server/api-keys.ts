@@ -105,6 +105,21 @@ export async function revokeApiKey(id: string) {
   await getDb().update(endpointAccessKeys).set({ revoked: true, updatedAt: new Date() }).where(eq(endpointAccessKeys.id, id));
 }
 
+export async function requireApiKeyTokenForKey(id: string, token: string) {
+  const [match] = await getDb()
+    .select()
+    .from(endpointAccessKeys)
+    .where(and(eq(endpointAccessKeys.id, id), isNull(endpointAccessKeys.sourceId)))
+    .limit(1);
+  if (!match || (match.scope as Record<string, unknown>)?.kind !== "consumer") {
+    throw new ApiKeyError("API key not found", 404);
+  }
+  if (match.revoked) throw new ApiKeyError("API key already revoked", 403);
+  if (!safeEqual(match.tokenHash, hashToken(token))) {
+    throw new ApiKeyError("API key token does not match this key", 403);
+  }
+}
+
 /** Settled spend (motes) charged to a key — keyed by attempt.client = `key:<id>`. */
 export async function spendForKey(id: string): Promise<bigint> {
   const rows = await getDb()
@@ -120,12 +135,33 @@ export async function creditsForKey(id: string): Promise<bigint> {
   return rows.reduce((sum, r) => sum + BigInt(r.amount || "0"), BigInt(0));
 }
 
-/** Verify a key for a specific call. Enforces revoke/expiry/tool-allowlist/balance-or-cap. Returns the key id. */
+/** Verify a key for a specific paid call. Enforces revoke/expiry/tool allowlist and prepaid WCSPR balance. */
 export async function verifyApiKey(token: string, ctx: { toolName: string; amountMotes: string }): Promise<string> {
   const rows = await getDb().select().from(endpointAccessKeys).where(isNull(endpointAccessKeys.sourceId));
   const hash = hashToken(token);
   const match = rows.find((r) => (r.scope as Record<string, unknown>)?.kind === "consumer" && safeEqual(r.tokenHash, hash));
   if (!match) throw new ApiKeyError("invalid API key", 401);
+  await assertKeyCanSpend(match, ctx);
+  return match.id;
+}
+
+export async function verifySelectedApiKey(keyId: string, ctx: { toolName: string; amountMotes: string }): Promise<string> {
+  const [match] = await getDb()
+    .select()
+    .from(endpointAccessKeys)
+    .where(and(eq(endpointAccessKeys.id, keyId), isNull(endpointAccessKeys.sourceId)))
+    .limit(1);
+  if (!match || (match.scope as Record<string, unknown>)?.kind !== "consumer") {
+    throw new ApiKeyError("selected API key not found", 404);
+  }
+  await assertKeyCanSpend(match, ctx);
+  return match.id;
+}
+
+async function assertKeyCanSpend(
+  match: typeof endpointAccessKeys.$inferSelect,
+  ctx: { toolName: string; amountMotes: string },
+) {
   if (match.revoked) throw new ApiKeyError("API key revoked", 403);
 
   const scope = scopeOf(match);
@@ -134,20 +170,14 @@ export async function verifyApiKey(token: string, ctx: { toolName: string; amoun
     throw new ApiKeyError(`API key is not scoped to call ${ctx.toolName}`, 403);
   }
   const credits = await creditsForKey(match.id);
-  if (credits > BigInt(0)) {
-    // Funded (prepaid) key — enforce the deposited WCSPR balance.
-    const spent = await spendForKey(match.id);
-    if (spent + BigInt(ctx.amountMotes) > credits) {
-      throw new ApiKeyError("insufficient key balance — fund the key with WCSPR", 402);
-    }
-  } else if (scope.maxSpendMotes) {
-    // Unfunded key — fall back to the optional spend cap.
-    const spent = await spendForKey(match.id);
-    if (spent + BigInt(ctx.amountMotes) > BigInt(scope.maxSpendMotes)) {
-      throw new ApiKeyError("API key spend cap reached", 402);
-    }
+  const spent = await spendForKey(match.id);
+  const nextSpend = spent + BigInt(ctx.amountMotes);
+  if (nextSpend > credits) {
+    throw new ApiKeyError("insufficient key balance — fund the key with WCSPR", 402);
   }
-  return match.id;
+  if (scope.maxSpendMotes && nextSpend > BigInt(scope.maxSpendMotes)) {
+    throw new ApiKeyError("API key spend cap reached", 402);
+  }
 }
 
 function safeEqual(a: string, b: string) {
