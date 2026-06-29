@@ -114,7 +114,7 @@ function ToolRunner({ tool, endpointUrl }: { tool: ServerTool; endpointUrl: stri
     if (paid && paymentMethod === "wallet") return toast.error("Direct wallet x402 signing is not available for Casper settlement yet.");
     if (paid && !selectedKey) return toast.error("Choose or create an API key before running a paid tool.");
     if (selectedBalanceCanBlock) return toast.error("Selected key does not have enough WCSPR for this call.");
-    if (gatewayPaymentNotReady) return toast.error("Gateway payment account needs WCSPR or CSPR gas before this call can settle.");
+    if (gatewayPaymentNotReady) return toast.error("The gateway's settlement wallet isn't funded yet (separate from your key) — operator must fund it.");
     setPhase("running");
     try {
       setResult(await runPaidCall({ apiKeyId: paid ? selectedKey?.id : undefined, args, client: "server-console", endpointUrl, toolName: tool.name }));
@@ -216,11 +216,12 @@ function ToolRunner({ tool, endpointUrl }: { tool: ServerTool; endpointUrl: stri
             {gatewayPaymentNotReady ? (
               <div className="flex items-start gap-2 rounded-md border border-signal/40 bg-signal/10 p-3 text-sm text-signal">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                Gateway payment account needs WCSPR or CSPR gas before this paid call can settle.
+                The gateway&apos;s own settlement wallet isn&apos;t funded yet — separate from your API key, it
+                needs WCSPR + CSPR gas to submit the on-chain payment. (Operator action, not yours.)
               </div>
             ) : gatewayBalance?.ready ? (
               <div className="rounded-md border border-settled/40 bg-settled/10 p-3 text-sm text-settled">
-                Gateway payment account is ready to settle this paid call.
+                Gateway settlement wallet is funded and ready to settle this paid call.
               </div>
             ) : gatewayBalance?.balanceUnavailable ? (
               <div className="rounded-md border border-hairline bg-panel p-3 text-sm text-ink-3">
