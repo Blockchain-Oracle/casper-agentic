@@ -66,7 +66,7 @@ export function AccountDialog() {
               ? "Your wallet, owner sign-in, and the gateway's payment account."
               : tab === "keys"
                 ? "Mint and manage casper_ API keys for paying per call."
-                : "Fund a key with WCSPR so agents can pay through it."}
+                : "Deposit CSPR to fund a key so agents can pay through it."}
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[calc(92dvh-73px)] overflow-y-auto px-4 pb-4 sm:px-5 sm:pb-5">
