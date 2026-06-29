@@ -64,22 +64,21 @@ export async function POST(request: NextRequest, context: { params: Promise<{ so
       return jsonRpcError(message.id, -32601, "method not found");
     }
 
+    const tool = resolveHostedTool(endpoint, requiredToolName(message.params));
+    if (!tool) return jsonRpcError(message.id, -32004, "tool not found", { status: "not_found" }, 404);
+    const paymentRequirements = tool.paymentRequirements;
+
     // Paid action — require a casper_ key (header or bearer); the gateway settles.
+    // Free published tools have no payment requirements and can run without a key.
     const apiKey = request.headers.get("x-api-key")?.trim() || bearerToken(request.headers.get("authorization"));
-    if (!apiKey) {
+    if (paymentRequirements && !apiKey) {
       return jsonRpcError(
         message.id,
         -32001,
-        "API key required — send x-api-key: casper_… or Authorization: Bearer casper_…",
+        "API key required for paid tool — send x-api-key: casper_… or Authorization: Bearer casper_…",
         { status: "unauthorized" },
         401,
       );
-    }
-
-    const tool = resolveHostedTool(endpoint, requiredToolName(message.params));
-    if (!tool) return jsonRpcError(message.id, -32004, "tool not found", { status: "not_found" }, 404);
-    if (!tool.paymentRequirements) {
-      return jsonRpcError(message.id, -32009, "tool is missing payment requirements", { status: "misconfigured" }, 409);
     }
 
     const outcome = await runGatewayPaidCall({
@@ -90,7 +89,21 @@ export async function POST(request: NextRequest, context: { params: Promise<{ so
       toolName: tool.name,
     });
 
+    if (outcome.status === "free") {
+      const base = isRecord(outcome.result) ? outcome.result : { content: [{ text: "", type: "text" }] };
+      const result = {
+        ...base,
+        _meta: {
+          ...(isRecord(base._meta) ? base._meta : {}),
+          "casperGw/free": true,
+        },
+      };
+      if (message.id === undefined) return new NextResponse(null, { status: 202 });
+      return NextResponse.json({ id: message.id, jsonrpc: "2.0", result });
+    }
+
     if (outcome.status === "settled" || outcome.status === "raw_proof_unavailable") {
+      if (!paymentRequirements) return jsonRpcError(message.id, -32009, "tool is missing payment requirements", { status: "misconfigured" }, 409);
       const transaction = outcome.explorerUrl?.split("/deploy/")[1];
       const base = isRecord(outcome.result) ? outcome.result : { content: [{ text: "", type: "text" }] };
       const result = {
@@ -98,7 +111,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ so
         _meta: {
           ...(isRecord(base._meta) ? base._meta : {}),
           "x402/payment-response": {
-            network: tool.paymentRequirements.network,
+            network: paymentRequirements.network,
             payer: "casper-gw-gateway-signer",
             proof: outcome.status === "settled" ? "indexed" : "indexing",
             success: true,
@@ -114,7 +127,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ so
     }
 
     // blocked / verify_failed / settle_failed / upstream_failed → 402, never a fake success.
-    const o = outcome as { attemptId: string; status: string; explorerUrl?: string; reason?: string };
+    const o = outcome as { attemptId?: string; status: string; explorerUrl?: string; reason?: string };
     return jsonRpcError(
       message.id,
       -32010,

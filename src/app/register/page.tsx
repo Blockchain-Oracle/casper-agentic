@@ -1,4 +1,5 @@
 import { RegisterFlow } from "@/components/register/register-flow";
+import { RegisteredSourcesPanel } from "@/components/register/registered-sources-panel";
 import { SiteNav } from "@/components/site/site-nav";
 
 export const metadata = { title: "Register a tool — Casper GW" };
@@ -16,6 +17,7 @@ export default function RegisterPage() {
         <div className="mt-8">
           <RegisterFlow />
         </div>
+        <RegisteredSourcesPanel />
       </main>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowRight, Loader2, Plug, Check } from "lucide-react";
+import { ArrowRight, Loader2, Plug, Check, CircleDollarSign } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ export function RegisterFlow() {
   const [phase, setPhase] = useState<Phase>("form");
   const [tools, setTools] = useState<DiscoveredTool[]>([]);
   const [prices, setPrices] = useState<Record<string, string>>({});
+  const [freeTools, setFreeTools] = useState<Set<string>>(new Set());
+  const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState("7.5");
   const [sourceId, setSourceId] = useState<string | null>(null);
   const [kind, setKind] = useState<"mcp" | "openapi">("mcp");
@@ -35,6 +37,8 @@ export function RegisterFlow() {
       setSourceId(source.id);
       setTools(found);
       setPrices(Object.fromEntries(found.map((t) => [t.id, "7.5"])));
+      setSelectedTools(new Set(found.map((t) => t.id)));
+      setFreeTools(new Set());
       setPhase("priced");
       toast.success(`Discovered ${found.length} tool${found.length > 1 ? "s" : ""}.`);
     } catch (error) {
@@ -43,19 +47,59 @@ export function RegisterFlow() {
     }
   }
 
-  async function publishAll() {
+  async function publishSelected() {
+    const selected = tools.filter((tool) => selectedTools.has(tool.id));
+    if (!selected.length) return toast.error("Select at least one tool to publish.");
     setPhase("publishing");
     try {
-      for (const tool of tools) {
-        await priceTool(tool.id, parseTokenToMotes(prices[tool.id] ?? "7.5"));
+      for (const tool of selected) {
+        if (!freeTools.has(tool.id)) {
+          await priceTool(tool.id, parseTokenToMotes(prices[tool.id] ?? "7.5"));
+        }
         await publishTool(tool.id);
       }
       setPhase("done");
-      toast.success("Tools published.");
+      toast.success(`${selected.length} tool${selected.length > 1 ? "s" : ""} published.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Publish failed.");
       setPhase("priced");
     }
+  }
+
+  function applyBulk() {
+    setPrices((current) => {
+      const next = { ...current };
+      for (const tool of tools) {
+        if (selectedTools.has(tool.id) && !freeTools.has(tool.id)) next[tool.id] = bulk;
+      }
+      return next;
+    });
+  }
+
+  function clearSelectedPrices() {
+    setPrices((current) => {
+      const next = { ...current };
+      for (const tool of tools) if (selectedTools.has(tool.id)) next[tool.id] = "";
+      return next;
+    });
+  }
+
+  function toggleSelected(toolId: string) {
+    setSelectedTools((current) => {
+      const next = new Set(current);
+      if (next.has(toolId)) next.delete(toolId);
+      else next.add(toolId);
+      return next;
+    });
+  }
+
+  function toggleFree(toolId: string) {
+    setFreeTools((current) => {
+      const next = new Set(current);
+      if (next.has(toolId)) next.delete(toolId);
+      else next.add(toolId);
+      return next;
+    });
   }
 
   if (phase === "done") {
@@ -66,7 +110,7 @@ export function RegisterFlow() {
         </span>
         <h2 className="font-display text-xl font-semibold text-ink">Published</h2>
         <p className="mx-auto mt-1.5 max-w-sm text-sm text-ink-2">
-          {tools.length} tool{tools.length > 1 ? "s are" : " is"} live and payable. Agents can call them with an API key.
+          {selectedTools.size} tool{selectedTools.size > 1 ? "s are" : " is"} live. Paid tools settle with a casper_ key; free tools run without x402.
         </p>
         <Button asChild className="mt-6 gap-2">
           <Link href={sourceId ? `/servers/${sourceId}` : "/servers"}>
@@ -121,35 +165,68 @@ export function RegisterFlow() {
         <div className="rounded-lg border border-hairline bg-panel p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <span className="font-mono text-[11px] uppercase tracking-widest text-ink-3">
-              Price &amp; publish · {tools.filter((t) => Number(prices[t.id] ?? "0") > 0).length}/{tools.length} priced
+              Select, price &amp; publish · {selectedTools.size}/{tools.length} selected
             </span>
             <div className="flex items-center gap-1.5">
               <Input value={bulk} onChange={(e) => setBulk(e.target.value)} className="h-7 w-20 text-right text-xs tnum" inputMode="decimal" disabled={phase === "publishing"} />
-              <Button size="sm" variant="outline" className="h-7 text-xs" disabled={phase === "publishing"} onClick={() => setPrices(Object.fromEntries(tools.map((t) => [t.id, bulk])))}>Apply to all</Button>
-              <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={phase === "publishing"} onClick={() => setPrices(Object.fromEntries(tools.map((t) => [t.id, ""])))}>Clear</Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs" disabled={phase === "publishing"} onClick={applyBulk}>Apply</Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={phase === "publishing"} onClick={clearSelectedPrices}>Clear</Button>
             </div>
           </div>
           <div className="space-y-2.5">
-            {tools.map((tool) => (
-              <div key={tool.id} className="flex items-center gap-3 rounded-md border border-hairline bg-well px-3 py-2.5">
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-mono text-sm text-ink">{tool.name}</div>
-                  {tool.description ? <div className="truncate text-xs text-ink-3">{tool.description}</div> : null}
+            {tools.map((tool) => {
+              const selected = selectedTools.has(tool.id);
+              const free = freeTools.has(tool.id);
+              return (
+                <div key={tool.id} className={`rounded-md border px-3 py-2.5 ${selected ? "border-hairline bg-well" : "border-dashed border-hairline bg-panel opacity-70"}`}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <button
+                      type="button"
+                      onClick={() => toggleSelected(tool.id)}
+                      disabled={phase === "publishing"}
+                      className={`grid size-8 shrink-0 place-items-center rounded-md border ${selected ? "border-casper bg-casper/10 text-casper" : "border-hairline text-ink-3"}`}
+                      aria-label={selected ? "Unselect tool" : "Select tool"}
+                    >
+                      {selected ? <Check className="size-4" /> : <span className="size-3 rounded-sm border border-current" />}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-mono text-sm text-ink">{tool.name}</div>
+                      {tool.description ? <div className="truncate text-xs text-ink-3">{tool.description}</div> : null}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 rounded-md border border-hairline bg-panel p-0.5 font-mono text-[11px] uppercase tracking-wider">
+                      <button
+                        type="button"
+                        onClick={() => free ? toggleFree(tool.id) : undefined}
+                        disabled={!selected || phase === "publishing"}
+                        className={`rounded px-2 py-1.5 ${!free ? "bg-casper/10 text-ink" : "text-ink-3"}`}
+                      >
+                        Paid
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => !free ? toggleFree(tool.id) : undefined}
+                        disabled={!selected || phase === "publishing"}
+                        className={`rounded px-2 py-1.5 ${free ? "bg-settled/10 text-settled" : "text-ink-3"}`}
+                      >
+                        Free
+                      </button>
+                    </div>
+                    <Input
+                      value={free ? "0" : (prices[tool.id] ?? "7.5")}
+                      onChange={(e) => setPrices((p) => ({ ...p, [tool.id]: e.target.value }))}
+                      disabled={phase === "publishing" || !selected || free}
+                      className="w-full text-right tnum sm:w-24"
+                      inputMode="decimal"
+                    />
+                    <span className="w-14 font-mono text-xs text-ink-3">WCSPR</span>
+                  </div>
                 </div>
-                <Input
-                  value={prices[tool.id] ?? "7.5"}
-                  onChange={(e) => setPrices((p) => ({ ...p, [tool.id]: e.target.value }))}
-                  disabled={phase === "publishing"}
-                  className="w-24 text-right tnum"
-                  inputMode="decimal"
-                />
-                <span className="w-14 font-mono text-xs text-ink-3">WCSPR</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
-          <Button onClick={publishAll} disabled={phase === "publishing"} className="mt-5 gap-2">
-            {phase === "publishing" ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-            {phase === "publishing" ? "Publishing…" : `Publish ${tools.length} tool${tools.length > 1 ? "s" : ""}`}
+          <Button onClick={publishSelected} disabled={phase === "publishing" || selectedTools.size === 0} className="mt-5 gap-2">
+            {phase === "publishing" ? <Loader2 className="size-4 animate-spin" /> : <CircleDollarSign className="size-4" />}
+            {phase === "publishing" ? "Publishing…" : `Publish ${selectedTools.size} selected`}
           </Button>
         </div>
       ) : null}

@@ -2,7 +2,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 
 import { getDb } from "@/db/client";
-import { auditEvents, providerSources, providerTools, toolPrices } from "@/db/schema";
+import { auditEvents, endpointAccessKeys, keyCredits, providerSources, providerTools, toolPrices } from "@/db/schema";
 import { discoverMcpTools, type DiscoveredMcpTool } from "./mcp-client";
 import { discoverOpenApiTools } from "./openapi-discovery";
 import {
@@ -39,29 +39,52 @@ export async function listProviderSources() {
   return rows.map(toProviderSourceView);
 }
 
+export async function deleteProviderSource(sourceId: string) {
+  const source = await getProviderSourceRecord(sourceId);
+  if (!source) throw new Error("provider source not found");
+  const db = getDb();
+  const tools = await db.select().from(providerTools).where(eq(providerTools.sourceId, sourceId));
+  const sourceKeys = await db.select().from(endpointAccessKeys).where(eq(endpointAccessKeys.sourceId, sourceId));
+  await db.transaction(async (tx) => {
+    if (tools.length) {
+      await tx.delete(toolPrices).where(inArray(toolPrices.toolId, tools.map((tool) => tool.id)));
+      await tx.delete(providerTools).where(eq(providerTools.sourceId, sourceId));
+    }
+    if (sourceKeys.length) {
+      await tx.delete(keyCredits).where(inArray(keyCredits.keyId, sourceKeys.map((key) => key.id)));
+      await tx.delete(endpointAccessKeys).where(eq(endpointAccessKeys.sourceId, sourceId));
+    }
+    await tx.delete(providerSources).where(eq(providerSources.id, sourceId));
+  });
+  await logProviderAudit("warn", "Provider source deleted", { sourceId, toolCount: tools.length });
+  return { deleted: true, sourceId, toolCount: tools.length };
+}
+
 export async function getProviderSourceRecord(sourceId: string) {
   const [source] = await getDb().select().from(providerSources).where(eq(providerSources.id, sourceId)).limit(1);
   return source ?? null;
 }
 
-/** Resolve a registered source by its endpoint URL — used to dispatch a paid call (MCP vs REST). */
 export async function getSourceByEndpoint(endpointUrl: string) {
   const [source] = await getDb().select().from(providerSources).where(eq(providerSources.endpointUrl, endpointUrl)).limit(1);
   return source ?? null;
 }
 
-/** Look up a published tool's REST operation (openapi sources store it on upstreamTarget). */
 export async function getToolByName(sourceId: string, name: string) {
   const [tool] = await getDb()
     .select()
     .from(providerTools)
     .where(and(eq(providerTools.sourceId, sourceId), eq(providerTools.name, name)))
     .limit(1);
-  return tool ? toProviderToolView(tool) : null;
+  if (!tool) return null;
+  const prices = await getDb()
+    .select()
+    .from(toolPrices)
+    .where(eq(toolPrices.toolId, tool.id))
+    .orderBy(desc(toolPrices.createdAt));
+  return { ...toProviderToolView(tool), price: priceForTool(prices, tool.id) };
 }
 
-/** Persist OpenAPI-derived tools (from openapi-mcp-generator). The REST operation
- * is stored as JSON on upstreamTarget so the settle path can execute it. */
 export async function persistOpenApiTools(
   sourceId: string,
   tools: Array<{
@@ -113,8 +136,6 @@ export async function persistDiscoveredMcpTools(sourceId: string, endpointUrl: s
   return inserted.map(toProviderToolView);
 }
 
-/** Re-run discovery for a source: refresh existing tools' schema/description (by name)
- * and add any newly-exposed tools as drafts. Preserves prices + published status. */
 export async function rediscoverSource(sourceId: string) {
   const source = await getProviderSourceRecord(sourceId);
   if (!source) throw new Error("provider source not found");
@@ -195,7 +216,6 @@ export async function listPublishedEndpointTools(sourceId: string) {
   }));
 }
 
-/** Registered MCP servers that have at least one published tool — for the public /servers catalogue. */
 export async function listServerCatalog() {
   const sources = await getDb().select().from(providerSources).orderBy(desc(providerSources.createdAt));
   if (!sources.length) return [];
@@ -208,7 +228,6 @@ export async function listServerCatalog() {
     .filter((server) => server.toolCount > 0);
 }
 
-/** A single server with its published tools (price-joined) — for the public /servers/[id] detail page. */
 export async function getServerWithTools(sourceId: string) {
   const source = await getProviderSourceRecord(sourceId);
   if (!source) return null;
@@ -228,9 +247,26 @@ export async function setProviderToolStatus(toolId: string, status: ProviderTool
 }
 
 export async function publishProviderTool(toolId: string) {
-  const [price] = await getDb().select().from(toolPrices).where(eq(toolPrices.toolId, toolId)).limit(1);
-  if (!price) throw new Error("provider tool must be priced before publishing");
   return setProviderToolStatus(toolId, "published");
+}
+
+export async function publishProviderToolFree(toolId: string) {
+  const db = getDb();
+  const [tool] = await db.transaction(async (tx) => {
+    await tx.delete(toolPrices).where(eq(toolPrices.toolId, toolId));
+    return tx
+      .update(providerTools)
+      .set({ status: "published", updatedAt: new Date() })
+      .where(eq(providerTools.id, toolId))
+      .returning();
+  });
+  if (!tool) throw new Error("provider tool not found");
+  await logProviderAudit("info", "Provider tool published free", { toolId });
+  return toProviderToolView(tool);
+}
+
+export async function unpublishProviderTool(toolId: string) {
+  return setProviderToolStatus(toolId, "unpublished");
 }
 
 export async function saveToolPrice(input: ToolPriceInput) {

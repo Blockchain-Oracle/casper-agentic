@@ -77,7 +77,7 @@ export function toProviderToolView(row: typeof providerTools.$inferSelect) {
     inputSchema: row.inputSchema,
     name: row.name,
     outputSchema: row.outputSchema,
-    sourceId: row.sourceId,
+    sourceId: row.sourceId ?? "",
     status: row.status as ProviderToolStatus,
     upstreamTarget: row.upstreamTarget,
   };
@@ -91,8 +91,8 @@ export function toToolPriceView(row: typeof toolPrices.$inferSelect) {
     maxTimeoutSeconds: row.maxTimeoutSeconds,
     network: row.network,
     payTo: row.payTo,
-    scheme: row.scheme,
-    toolId: row.toolId,
+    scheme: row.scheme as "exact",
+    toolId: row.toolId ?? "",
   };
 }
 
