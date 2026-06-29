@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { claimDeposit } from "@/server/claim-deposit";
+import { claimCsprDeposit } from "@/server/claim-deposit";
 
 export const dynamic = "force-dynamic";
 
-// Credit a prepaid WCSPR deposit to a key by deploy hash. Idempotent — claiming the
+// Credit a native CSPR deposit to a key by deploy hash. Idempotent — claiming the
 // same deploy twice returns already_claimed and credits nothing further.
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "keyId and deployHash are required" }, { status: 400 });
   }
   try {
-    const result = await claimDeposit(keyId, deployHash);
+    const result = await claimCsprDeposit(keyId, deployHash);
     const status = result.status === "credited" || result.status === "already_claimed" ? 200 : 422;
     return NextResponse.json(result, { status });
   } catch (error) {

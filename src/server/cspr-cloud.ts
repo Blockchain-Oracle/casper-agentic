@@ -50,6 +50,13 @@ export interface CsprCloudFTOwnership {
   owner_type: number;
 }
 
+export interface CsprCloudNativeTransfer {
+  amount: string;
+  deploy_hash: string;
+  initiator_account_hash: string | null;
+  to_account_hash: string | null;
+}
+
 export interface CsprCloudFTAction {
   amount: string;
   block_height: number;
@@ -73,6 +80,11 @@ export class CsprCloudClient {
 
   async getDeploy(deployHash: string) {
     return this.request<CsprCloudDeploy>(`/deploys/${encodeURIComponent(deployHash)}`);
+  }
+
+  // Native CSPR transfers in a deploy (to_account_hash is the recipient account).
+  async getDeployTransfers(deployHash: string) {
+    return this.requestList<CsprCloudNativeTransfer>(`/deploys/${encodeURIComponent(deployHash)}/transfers`);
   }
 
   async getCsprNameResolution(name: string) {

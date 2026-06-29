@@ -4,6 +4,7 @@ import { keyCredits } from "@/db/schema";
 import { normalizeCasperAccountHash } from "./casper-account";
 import { CsprCloudClient } from "./cspr-cloud";
 import { requireIntegrationConfig } from "./env";
+import { getConfiguredSignerAddress } from "./x402-payment";
 
 // Credit a prepaid WCSPR deposit to an API key, attributed by deploy hash (CEP-18
 // has no memo). The user transfers WCSPR to the gateway payee, then claims that
@@ -71,6 +72,55 @@ export async function claimDeposit(keyId: string, deployHash: string): Promise<C
     if (row) {
       credited += BigInt(action.amount);
       fromHash = action.from_hash ?? fromHash;
+    }
+  }
+
+  if (credited === BigInt(0)) return { deployHash, reason: "deposit already credited", status: "already_claimed" };
+  return { amount: credited.toString(), deployHash, fromHash, status: "credited" };
+}
+
+// CSPR-only deposit: the user sends native CSPR to the gateway signer account (no
+// WCSPR needed). The gateway credits the key 1:1 (motes) and keeps its own WCSPR pool
+// topped up by wrapping its CSPR (wrap:wcspr). Attributed by deploy hash, deduped per
+// transfer index — never credits a pending/failed deploy.
+export async function claimCsprDeposit(keyId: string, deployHash: string): Promise<ClaimDepositResult> {
+  const config = requireIntegrationConfig();
+  const csprCloud = new CsprCloudClient(config);
+  const gateway = normalizeCasperAccountHash(getConfiguredSignerAddress(config));
+
+  let deploy;
+  try {
+    deploy = await csprCloud.getDeploy(deployHash);
+  } catch {
+    return { deployHash, reason: "deploy not indexed yet — try again shortly", status: "pending" };
+  }
+  if (deploy.status !== "processed") return { deployHash, reason: `deploy ${deploy.status}`, status: "pending" };
+  if (deploy.error_message) return { deployHash, reason: decodeDeployError(deploy.error_message), status: "failed" };
+
+  const transfers = await csprCloud.getDeployTransfers(deployHash);
+  const inbound = transfers.filter((transfer) => transfer.to_account_hash?.toLowerCase() === gateway);
+  if (!inbound.length) {
+    return { deployHash, reason: "no CSPR transfer to the gateway in this deploy", status: "no_transfer" };
+  }
+
+  let credited = BigInt(0);
+  let fromHash: string | undefined;
+  for (let index = 0; index < inbound.length; index += 1) {
+    const transfer = inbound[index];
+    const [row] = await getDb()
+      .insert(keyCredits)
+      .values({
+        amount: transfer.amount,
+        deployHash,
+        fromHash: transfer.initiator_account_hash ?? null,
+        keyId,
+        transformIdx: index,
+      })
+      .onConflictDoNothing({ target: [keyCredits.deployHash, keyCredits.transformIdx] })
+      .returning();
+    if (row) {
+      credited += BigInt(transfer.amount);
+      fromHash = transfer.initiator_account_hash ?? fromHash;
     }
   }
 

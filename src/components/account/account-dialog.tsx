@@ -16,7 +16,7 @@ type GatewayBalance = Awaited<ReturnType<typeof getGatewayBalance>>;
 type Tab = "wallet" | "keys" | "fund";
 
 export function AccountDialog() {
-  const { connect, publicKey, ready, sendWcsprTransfer } = useCsprClick();
+  const { connect, publicKey, ready, sendCsprDeposit } = useCsprClick();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("wallet");
   const [keys, setKeys] = useState<ApiKeyView[]>([]);
@@ -90,7 +90,7 @@ export function AccountDialog() {
                 keys={keys}
                 onConnectWallet={connect}
                 onRefresh={refresh}
-                onSendWcsprTransfer={sendWcsprTransfer}
+                onSendCsprDeposit={sendCsprDeposit}
                 publicKey={publicKey}
                 walletReady={ready}
               />

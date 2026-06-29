@@ -30,6 +30,8 @@ type CsprClickContextValue = {
   connect: () => void;
   disconnect: () => void;
   sendWcsprTransfer: (input: SendWcsprTransferInput) => Promise<SendWcsprTransferResult>;
+  /** Send native CSPR from the connected wallet to the gateway (CSPR-only deposit). */
+  sendCsprDeposit: (input: SendCsprDepositInput) => Promise<SendWcsprTransferResult>;
   /** Ask the connected wallet to sign an owner sign-in message (identity only). */
   signOwnerMessage: (message: string) => Promise<SignOwnerMessageResult>;
 };
@@ -46,6 +48,14 @@ export interface SendWcsprTransferInput {
   chainName: string;
   onStatusUpdate?: (status: string, data: unknown) => void;
   payeeAccountHash: string;
+  paymentAmountMotes: string;
+}
+
+export interface SendCsprDepositInput {
+  amountMotes: string;
+  chainName: string;
+  gatewayAccountHash: string;
+  onStatusUpdate?: (status: string, data: unknown) => void;
   paymentAmountMotes: string;
 }
 
@@ -185,12 +195,15 @@ export function CsprClickProvider({ children }: { children: React.ReactNode }) {
     void client?.disconnect?.();
   }, []);
 
-  const sendWcsprTransfer = useCallback(
-    async (input: SendWcsprTransferInput): Promise<SendWcsprTransferResult> => {
+  // Shared: resolve the signing key, build the tx, send via CSPR.click, map the result.
+  const dispatchTransaction = useCallback(
+    async (
+      buildTx: (signingPublicKey: string) => Promise<{ toJSON: () => unknown }>,
+      onStatusUpdate?: (status: string, data: unknown) => void,
+    ): Promise<SendWcsprTransferResult> => {
       const client = clientRef.current;
       if (!client) return { error: "Wallet connector is not loaded", status: "error" };
       if (!client.send) return { error: "Connected wallet does not support transaction sending", status: "error" };
-
       const account = client.getActiveAccountAsync
         ? await client.getActiveAccountAsync().catch(() => null)
         : (client.getActiveAccount?.() ?? null);
@@ -199,17 +212,8 @@ export function CsprClickProvider({ children }: { children: React.ReactNode }) {
         client.signIn?.();
         return { status: "needs_connection" };
       }
-
-      const { buildWcsprTransferTransaction } = await import("@/lib/csprclick-wcspr-transfer");
-      const transaction = buildWcsprTransferTransaction({
-        amountMotes: input.amountMotes,
-        assetPackageHash: input.assetPackageHash,
-        chainName: input.chainName,
-        fromPublicKey: signingPublicKey,
-        payeeAccountHash: input.payeeAccountHash,
-        paymentAmountMotes: input.paymentAmountMotes,
-      });
-      const result = await client.send(transaction.toJSON() as object, signingPublicKey, input.onStatusUpdate);
+      const transaction = await buildTx(signingPublicKey);
+      const result = await client.send(transaction.toJSON() as object, signingPublicKey, onStatusUpdate);
       if (result?.transactionHash) {
         return { rawStatus: result.status, status: "sent", transactionHash: result.transactionHash };
       }
@@ -220,6 +224,24 @@ export function CsprClickProvider({ children }: { children: React.ReactNode }) {
       };
     },
     [publicKey],
+  );
+
+  const sendWcsprTransfer = useCallback(
+    (input: SendWcsprTransferInput) =>
+      dispatchTransaction(async (fromPublicKey) => {
+        const { buildWcsprTransferTransaction } = await import("@/lib/csprclick-wcspr-transfer");
+        return buildWcsprTransferTransaction({ ...input, fromPublicKey });
+      }, input.onStatusUpdate),
+    [dispatchTransaction],
+  );
+
+  const sendCsprDeposit = useCallback(
+    (input: SendCsprDepositInput) =>
+      dispatchTransaction(async (fromPublicKey) => {
+        const { buildCsprDepositTransaction } = await import("@/lib/casper-cspr-transfer");
+        return buildCsprDepositTransaction({ ...input, fromPublicKey });
+      }, input.onStatusUpdate),
+    [dispatchTransaction],
   );
 
   const signOwnerMessage = useCallback(
@@ -245,8 +267,8 @@ export function CsprClickProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo<CsprClickContextValue>(
-    () => ({ connect, disconnect, disabled, publicKey, ready, sendWcsprTransfer, signOwnerMessage }),
-    [connect, disconnect, disabled, publicKey, ready, sendWcsprTransfer, signOwnerMessage],
+    () => ({ connect, disconnect, disabled, publicKey, ready, sendCsprDeposit, sendWcsprTransfer, signOwnerMessage }),
+    [connect, disconnect, disabled, publicKey, ready, sendCsprDeposit, sendWcsprTransfer, signOwnerMessage],
   );
 
   return <CsprClickContext.Provider value={value}>{children}</CsprClickContext.Provider>;
