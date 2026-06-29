@@ -16,6 +16,9 @@ type GatewayBalance = {
   wcspr: string;
 };
 
+// Matches MIN_GAS_MOTES in gateway-balance.ts (5 CSPR of native gas).
+const MIN_GAS_MOTES = BigInt("5000000000");
+
 function short(value?: string) {
   if (!value) return "Not connected";
   return value.length > 18 ? `${value.slice(0, 10)}...${value.slice(-8)}` : value;
@@ -67,26 +70,54 @@ export function WalletTab({
         <Stat label="Default call price" loading={loading} value={!balance ? "—" : formatTokenAmount(balance.perCall)} />
       </div>
 
-      <div
-        className={`rounded-md border p-4 ${
-          balance?.ready ? "border-settled/40 bg-settled/10" : balance?.balanceUnavailable ? "border-hairline bg-panel" : "border-signal/40 bg-signal/10"
-        }`}
-      >
-        <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-ink">
-          <TokenIcon size={16} />
-          {loading
-            ? "Checking gateway balance"
-            : balance?.ready
-              ? "Gateway payment account ready"
-              : balance?.balanceUnavailable
-                ? "Live gateway balance unavailable"
-                : "Gateway needs WCSPR or CSPR gas"}
-        </div>
-        <p className="mt-2 text-xs leading-relaxed text-ink-3">
-          This is the gateway&apos;s configured Casper Testnet payment account, not your connected wallet.
-          It pays Casper x402 settlements after an API key authorizes the call.
-        </p>
+      <GatewayReadiness balance={balance} loading={loading} />
+    </div>
+  );
+}
+
+function GatewayReadiness({ balance, loading }: { balance: GatewayBalance | null; loading: boolean }) {
+  const lowWcspr = balance ? BigInt(balance.wcspr || "0") < BigInt(balance.perCall || "0") : false;
+  const lowGas = balance ? BigInt(balance.csprGas || "0") < MIN_GAS_MOTES : false;
+  const tone = balance?.ready
+    ? "border-settled/40 bg-settled/10"
+    : balance?.balanceUnavailable
+      ? "border-hairline bg-panel"
+      : "border-signal/40 bg-signal/10";
+
+  return (
+    <div className={`rounded-md border p-4 ${tone}`}>
+      <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-ink">
+        <TokenIcon size={16} />
+        {loading
+          ? "Checking gateway balance"
+          : balance?.ready
+            ? "Gateway payment account ready"
+            : balance?.balanceUnavailable
+              ? "Live gateway balance unavailable"
+              : "Gateway not ready to settle"}
       </div>
+      <p className="mt-2 text-xs leading-relaxed text-ink-3">
+        The gateway settles every paid call from its own Casper account, which needs{" "}
+        <span className="text-ink-2">two separate balances</span>: WCSPR to pay (≥ {balance ? formatTokenAmount(balance.perCall) : "7.5"}/call)
+        and native CSPR for gas (≥ 5). A WCSPR token transfer can&apos;t carry native CSPR, so fund each with its own send.
+      </p>
+      {!loading && balance && !balance.ready && !balance.balanceUnavailable ? (
+        <ul className="mt-2 space-y-1 text-xs text-signal">
+          {lowWcspr ? <li>• Needs WCSPR — has {formatTokenAmount(balance.wcspr)}, needs ≥ {formatTokenAmount(balance.perCall)}</li> : null}
+          {lowGas ? <li>• Needs native CSPR gas — has {formatTokenAmount(balance.csprGas)}, needs ≥ 5</li> : null}
+        </ul>
+      ) : null}
+      {balance?.accountHash ? (
+        <div className="mt-3">
+          <div className="font-mono text-[10px] uppercase tracking-wider text-ink-3">Gateway account — send WCSPR + native CSPR here</div>
+          <div className="mt-1 flex items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded-sm border border-hairline bg-panel px-2 py-1.5 font-mono text-xs text-ink">
+              {balance.accountHash}
+            </code>
+            <CopyButton value={balance.accountHash} label="Gateway account hash copied" />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
