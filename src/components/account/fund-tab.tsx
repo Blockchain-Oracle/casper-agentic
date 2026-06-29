@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Copy, Loader2, Send, Wallet } from "lucide-react";
+import { Loader2, Send, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import type { SendWcsprTransferInput, SendWcsprTransferResult } from "@/components/csprclick/csprclick-provider";
@@ -55,11 +55,8 @@ export function FundTab({
 }) {
   const [selectedId, setSelectedId] = useState(initialKeyId ?? "");
   const [amount, setAmount] = useState("");
-  const [deployHash, setDeployHash] = useState("");
-  const [crediting, setCrediting] = useState(false);
   const [funding, setFunding] = useState(false);
   const [fundingStatus, setFundingStatus] = useState("");
-  const [showCreditForm, setShowCreditForm] = useState(false);
   const activeKeys = useMemo(() => keys.filter((key) => !key.revoked), [keys]);
   const selectedKey = activeKeys.find((key) => key.id === selectedId) ?? activeKeys[0];
   const suggestedAmount = balance?.perCall ? formatTokenAmount(balance.perCall) : "7.5";
@@ -107,8 +104,6 @@ export function FundTab({
         return;
       }
 
-      setDeployHash(result.transactionHash);
-      setShowCreditForm(true);
       toast.success("WCSPR transfer sent. Crediting this key now.");
       await creditTransferHash(result.transactionHash);
     } catch (error) {
@@ -119,31 +114,20 @@ export function FundTab({
     }
   }
 
-  async function creditTransfer() {
-    if (!deployHash.trim()) return toast.error("Paste the WCSPR transfer deploy hash");
-    await creditTransferHash(deployHash.trim());
-  }
-
   async function creditTransferHash(hash: string) {
     const keyId = selectedKey?.id;
     if (!keyId) return toast.error("Create a key before funding");
-    setCrediting(true);
     try {
       const result = await claimDepositReq({ deployHash: hash, keyId });
       if (result.status === "credited") toast.success(`Credited ${formatTokenAmount(result.amount ?? "0")} WCSPR`);
       else if (result.status === "already_claimed") toast.info("Transfer already credited");
       else {
-        setDeployHash(hash);
-        setShowCreditForm(true);
-        toast.info(result.reason ?? "Transfer is not indexed yet. The deploy hash is saved below.");
+        toast.info(result.reason ?? `Transfer is not indexed yet. Deploy hash: ${hash.slice(0, 12)}…`);
         return;
       }
-      setDeployHash("");
       await onRefresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not credit transfer");
-    } finally {
-      setCrediting(false);
     }
   }
 
@@ -158,8 +142,8 @@ export function FundTab({
           {balance?.payee ? <CopyButton value={balance.payee} label="Deposit address copied" /> : null}
         </div>
         <p className="mt-2 text-xs leading-relaxed text-ink-3">
-          Send WCSPR here, then credit that transfer to the selected API key. Each transfer hash can only
-          credit one key.
+          The gateway&apos;s WCSPR payment account. Use &ldquo;Send WCSPR&rdquo; below to fund a key from your
+          connected wallet — it credits the selected key automatically.
         </p>
         {balance?.balanceUnavailable ? (
           <p className="mt-2 rounded-sm border border-hairline bg-panel px-2 py-1.5 text-xs text-ink-3">
@@ -213,27 +197,6 @@ export function FundTab({
         </div>
         {fundingStatus ? <p className="mt-3 text-xs text-ink-3">{fundingStatus}</p> : null}
       </div>
-
-      <details
-        className="rounded-md border border-hairline bg-panel p-4"
-        onToggle={(event) => setShowCreditForm(event.currentTarget.open)}
-        open={showCreditForm}
-      >
-        <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-wider text-ink-3">
-          Credit an existing WCSPR transfer
-        </summary>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <Input
-            value={deployHash}
-            onChange={(e) => setDeployHash(e.target.value)}
-            placeholder="transfer deploy hash"
-            className="font-mono text-xs"
-          />
-          <Button onClick={creditTransfer} disabled={crediting || !selectedKey} className="gap-2 sm:min-w-32">
-            {crediting ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-4" />} Credit key
-          </Button>
-        </div>
-      </details>
     </div>
   );
 }
