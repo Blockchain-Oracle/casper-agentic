@@ -4,6 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 
 import { ConnectDialog } from "@/components/connect/connect-dialog";
 import { RediscoverButton } from "@/components/servers/rediscover-button";
+import { ServerLogo } from "@/components/servers/server-logo";
 import { CopyButton } from "@/components/primitives/copy-button";
 import { TokenIcon } from "@/components/primitives/token-icon";
 import { SiteNav } from "@/components/site/site-nav";
@@ -33,10 +34,13 @@ export default async function ServerDetailPage({ params }: { params: Promise<{ i
           ← Servers
         </Link>
 
-        <div className="mt-4 flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{server.source.name}</h1>
-            <div className="mt-2 break-all font-mono text-xs text-ink-3">{server.source.endpointUrl}</div>
+        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <ServerLogo endpointUrl={server.source.endpointUrl} name={server.source.name} size={56} />
+            <div className="min-w-0">
+              <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{server.source.name}</h1>
+              <div className="mt-2 break-all font-mono text-xs text-ink-3">{server.source.endpointUrl}</div>
+            </div>
           </div>
           <ConnectDialog sourceId={server.source.id} serverName={server.source.name} />
         </div>

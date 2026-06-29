@@ -3,12 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Moon, Sun } from "lucide-react";
+import { Menu, Moon, Sun } from "lucide-react";
 
-import { ApiKeysDialog } from "@/components/keys/api-keys-dialog";
+import { AccountDialog } from "@/components/account/account-dialog";
+import { ConnectWalletButton } from "@/components/csprclick/connect-wallet-button";
 import { BrandMark } from "@/components/site/proof-stamp";
-import { WalletConnectButton } from "@/components/wallet/wallet-connect-button";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -51,12 +57,34 @@ export function SiteNav() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          <MobileMenu pathname={pathname} />
+          <ConnectWalletButton />
           <ThemeToggle />
-          <WalletConnectButton />
-          <ApiKeysDialog />
+          <AccountDialog />
         </div>
       </div>
     </header>
+  );
+}
+
+function MobileMenu({ pathname }: { pathname: string }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="icon-sm" variant="ghost" className="md:hidden" aria-label="Open navigation">
+          <Menu className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        {LINKS.map(({ href, label }) => (
+          <DropdownMenuItem key={href} asChild>
+            <Link className={cn(pathname.startsWith(href) && "text-ink")} href={href}>
+              {label}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

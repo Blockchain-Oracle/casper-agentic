@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowUpRight, Check, Copy, Server } from "lucide-react";
+import { ArrowUpRight, Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
+import { ServerLogo } from "@/components/servers/server-logo";
 import { Button } from "@/components/ui/button";
 
 /** Server catalogue card — name + tool count + a CONNECT button that copies the
@@ -30,14 +31,16 @@ export function ServerCard({
       href={`/servers/${server.id}`}
       className="group rounded-lg border border-hairline bg-panel p-5 transition-colors hover:border-ink-3"
     >
-      <div className="flex items-start justify-between">
-        <span className="grid size-9 place-items-center rounded-md bg-well text-ink">
-          <Server className="size-4.5" />
-        </span>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <ServerLogo endpointUrl={server.endpointUrl} name={server.name} />
+          <div className="min-w-0">
+            <div className="truncate font-display text-base font-semibold text-ink">{server.name}</div>
+            <div className="mt-1 truncate font-mono text-xs text-ink-3">{server.endpointUrl}</div>
+          </div>
+        </div>
         <ArrowUpRight className="size-4 text-ink-3 transition-transform group-hover:-translate-y-0.5 group-hover:text-casper" />
       </div>
-      <div className="mt-3 font-display text-base font-semibold text-ink">{server.name}</div>
-      <div className="mt-1 truncate font-mono text-xs text-ink-3">{server.endpointUrl}</div>
       <div className="mt-4 flex items-center justify-between gap-2">
         <span className="font-mono text-[11px] uppercase tracking-wider text-ink-3">
           {server.toolCount} paid tool{server.toolCount > 1 ? "s" : ""}

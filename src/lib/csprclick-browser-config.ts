@@ -39,6 +39,8 @@ export type CSPRClickAccount = Partial<Pick<AccountType, "provider" | "providerS
 export type CSPRClickProviderInfo = Partial<Pick<ProviderInfo, "key" | "name" | "supports" | "version">>;
 
 export type CSPRClickClient = {
+  appSettings?: { badge_left?: unknown };
+  disconnect?: () => Promise<void> | void;
   getActiveAccount?: () => CSPRClickAccount | null;
   getActiveAccountAsync?: () => Promise<CSPRClickAccount | null>;
   getActivePublicKey?: () => Promise<string | undefined> | string | undefined;
@@ -47,6 +49,7 @@ export type CSPRClickClient = {
   on?: (eventName: CSPRClickEventName, handler: (event?: CSPRClickAccountEvent) => void) => void;
   signIn?: () => void;
   signInWithAccount?: (account: CSPRClickAccount) => unknown;
+  signOut?: () => Promise<void> | void;
   signTypedData?: (
     params: SignTypedDataParams,
     signingPublicKey: string,
@@ -55,13 +58,16 @@ export type CSPRClickClient = {
 };
 
 export type CSPRClickEventName =
+  | "csprclick:account_changed"
   | "csprclick:disconnected"
   | "csprclick:signed_in"
   | "csprclick:signed_out"
   | "csprclick:switched_account"
   | "csprclick:unsolicited_account_change";
 
-export type CSPRClickAccountEvent = { account?: CSPRClickAccount };
+// `signed_in` / `switched_account` carry `event.account`; `account_changed`
+// carries the account on `event.detail` (matches the reference ClickContext).
+export type CSPRClickAccountEvent = { account?: CSPRClickAccount; detail?: CSPRClickAccount };
 
 export type CSPRClickBrowserWindow = {
   addEventListener?: (eventName: "csprclick:loaded", handler: () => void) => void;
