@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Copy, KeyRound, Loader2, Play, Wallet } from "lucide-react";
+import { AlertTriangle, KeyRound, Loader2, Play, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
-import { ExistingKeyDropdown, KeySelectorSkeleton, PaymentMethodMenu } from "@/components/tools/payment-key-selector";
+import { ExistingKeyDropdown, KeySelectorSkeleton, PaymentDatum, PaymentMethodMenu, short } from "@/components/tools/payment-key-selector";
+import { FundKeyDialog } from "@/components/tools/fund-key-dialog";
 import { SchemaForm } from "@/components/tools/schema-form";
 import { ToolRunnerResultPanel, type ToolRunResult } from "@/components/tools/tool-runner-result";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -216,10 +217,25 @@ function ToolRunner({ tool, endpointUrl, sourceId }: { tool: ServerTool; endpoin
             </div>
 
             {selectedBalanceCanBlock ? (
-              <div className="flex items-start gap-2 rounded-md border border-signal/40 bg-signal/10 p-3 text-sm text-signal">
-                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                This call needs {formatTokenAmount(tool.price.amount)} WCSPR. The selected saved key has {formatTokenAmount(selectedKey?.available ?? "0")} WCSPR.
-                {" "}Fund it before using this token.
+              <div className="rounded-md border border-signal/40 bg-signal/10 p-3 text-sm text-signal">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                  <span>
+                    This call needs {formatTokenAmount(tool.price.amount)} WCSPR; the selected key has{" "}
+                    {formatTokenAmount(selectedKey?.available ?? "0")} WCSPR.
+                  </span>
+                </div>
+                <FundKeyDialog
+                  balance={gatewayBalance}
+                  initialKeyId={selectedKey?.id}
+                  keys={keys}
+                  onFunded={() => void listApiKeys().then((res) => setKeys(res.keys)).catch(() => {})}
+                  trigger={
+                    <Button size="sm" className="mt-2 gap-1.5">
+                      <KeyRound className="size-3.5" /> Fund this key
+                    </Button>
+                  }
+                />
               </div>
             ) : null}
             {gatewayPaymentNotReady ? (
@@ -266,33 +282,3 @@ function ToolRunner({ tool, endpointUrl, sourceId }: { tool: ServerTool; endpoin
   );
 }
 
-function short(value?: string) {
-  if (!value) return "n/a";
-  return value.length > 18 ? `${value.slice(0, 10)}...${value.slice(-8)}` : value;
-}
-
-function PaymentDatum({
-  copyValue,
-  label,
-  onCopy,
-  value,
-}: {
-  copyValue?: string;
-  label: string;
-  onCopy?: (value: string, label: string) => void;
-  value: string;
-}) {
-  return (
-    <div className="rounded-md border border-hairline bg-panel p-2">
-      <div className="font-mono text-[10px] uppercase tracking-wider text-ink-3">{label}</div>
-      <div className="mt-1 flex items-center gap-1.5">
-        <span className="min-w-0 truncate font-mono text-xs text-ink">{value}</span>
-        {copyValue && onCopy ? (
-          <button type="button" onClick={() => onCopy(copyValue, label)} className="shrink-0 text-ink-3 hover:text-ink" aria-label={`Copy ${label}`}>
-            <Copy className="size-3" />
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
-}

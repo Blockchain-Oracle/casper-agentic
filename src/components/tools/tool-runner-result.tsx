@@ -130,14 +130,19 @@ function analyzePayload(value: unknown): { text: string; isJson: boolean } {
 }
 
 function formatOutput(value: unknown, pretty: boolean) {
+  // Raw = the full tool response exactly as returned (the MCP envelope). Formatted =
+  // the unwrapped payload, pretty-printed if JSON. This makes the toggle visibly change
+  // even when the tool already returned pretty JSON inside content[].text.
+  if (!pretty) {
+    return typeof value === "string" ? value : JSON.stringify(value ?? null, null, 2);
+  }
   const base = extractMcpText(value) ?? (typeof value === "string" ? value : null);
   if (base !== null) {
-    if (!pretty) return base;
     try {
       return JSON.stringify(JSON.parse(base), null, 2);
     } catch {
       return base;
     }
   }
-  return JSON.stringify(value ?? null, null, pretty ? 2 : 0);
+  return JSON.stringify(value ?? null, null, 2);
 }

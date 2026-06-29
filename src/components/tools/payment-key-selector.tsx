@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, KeyRound, Loader2, Wallet } from "lucide-react";
+import { ChevronDown, Copy, KeyRound, Loader2, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -112,6 +112,37 @@ export function KeySelectorSkeleton() {
     <div className="grid gap-2 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
       <Skeleton className="h-12 w-full" />
       <Skeleton className="h-10 w-full" />
+    </div>
+  );
+}
+
+export function short(value?: string) {
+  if (!value) return "n/a";
+  return value.length > 18 ? `${value.slice(0, 10)}...${value.slice(-8)}` : value;
+}
+
+export function PaymentDatum({
+  copyValue,
+  label,
+  onCopy,
+  value,
+}: {
+  copyValue?: string;
+  label: string;
+  onCopy?: (value: string, label: string) => void;
+  value: string;
+}) {
+  return (
+    <div className="rounded-md border border-hairline bg-panel p-2">
+      <div className="font-mono text-[10px] uppercase tracking-wider text-ink-3">{label}</div>
+      <div className="mt-1 flex items-center gap-1.5">
+        <span className="min-w-0 truncate font-mono text-xs text-ink">{value}</span>
+        {copyValue && onCopy ? (
+          <button type="button" onClick={() => onCopy(copyValue, label)} className="shrink-0 text-ink-3 hover:text-ink" aria-label={`Copy ${label}`}>
+            <Copy className="size-3" />
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }
