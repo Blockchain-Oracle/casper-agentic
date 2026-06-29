@@ -12,6 +12,11 @@ vi.mock("@/server/endpoint-access", () => ({
   requireEndpointAccess: mocks.requireEndpointAccess,
 }));
 
+// Owner guard hits the DB; stub as pass-through for the access-key route test.
+vi.mock("@/server/owner-guard", () => ({
+  requireSourceOwner: vi.fn(async () => null),
+}));
+
 vi.mock("@/server/hosted-endpoint", () => ({
   getHostedEndpoint: mocks.getHostedEndpoint,
   hostedMcpTools: (endpoint: HostedEndpointStub) =>

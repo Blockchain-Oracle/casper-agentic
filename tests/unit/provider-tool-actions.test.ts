@@ -17,6 +17,15 @@ vi.mock("@/server/provider-store", () => ({
   unpublishProviderTool: mocks.unpublishProviderTool,
 }));
 
+// Owner guard hits the DB to resolve a record's owner; stub it as a pass-through so
+// these route tests exercise handler logic, not ownership enforcement.
+vi.mock("@/server/owner-guard", () => ({
+  requireToolOwner: vi.fn(async () => null),
+  requireSourceOwner: vi.fn(async () => null),
+  readOwnerFromRequest: vi.fn(() => null),
+  assignSourceOwner: vi.fn(async () => undefined),
+}));
+
 const originalEnv = { ...process.env };
 
 beforeEach(() => {

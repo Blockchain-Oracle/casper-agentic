@@ -43,6 +43,13 @@
       "when": 1782652653295,
       "tag": "0005_famous_shiver_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782743263964,
+      "tag": "0006_certain_enchantress",
+      "breakpoints": true
     }
   ]
 }

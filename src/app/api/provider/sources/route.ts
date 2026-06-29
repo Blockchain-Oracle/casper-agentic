@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createProviderSource, listProviderSources } from "@/server/provider-store";
+import { assignSourceOwner, readOwnerFromRequest } from "@/server/owner-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,8 @@ export async function POST(request: NextRequest) {
       name: body.name,
       sourceType: body.sourceType,
     });
+    const owner = readOwnerFromRequest(request);
+    if (owner) await assignSourceOwner(source.id, owner);
     return NextResponse.json({ source }, { status: 201 });
   } catch (error) {
     return providerError(error, "provider_source_create_failed");

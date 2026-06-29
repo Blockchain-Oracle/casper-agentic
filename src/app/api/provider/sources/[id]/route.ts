@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { isDestructiveActionError, requireDestructiveActionToken } from "@/server/destructive-action-guard";
+import { isDestructiveActionError } from "@/server/destructive-action-guard";
+import { requireSourceOwner } from "@/server/owner-guard";
 import { deleteProviderSource } from "@/server/provider-store";
 
 export const dynamic = "force-dynamic";
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    requireDestructiveActionToken(request);
     const { id } = await context.params;
+    await requireSourceOwner(request, id, "admin");
     return NextResponse.json(await deleteProviderSource(id));
   } catch (error) {
     return NextResponse.json(

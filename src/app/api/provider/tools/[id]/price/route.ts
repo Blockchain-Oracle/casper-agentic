@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { DEFAULT_CASPER_NETWORK, DEFAULT_WCSPR_PACKAGE, getRuntimeConfig } from "@/server/env";
+import { isDestructiveActionError } from "@/server/destructive-action-guard";
+import { requireToolOwner } from "@/server/owner-guard";
 import { saveToolPrice } from "@/server/provider-store";
 import { buildPaymentRequirements } from "@/server/x402-payment";
 
@@ -10,6 +12,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const body = await request.json().catch(() => ({}));
   try {
     const { id } = await context.params;
+    await requireToolOwner(request, id);
     const config = getRuntimeConfig();
     const payeeAccountHash = assertServerPaymentDefaults(body, config);
     const requirements = buildPaymentRequirements({ ...config, payeeAccountHash });
@@ -26,10 +29,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     return NextResponse.json({ price });
   } catch (error) {
     const message = error instanceof Error ? error.message : "provider_tool_price_failed";
-    return NextResponse.json(
-      { error: message },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: message }, { status: isDestructiveActionError(error) ? error.status : 400 });
   }
 }
 

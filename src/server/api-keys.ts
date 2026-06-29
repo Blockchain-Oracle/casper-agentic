@@ -63,7 +63,11 @@ function toView(row: typeof endpointAccessKeys.$inferSelect): ApiKeyView {
 }
 
 /** Mint a key. Returns the plaintext token ONCE (only the hash is stored). */
-export async function createApiKey(input: { name?: string; scope?: ApiKeyScope }) {
+export async function createApiKey(input: {
+  name?: string;
+  scope?: ApiKeyScope;
+  owner?: { publicKey: string; accountHash: string } | null;
+}) {
   const token = `casper_${nano()}`;
   const scope: ApiKeyScope = {};
   if (input.scope?.allowedTools?.length) scope.allowedTools = input.scope.allowedTools;
@@ -74,6 +78,8 @@ export async function createApiKey(input: { name?: string; scope?: ApiKeyScope }
     .insert(endpointAccessKeys)
     .values({
       label: input.name?.trim() || "Agent key",
+      ownerAccountHash: input.owner?.accountHash ?? null,
+      ownerPublicKey: input.owner?.publicKey ?? null,
       scope: { kind: "consumer", ...scope },
       sourceId: null,
       tokenHash: hashToken(token),

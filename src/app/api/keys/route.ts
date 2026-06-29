@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createApiKey, listApiKeys, type ApiKeyScope } from "@/server/api-keys";
+import { readOwnerFromRequest } from "@/server/owner-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,11 @@ export async function POST(request: NextRequest) {
     if (typeof body.expiresAt === "string" && !Number.isNaN(Date.parse(body.expiresAt))) {
       scope.expiresAt = body.expiresAt;
     }
-    const result = await createApiKey({ name: typeof body.name === "string" ? body.name : undefined, scope });
+    const result = await createApiKey({
+      name: typeof body.name === "string" ? body.name : undefined,
+      owner: readOwnerFromRequest(request),
+      scope,
+    });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: msg(error, "key_create_failed") }, { status: 400 });

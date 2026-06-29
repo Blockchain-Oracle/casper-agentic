@@ -29,6 +29,13 @@ vi.mock("@/server/openapi-discovery", () => ({
   discoverOpenApiTools: mocks.discoverOpenApiTools,
 }));
 
+// Owner guard hits the DB; stub as pass-through for route-handler tests.
+vi.mock("@/server/owner-guard", () => ({
+  requireSourceOwner: vi.fn(async () => null),
+  readOwnerFromRequest: vi.fn(() => null),
+  assignSourceOwner: vi.fn(async () => undefined),
+}));
+
 const originalEnv = { ...process.env };
 
 beforeEach(() => {
