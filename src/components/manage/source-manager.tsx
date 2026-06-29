@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { AlertTriangle, ArrowUpRight, Check, Copy, Loader2, RefreshCw, Search } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Check, Copy, Loader2, RefreshCw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ManageToolRow } from "@/components/manage/manage-tool-row";
@@ -10,7 +11,7 @@ import type { ManageMode, ManagedSource, ManageTool } from "@/components/manage/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatTokenAmount, parseTokenToMotes } from "@/lib/format-amount";
-import { listTools, priceTool, publishFreeTool, publishTool, unpublishTool } from "@/lib/gateway-api";
+import { deleteSource, listTools, priceTool, publishFreeTool, publishTool, unpublishTool } from "@/lib/gateway-api";
 
 export function SourceManager({ initialTools, source }: { initialTools: ManageTool[]; source: ManagedSource }) {
   const [tools, setTools] = useState(initialTools);
@@ -20,6 +21,21 @@ export function SourceManager({ initialTools, source }: { initialTools: ManageTo
   const [query, setQuery] = useState("");
   const [bulkPrice, setBulkPrice] = useState("7.5");
   const [busy, setBusy] = useState("");
+  const router = useRouter();
+
+  async function deleteSourceNow() {
+    if (!window.confirm(`Delete "${source.name}" and all ${tools.length} tools? This cannot be undone.`)) return;
+    setBusy("delete");
+    try {
+      await deleteSource(source.id);
+      toast.success(`Deleted ${source.name}`);
+      router.push("/register");
+    } catch (error) {
+      // The server enforces ownership; surface its 401/403 message verbatim.
+      toast.error(error instanceof Error ? error.message : "Could not delete server");
+      setBusy("");
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -230,10 +246,13 @@ export function SourceManager({ initialTools, source }: { initialTools: ManageTo
           <div className="min-w-0 flex-1">
             <h2 className="font-mono text-[11px] uppercase tracking-widest text-ink">Delete endpoint</h2>
             <p className="mt-1 text-sm leading-relaxed text-ink-2">
-              Destructive source deletion is locked until ownership verification is wired to the connected account. Public users cannot delete an endpoint from this page.
+              Permanently delete this server and all its tools. Only the owner can do this — sign in with the
+              wallet that owns it (Account → Wallet) if the button is rejected.
             </p>
           </div>
-          <Button disabled variant="outline">Delete</Button>
+          <Button onClick={deleteSourceNow} disabled={Boolean(busy)} variant="outline" className="gap-1.5 border-signal/40 text-signal hover:bg-signal/10">
+            {busy === "delete" ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />} Delete
+          </Button>
         </div>
       </section>
     </div>
