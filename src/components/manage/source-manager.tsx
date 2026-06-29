@@ -117,7 +117,9 @@ export function SourceManager({ initialTools, source }: { initialTools: ManageTo
     setBusy("bulk");
     try {
       for (const tool of picked) {
-        if (modes[tool.id] === "paid") {
+        // Default to "paid" exactly like the row display (modes[id] ?? "paid"), so a
+        // tool shown as Paid can never be silently published Free on an unset mode.
+        if ((modes[tool.id] ?? "paid") === "paid") {
           await priceTool(tool.id, parseTokenToMotes(prices[tool.id] || bulkPrice || "7.5"));
           await publishTool(tool.id);
         } else {

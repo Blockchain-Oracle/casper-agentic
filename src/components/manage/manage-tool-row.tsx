@@ -54,7 +54,19 @@ export function ManageToolRow({
           {selected ? <Check className="size-4" /> : <span className="size-3 rounded-sm border border-current" />}
         </button>
 
-        <div className="min-w-0 flex-1">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={onSelect}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              onSelect();
+            }
+          }}
+          className="min-w-0 flex-1 cursor-pointer select-none"
+          aria-pressed={selected}
+        >
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="min-w-0 truncate font-mono text-sm font-medium text-ink">{tool.name}</h3>
             <StatusBadge status={tool.status} paid={Boolean(tool.price)} />
