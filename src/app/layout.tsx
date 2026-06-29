@@ -45,7 +45,8 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          {children}
+          <div id="app">{children}</div>
+          <div id="csprclick-ui" />
           <Toaster position="bottom-right" />
         </ThemeProvider>
       </body>

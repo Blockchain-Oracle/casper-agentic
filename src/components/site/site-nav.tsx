@@ -7,6 +7,7 @@ import { Moon, Sun } from "lucide-react";
 
 import { ApiKeysDialog } from "@/components/keys/api-keys-dialog";
 import { BrandMark } from "@/components/site/proof-stamp";
+import { WalletConnectButton } from "@/components/wallet/wallet-connect-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +52,7 @@ export function SiteNav() {
 
         <div className="ml-auto flex items-center gap-2">
           <ThemeToggle />
+          <WalletConnectButton />
           <ApiKeysDialog />
         </div>
       </div>
