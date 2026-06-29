@@ -18,6 +18,7 @@ export function RegisterFlow() {
   const [phase, setPhase] = useState<Phase>("form");
   const [tools, setTools] = useState<DiscoveredTool[]>([]);
   const [prices, setPrices] = useState<Record<string, string>>({});
+  const [bulk, setBulk] = useState("7.5");
   const [sourceId, setSourceId] = useState<string | null>(null);
   const [kind, setKind] = useState<"mcp" | "openapi">("mcp");
 
@@ -118,8 +119,15 @@ export function RegisterFlow() {
 
       {tools.length > 0 ? (
         <div className="rounded-lg border border-hairline bg-panel p-5">
-          <div className="mb-4 font-mono text-[11px] uppercase tracking-widest text-ink-3">
-            Price &amp; publish · {tools.length} tool{tools.length > 1 ? "s" : ""}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <span className="font-mono text-[11px] uppercase tracking-widest text-ink-3">
+              Price &amp; publish · {tools.filter((t) => Number(prices[t.id] ?? "0") > 0).length}/{tools.length} priced
+            </span>
+            <div className="flex items-center gap-1.5">
+              <Input value={bulk} onChange={(e) => setBulk(e.target.value)} className="h-7 w-20 text-right text-xs tnum" inputMode="decimal" disabled={phase === "publishing"} />
+              <Button size="sm" variant="outline" className="h-7 text-xs" disabled={phase === "publishing"} onClick={() => setPrices(Object.fromEntries(tools.map((t) => [t.id, bulk])))}>Apply to all</Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={phase === "publishing"} onClick={() => setPrices(Object.fromEntries(tools.map((t) => [t.id, ""])))}>Clear</Button>
+            </div>
           </div>
           <div className="space-y-2.5">
             {tools.map((tool) => (
