@@ -25,7 +25,7 @@ export interface ServerTool {
 type GatewayBalance = Awaited<ReturnType<typeof getGatewayBalance>>;
 
 /** Searchable, expandable tools list for a server detail — modelled on MCPay's tools accordion. */
-export function ServerTools({ endpointUrl, tools }: { endpointUrl: string; tools: ServerTool[] }) {
+export function ServerTools({ endpointUrl, sourceId, tools }: { endpointUrl: string; sourceId: string; tools: ServerTool[] }) {
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -54,7 +54,7 @@ export function ServerTools({ endpointUrl, tools }: { endpointUrl: string; tools
               </div>
             </AccordionTrigger>
             <AccordionContent>
-              <ToolRunner tool={tool} endpointUrl={endpointUrl} />
+              <ToolRunner tool={tool} endpointUrl={endpointUrl} sourceId={sourceId} />
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -63,7 +63,7 @@ export function ServerTools({ endpointUrl, tools }: { endpointUrl: string; tools
   );
 }
 
-function ToolRunner({ tool, endpointUrl }: { tool: ServerTool; endpointUrl: string }) {
+function ToolRunner({ tool, endpointUrl, sourceId }: { tool: ServerTool; endpointUrl: string; sourceId: string }) {
   const [args, setArgs] = useState<Record<string, unknown>>({});
   const [phase, setPhase] = useState<"idle" | "running" | "done">("idle");
   const [result, setResult] = useState<ToolRunResult | null>(null);
@@ -110,14 +110,23 @@ function ToolRunner({ tool, endpointUrl }: { tool: ServerTool; endpointUrl: stri
     };
   }, [paid]);
 
+  const requiredFields = Array.isArray((tool.inputSchema as { required?: unknown })?.required)
+    ? ((tool.inputSchema as { required?: string[] }).required as string[])
+    : [];
+  const missingRequired = requiredFields.filter((key) => {
+    const value = args[key];
+    return value === undefined || value === null || (typeof value === "string" && value.trim() === "");
+  });
+
   async function run() {
+    if (missingRequired.length) return toast.error(`Fill required field${missingRequired.length > 1 ? "s" : ""}: ${missingRequired.join(", ")}`);
     if (paid && paymentMethod === "wallet") return toast.error("Direct wallet x402 signing is not available for Casper settlement yet.");
     if (paid && !selectedKey) return toast.error("Choose or create an API key before running a paid tool.");
     if (selectedBalanceCanBlock) return toast.error("Selected key does not have enough WCSPR for this call.");
     if (gatewayPaymentNotReady) return toast.error("The gateway's settlement wallet isn't funded yet (separate from your key) — operator must fund it.");
     setPhase("running");
     try {
-      setResult(await runPaidCall({ apiKeyId: paid ? selectedKey?.id : undefined, args, client: "server-console", endpointUrl, toolName: tool.name }));
+      setResult(await runPaidCall({ apiKeyId: paid ? selectedKey?.id : undefined, args, client: "server-console", endpointUrl, sourceId, toolName: tool.name }));
     } catch (error) {
       setResult({ reason: error instanceof Error ? error.message : "request failed", status: "error" });
     }
@@ -244,7 +253,12 @@ function ToolRunner({ tool, endpointUrl }: { tool: ServerTool; endpointUrl: stri
         )}
       </div>
 
-      <Button onClick={run} disabled={phase === "running" || (paid && (paymentMethod === "wallet" || !selectedKey || selectedBalanceCanBlock || gatewayPaymentNotReady))} className="mt-4 w-full gap-2">
+      {missingRequired.length ? (
+        <p className="mt-3 font-mono text-[11px] text-ink-3">
+          Required: <span className="text-casper">{missingRequired.join(", ")}</span>
+        </p>
+      ) : null}
+      <Button onClick={run} disabled={phase === "running" || missingRequired.length > 0 || (paid && (paymentMethod === "wallet" || !selectedKey || selectedBalanceCanBlock || gatewayPaymentNotReady))} className="mt-4 w-full gap-2">
         {phase === "running" ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
         {phase === "running" ? "Signing & settling on Casper…" : tool.price ? `Pay & run · ${formatTokenAmount(tool.price.amount)} WCSPR` : "Run free"}
       </Button>

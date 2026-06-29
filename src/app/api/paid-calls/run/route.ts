@@ -53,6 +53,7 @@ function parsePaidCallBody(body: unknown) {
     args,
     client: stringValue(body.client),
     endpointUrl: requireString(body.endpointUrl, "endpointUrl"),
+    sourceId: stringValue(body.sourceId),
     toolName: requireString(body.toolName, "toolName"),
   };
 }

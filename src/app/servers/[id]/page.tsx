@@ -56,6 +56,7 @@ export default async function ServerDetailPage({ params }: { params: Promise<{ i
           </div>
           <ServerTools
             endpointUrl={server.source.endpointUrl}
+            sourceId={server.source.id}
             tools={server.tools.map((t) => ({
               id: t.id,
               name: t.name,

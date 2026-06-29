@@ -82,6 +82,7 @@ export function runPaidCall(input: {
   apiKey?: string;
   apiKeyId?: string;
   endpointUrl: string;
+  sourceId?: string;
   toolName: string;
   args: Record<string, unknown>;
   client?: string;

@@ -9,7 +9,7 @@ import {
   type PaidCallInput,
 } from "./live-paid-call-input";
 import { callMcpTool, discoverMcpTools } from "./mcp-client";
-import { getSourceByEndpoint, getToolByName } from "./provider-store";
+import { getProviderSourceRecord, getSourceByEndpoint, getToolByName } from "./provider-store";
 import { callRestTool, parseRestOperation } from "./rest-tool";
 import {
   persistAttempt,
@@ -39,12 +39,13 @@ type ToolPrice = NonNullable<ResolvedTool["price"]>;
  * only pre-settlement gate. Proven verify → settle → Casper proof flow.
  */
 export async function runGatewayPaidCall(input: PaidCallInput) {
-  const { args, endpointUrl, toolName } = requireLivePaidCallInput(input);
+  const { args, endpointUrl, sourceId, toolName } = requireLivePaidCallInput(input);
 
   // Resolve the registered source to dispatch the tool execution: MCP sources are
   // discovered + called over JSON-RPC; OpenAPI sources run a REST call from the
   // operation stored at register time. Settlement (x402) is identical either way.
-  const source = await getSourceByEndpoint(endpointUrl);
+  // Prefer the explicit source id (multiple sources can share one endpoint URL).
+  const source = sourceId ? await getProviderSourceRecord(sourceId) : await getSourceByEndpoint(endpointUrl);
   const providerName = source?.name ?? "MCP source";
   const registeredTool = source ? await getToolByName(source.id, toolName) : null;
   if (source && (!registeredTool || registeredTool.status !== "published")) {

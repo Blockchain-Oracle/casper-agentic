@@ -4,12 +4,16 @@ export interface PaidCallInput {
   args: Record<string, unknown>;
   client?: string;
   endpointUrl: string;
+  // Resolve the registered source by id when provided — multiple sources can share
+  // one endpoint URL, so endpoint-only resolution picks the wrong (wrong-published) one.
+  sourceId?: string;
   toolName: string;
 }
 
 export interface ParsedPaidCallInput {
   args: Record<string, unknown>;
   endpointUrl: string;
+  sourceId?: string;
   toolName: string;
 }
 
@@ -25,6 +29,7 @@ export function requireLivePaidCallInput(input: PaidCallInput): ParsedPaidCallIn
   return {
     args: requireArgs(input.args),
     endpointUrl: requireText(input.endpointUrl, "endpointUrl"),
+    sourceId: input.sourceId?.trim() || undefined,
     toolName: requireText(input.toolName, "toolName"),
   };
 }
