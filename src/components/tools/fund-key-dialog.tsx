@@ -36,7 +36,7 @@ export function FundKeyDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-h-[92dvh] w-[calc(100vw-1rem)] max-w-lg overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[92dvh] w-[calc(100vw-1rem)] max-w-md overflow-x-hidden overflow-y-auto [&>*]:min-w-0 sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display">Fund key</DialogTitle>
           <DialogDescription className="text-xs text-ink-3">

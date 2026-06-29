@@ -131,7 +131,7 @@ export function FundTab({
         <div className="font-mono text-[10px] uppercase tracking-wider text-ink-3">Gateway deposit address (CSPR)</div>
         <div className="mt-2 flex items-center gap-2">
           <code className="min-w-0 flex-1 truncate rounded-sm border border-hairline bg-panel px-2 py-1.5 font-mono text-xs text-ink">
-            {balance?.accountHash ?? "..."}
+            {balance?.accountHash ? shortHash(balance.accountHash) : "..."}
           </code>
           {balance?.accountHash ? <CopyButton value={balance.accountHash} label="Gateway address copied" /> : null}
         </div>
@@ -188,6 +188,10 @@ export function FundTab({
       </div>
     </div>
   );
+}
+
+function shortHash(value: string) {
+  return value.length > 22 ? `${value.slice(0, 12)}…${value.slice(-8)}` : value;
 }
 
 function statusLabel(status: string) {

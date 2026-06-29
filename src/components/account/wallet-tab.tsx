@@ -109,10 +109,10 @@ function GatewayReadiness({ balance, loading }: { balance: GatewayBalance | null
       ) : null}
       {balance?.accountHash ? (
         <div className="mt-3">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-ink-3">Gateway account — send WCSPR + native CSPR here</div>
+          <div className="font-mono text-[10px] uppercase tracking-wider text-ink-3">Gateway account — deposit CSPR here</div>
           <div className="mt-1 flex items-center gap-2">
             <code className="min-w-0 flex-1 truncate rounded-sm border border-hairline bg-panel px-2 py-1.5 font-mono text-xs text-ink">
-              {balance.accountHash}
+              {short(balance.accountHash)}
             </code>
             <CopyButton value={balance.accountHash} label="Gateway account hash copied" />
           </div>
