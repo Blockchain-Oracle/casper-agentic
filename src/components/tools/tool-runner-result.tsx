@@ -61,7 +61,7 @@ export function ToolRunnerResultPanel({
             <span className="font-mono text-[10px] uppercase tracking-wider text-ink-3">Tool result</span>
             <div className="flex items-center gap-1">
               <Button type="button" size="xs" variant="ghost" onClick={() => setPretty((value) => !value)}>
-                {pretty ? "Raw" : "Pretty"}
+                {pretty ? "Raw" : "Formatted"}
               </Button>
               <Button type="button" size="xs" variant="ghost" onClick={copyResult} className="gap-1">
                 <Copy className="size-3" /> Copy
@@ -93,7 +93,28 @@ function statusLabel(status: string) {
   return status === "raw_proof_unavailable" ? "Settled · proof indexing" : "Settled";
 }
 
+// MCP tool results wrap the real payload as a string in content[].text, so the raw
+// object prints as an escaped blob. Unwrap that text, then pretty-print it as JSON
+// when it parses (the common case), otherwise show it as-is (e.g. markdown/plain text).
+function extractMcpText(value: unknown): string | null {
+  if (value && typeof value === "object" && Array.isArray((value as { content?: unknown }).content)) {
+    const parts = (value as { content: Array<{ text?: unknown }> }).content
+      .map((part) => (typeof part?.text === "string" ? part.text : null))
+      .filter((text): text is string => text !== null);
+    if (parts.length) return parts.join("\n");
+  }
+  return null;
+}
+
 function formatOutput(value: unknown, pretty: boolean) {
-  if (typeof value === "string") return value;
+  const base = extractMcpText(value) ?? (typeof value === "string" ? value : null);
+  if (base !== null) {
+    if (!pretty) return base;
+    try {
+      return JSON.stringify(JSON.parse(base), null, 2);
+    } catch {
+      return base;
+    }
+  }
   return JSON.stringify(value ?? null, null, pretty ? 2 : 0);
 }
