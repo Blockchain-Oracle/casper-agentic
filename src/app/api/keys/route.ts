@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createApiKey, listApiKeys, type ApiKeyScope } from "@/server/api-keys";
 import { readOwnerFromRequest } from "@/server/owner-guard";
+import { ownerSessionsEnabled } from "@/server/wallet-session";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    return NextResponse.json({ keys: await listApiKeys() });
+    // Sessions off → unscoped (ops). On → only the signed-in wallet's keys; signed
+    // out returns nothing rather than every key in the gateway.
+    if (!ownerSessionsEnabled()) return NextResponse.json({ keys: await listApiKeys() });
+    const owner = readOwnerFromRequest(request);
+    return NextResponse.json({ keys: owner ? await listApiKeys(owner) : [] });
   } catch (error) {
     return NextResponse.json({ error: msg(error, "keys_list_failed") }, { status: 500 });
   }

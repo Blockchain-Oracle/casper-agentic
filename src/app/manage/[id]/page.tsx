@@ -1,12 +1,14 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, LockKeyhole } from "lucide-react";
 
 import { SourceManager } from "@/components/manage/source-manager";
 import { ServerLogo } from "@/components/servers/server-logo";
 import { SiteNav } from "@/components/site/site-nav";
 import { Button } from "@/components/ui/button";
 import { getProviderSourceRecord, listProviderTools } from "@/server/provider-store";
+import { OWNER_SESSION_COOKIE, ownerSessionsEnabled, readOwnerSession } from "@/server/wallet-session";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,15 @@ export default async function ManageSourcePage({ params }: { params: Promise<{ i
   const { id } = await params;
   const source = await getProviderSourceRecord(id);
   if (!source) notFound();
+
+  // Gate only when the server is owned by a different wallet (or you're not signed
+  // in as its owner). Unclaimed (owner-null) servers still render so they can be claimed.
+  if (ownerSessionsEnabled() && source.ownerPublicKey) {
+    const session = readOwnerSession((await cookies()).get(OWNER_SESSION_COOKIE)?.value);
+    if (!session || session.publicKey !== source.ownerPublicKey) {
+      return <ManageGated name={source.name} signedIn={Boolean(session)} />;
+    }
+  }
 
   const tools = await listProviderTools(id);
   const sourceView = {
@@ -61,6 +72,29 @@ export default async function ManageSourcePage({ params }: { params: Promise<{ i
         <div className="mt-8">
           <SourceManager initialTools={tools} source={sourceView} />
         </div>
+      </main>
+    </div>
+  );
+}
+
+function ManageGated({ name, signedIn }: { name: string; signedIn: boolean }) {
+  return (
+    <div className="min-h-dvh bg-surface text-ink">
+      <SiteNav />
+      <main className="mx-auto max-w-lg px-5 py-20 text-center">
+        <div className="mx-auto grid size-12 place-items-center rounded-full border border-hairline bg-panel">
+          <LockKeyhole className="size-5 text-ink-3" />
+        </div>
+        <h1 className="mt-5 font-display text-2xl font-bold tracking-tight">This server isn&apos;t yours to manage</h1>
+        <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink-2">
+          {name} is owned by another wallet.{" "}
+          {signedIn
+            ? "You're signed in, but with a different wallet than the one that owns it."
+            : "Sign in (Account → Wallet) with the wallet that owns it to manage it."}
+        </p>
+        <Button asChild variant="outline" className="mt-6 gap-2">
+          <Link href="/register"><ArrowLeft className="size-4" /> Back to register</Link>
+        </Button>
       </main>
     </div>
   );

@@ -89,9 +89,12 @@ export async function createApiKey(input: {
   return { key: toView(row), token };
 }
 
-export async function listApiKeys(): Promise<ApiKeyView[]> {
+// owner undefined = unscoped (ops/sessions-disabled path); owner set = only that
+// wallet's keys. The route returns [] for a signed-out user when sessions are enabled.
+export async function listApiKeys(owner?: { publicKey: string }): Promise<ApiKeyView[]> {
   const rows = (await getDb().select().from(endpointAccessKeys).where(isNull(endpointAccessKeys.sourceId)))
     .filter((r) => (r.scope as Record<string, unknown>)?.kind === "consumer")
+    .filter((r) => !owner || r.ownerPublicKey === owner.publicKey)
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   return Promise.all(
     rows.map(async (row) => {
