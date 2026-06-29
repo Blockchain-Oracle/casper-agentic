@@ -7,15 +7,53 @@ const mocks = vi.hoisted(() => ({
   runGatewayPaidCall: vi.fn(),
 }));
 
-vi.mock("@/server/hosted-endpoint", async () => {
-  const actual = await vi.importActual<typeof import("@/server/hosted-endpoint")>("@/server/hosted-endpoint");
-  return { ...actual, getHostedEndpoint: mocks.getHostedEndpoint };
-});
+vi.mock("@/server/hosted-endpoint", () => ({
+  getHostedEndpoint: mocks.getHostedEndpoint,
+  hostedMcpTools: (endpoint: HostedEndpointStub) =>
+    endpoint.tools.map((tool) => ({
+      _meta: {
+        "casperGw/paymentRequirements": tool.paymentRequirements,
+        "casperGw/toolId": tool.id,
+      },
+      description: tool.description ?? undefined,
+      inputSchema: tool.inputSchema,
+      name: tool.name,
+    })),
+  resolveHostedTool: (endpoint: HostedEndpointStub, nameOrId: string) =>
+    endpoint.tools.find((tool) => tool.name === nameOrId || tool.id === nameOrId) ?? null,
+  toHostedEndpointPublicView: (endpoint: HostedEndpointStub) => ({
+    source: {
+      id: endpoint.source.id,
+      name: endpoint.source.name,
+      sourceType: endpoint.source.sourceType,
+    },
+    tools: endpoint.tools.map((tool) => ({
+      description: tool.description,
+      id: tool.id,
+      inputSchema: tool.inputSchema,
+      name: tool.name,
+      paymentRequirements: tool.paymentRequirements,
+      status: tool.status,
+    })),
+  }),
+}));
 
-vi.mock("@/server/live-paid-call", async () => {
-  const actual = await vi.importActual<typeof import("@/server/live-paid-call")>("@/server/live-paid-call");
-  return { ...actual, runGatewayPaidCall: mocks.runGatewayPaidCall };
-});
+type HostedEndpointStub = {
+  source: { id: string; name: string; sourceType: string };
+  tools: Array<{
+    description?: string | null;
+    id: string;
+    inputSchema: unknown;
+    name: string;
+    paymentRequirements?: unknown;
+    status?: string;
+  }>;
+};
+
+vi.mock("@/server/live-paid-call", () => ({
+  isPaidCallInputError: () => false,
+  runGatewayPaidCall: mocks.runGatewayPaidCall,
+}));
 
 const originalEnv = { ...process.env };
 beforeEach(() => vi.clearAllMocks());

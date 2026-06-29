@@ -106,6 +106,20 @@ body {
   display: none !important;
 }
 
+#csprclick-ui {
+  position: relative;
+  z-index: 1000;
+}
+
+#csprclick-ui iframe,
+#csprclick-ui [role="dialog"],
+#csprclick-ui [class*="Modal"],
+#csprclick-ui [class*="modal"],
+#csprclick-ui [class*="Overlay"],
+#csprclick-ui [class*="overlay"] {
+  z-index: 1000 !important;
+}
+
 .tnum {
   font-feature-settings: "tnum" 1, "zero" 1;
 }

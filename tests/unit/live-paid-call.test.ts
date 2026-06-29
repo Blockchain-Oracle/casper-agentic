@@ -66,6 +66,23 @@ const input = { args: { amount: "10" }, endpointUrl: ENDPOINT, toolName: "get_qu
 function setDefaults() {
   m.supported.mockResolvedValue({ kinds: [{ network: "casper:casper-test", scheme: "exact" }] });
   m.getSourceByEndpoint.mockResolvedValue({ id: "src-1", name: "CSPR.trade MCP", sourceType: "mcp" });
+  m.getToolByName.mockResolvedValue({
+    id: "tool-1",
+    name: "get_quote",
+    price: {
+      amount: "5",
+      asset: "asset",
+      extra: {},
+      maxTimeoutSeconds: 900,
+      network: "casper:casper-test",
+      payTo: "payee",
+      scheme: "exact",
+      toolId: "tool-1",
+    },
+    sourceId: "src-1",
+    status: "published",
+    upstreamTarget: `${ENDPOINT}#get_quote`,
+  });
   m.discoverMcpTools.mockResolvedValue([{ name: "get_quote" }]);
   m.getConfiguredSignerAddress.mockReturnValue(`00${GATEWAY_HASH}`);
   m.buildPaymentRequirements.mockReturnValue({ amount: "5", asset: "asset", network: "casper:casper-test" });

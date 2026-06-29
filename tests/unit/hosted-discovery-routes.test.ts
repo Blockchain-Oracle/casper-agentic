@@ -5,10 +5,9 @@ const mocks = vi.hoisted(() => ({
   getHostedEndpoint: vi.fn(),
 }));
 
-vi.mock("@/server/hosted-endpoint", async () => {
-  const actual = await vi.importActual<typeof import("@/server/hosted-endpoint")>("@/server/hosted-endpoint");
-  return { ...actual, getHostedEndpoint: mocks.getHostedEndpoint };
-});
+vi.mock("@/server/hosted-endpoint", () => ({
+  getHostedEndpoint: mocks.getHostedEndpoint,
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();

@@ -2,15 +2,19 @@ import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  publishProviderToolFree: vi.fn(),
   publishProviderTool: vi.fn(),
   saveToolPrice: vi.fn(),
   setProviderToolStatus: vi.fn(),
+  unpublishProviderTool: vi.fn(),
 }));
 
 vi.mock("@/server/provider-store", () => ({
+  publishProviderToolFree: mocks.publishProviderToolFree,
   publishProviderTool: mocks.publishProviderTool,
   saveToolPrice: mocks.saveToolPrice,
   setProviderToolStatus: mocks.setProviderToolStatus,
+  unpublishProviderTool: mocks.unpublishProviderTool,
 }));
 
 const originalEnv = { ...process.env };
@@ -115,6 +119,32 @@ describe("provider tool action routes", () => {
     expect(response.status).toBe(200);
     expect(mocks.publishProviderTool).toHaveBeenCalledWith("tool-1");
     expect(await response.json()).toEqual({ tool: { id: "tool-1", status: "published" } });
+  });
+
+  it("publishes provider tools free by clearing their price", async () => {
+    const { POST } = await import("@/app/api/provider/tools/[id]/free/route");
+    mocks.publishProviderToolFree.mockResolvedValue({ id: "tool-1", price: null, status: "published" });
+
+    const response = await POST(request("https://gw.test/api/provider/tools/tool-1/free", { token: "operator-token" }), {
+      params: Promise.resolve({ id: "tool-1" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(mocks.publishProviderToolFree).toHaveBeenCalledWith("tool-1");
+    expect(await response.json()).toEqual({ tool: { id: "tool-1", price: null, status: "published" } });
+  });
+
+  it("unpublishes provider tools", async () => {
+    const { POST } = await import("@/app/api/provider/tools/[id]/unpublish/route");
+    mocks.unpublishProviderTool.mockResolvedValue({ id: "tool-1", status: "unpublished" });
+
+    const response = await POST(request("https://gw.test/api/provider/tools/tool-1/unpublish", { token: "operator-token" }), {
+      params: Promise.resolve({ id: "tool-1" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(mocks.unpublishProviderTool).toHaveBeenCalledWith("tool-1");
+    expect(await response.json()).toEqual({ tool: { id: "tool-1", status: "unpublished" } });
   });
 });
 
