@@ -101,8 +101,24 @@ export type CSPRClickBrowserWindow = {
   removeEventListener?: (eventName: "csprclick:loaded", handler: () => void) => void;
 };
 
+// Next/Turbopack only inlines DIRECT `process.env.NEXT_PUBLIC_*` references into the
+// client bundle — an aliased read (`const e = process.env; e.NEXT_PUBLIC_X`) becomes
+// undefined on the client, silently falling back to defaults. So build the default env
+// from direct member accesses; tests/server still pass an explicit env object.
+function publicClickEnv(): Record<string, string | undefined> {
+  return {
+    NEXT_PUBLIC_CSPR_CLICK_APP_ID: process.env.NEXT_PUBLIC_CSPR_CLICK_APP_ID,
+    NEXT_PUBLIC_CSPR_CLICK_APP_NAME: process.env.NEXT_PUBLIC_CSPR_CLICK_APP_NAME,
+    NEXT_PUBLIC_CASPER_CHAIN_NAME: process.env.NEXT_PUBLIC_CASPER_CHAIN_NAME,
+    NEXT_PUBLIC_CSPR_CLICK_CONTENT_MODE: process.env.NEXT_PUBLIC_CSPR_CLICK_CONTENT_MODE,
+    NEXT_PUBLIC_CSPR_CLICK_PROVIDERS: process.env.NEXT_PUBLIC_CSPR_CLICK_PROVIDERS,
+    NEXT_PUBLIC_CSPR_CLICK_ROOT_ELEMENT: process.env.NEXT_PUBLIC_CSPR_CLICK_ROOT_ELEMENT,
+    NEXT_PUBLIC_CSPR_CLICK_UI_CONTAINER: process.env.NEXT_PUBLIC_CSPR_CLICK_UI_CONTAINER,
+  };
+}
+
 export function getCSPRClickPublicConfig(
-  env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = publicClickEnv(),
 ): CSPRClickPublicConfig {
   // Default to the public localhost demo app id (per CSPR.click docs) so browser
   // wallet connect works out-of-the-box; override with NEXT_PUBLIC_CSPR_CLICK_APP_ID.
