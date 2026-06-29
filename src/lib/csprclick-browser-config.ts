@@ -37,6 +37,14 @@ export type CSPRClickPublicConfig =
 
 export type CSPRClickAccount = Partial<Pick<AccountType, "provider" | "providerSupports" | "public_key">>;
 export type CSPRClickProviderInfo = Partial<Pick<ProviderInfo, "key" | "name" | "supports" | "version">>;
+export type CSPRClickSendResult = {
+  cancelled?: boolean;
+  csprCloudTransaction?: { timestamp?: string };
+  error?: string;
+  errorData?: unknown;
+  status?: string;
+  transactionHash?: string;
+};
 
 export type CSPRClickClient = {
   appSettings?: { badge_left?: unknown };
@@ -54,6 +62,12 @@ export type CSPRClickClient = {
     params: SignTypedDataParams,
     signingPublicKey: string,
   ) => Promise<CSPRClickSignTypedDataResult | SignTypedDataResult | undefined>;
+  send?: (
+    transactionJSON: string | object,
+    signingPublicKey: string,
+    onStatusUpdate?: (status: string, data: unknown) => void,
+    timeout?: number,
+  ) => Promise<CSPRClickSendResult | undefined>;
   switchAccount?: (withProvider?: string, options?: unknown) => Promise<void>;
 };
 

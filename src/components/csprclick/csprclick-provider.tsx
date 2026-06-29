@@ -29,7 +29,23 @@ type CsprClickContextValue = {
   disabled: boolean;
   connect: () => void;
   disconnect: () => void;
+  sendWcsprTransfer: (input: SendWcsprTransferInput) => Promise<SendWcsprTransferResult>;
 };
+
+export interface SendWcsprTransferInput {
+  amountMotes: string;
+  assetPackageHash: string;
+  chainName: string;
+  onStatusUpdate?: (status: string, data: unknown) => void;
+  payeeAccountHash: string;
+  paymentAmountMotes: string;
+}
+
+export type SendWcsprTransferResult =
+  | { status: "cancelled" }
+  | { error: string; status: "error" }
+  | { status: "needs_connection" }
+  | { rawStatus?: string; status: "sent"; transactionHash: string };
 
 const CsprClickContext = createContext<CsprClickContextValue | null>(null);
 
@@ -161,9 +177,46 @@ export function CsprClickProvider({ children }: { children: React.ReactNode }) {
     void client?.disconnect?.();
   }, []);
 
+  const sendWcsprTransfer = useCallback(
+    async (input: SendWcsprTransferInput): Promise<SendWcsprTransferResult> => {
+      const client = clientRef.current;
+      if (!client) return { error: "Wallet connector is not loaded", status: "error" };
+      if (!client.send) return { error: "Connected wallet does not support transaction sending", status: "error" };
+
+      const account = client.getActiveAccountAsync
+        ? await client.getActiveAccountAsync().catch(() => null)
+        : (client.getActiveAccount?.() ?? null);
+      const signingPublicKey = account?.public_key?.toLowerCase() || publicKey;
+      if (!signingPublicKey) {
+        client.signIn?.();
+        return { status: "needs_connection" };
+      }
+
+      const { buildWcsprTransferTransaction } = await import("@/lib/csprclick-wcspr-transfer");
+      const transaction = buildWcsprTransferTransaction({
+        amountMotes: input.amountMotes,
+        assetPackageHash: input.assetPackageHash,
+        chainName: input.chainName,
+        fromPublicKey: signingPublicKey,
+        payeeAccountHash: input.payeeAccountHash,
+        paymentAmountMotes: input.paymentAmountMotes,
+      });
+      const result = await client.send(transaction.toJSON() as object, signingPublicKey, input.onStatusUpdate);
+      if (result?.transactionHash) {
+        return { rawStatus: result.status, status: "sent", transactionHash: result.transactionHash };
+      }
+      if (result?.cancelled) return { status: "cancelled" };
+      return {
+        error: result?.error ? `${result.error}${result.errorData ? `: ${JSON.stringify(result.errorData)}` : ""}` : "Wallet did not return a transaction hash",
+        status: "error",
+      };
+    },
+    [publicKey],
+  );
+
   const value = useMemo<CsprClickContextValue>(
-    () => ({ connect, disconnect, disabled, publicKey, ready }),
-    [connect, disconnect, disabled, publicKey, ready],
+    () => ({ connect, disconnect, disabled, publicKey, ready, sendWcsprTransfer }),
+    [connect, disconnect, disabled, publicKey, ready, sendWcsprTransfer],
   );
 
   return <CsprClickContext.Provider value={value}>{children}</CsprClickContext.Provider>;

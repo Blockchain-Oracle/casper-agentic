@@ -50,7 +50,6 @@ export function ConnectWalletButton() {
     >
       <Wallet className="size-3.5" />
       <span className="max-sm:hidden" aria-hidden="true">{ready ? "Connect wallet" : "Loading..."}</span>
-      <span className="sm:hidden" aria-hidden="true">{ready ? "Wallet" : "..."}</span>
     </Button>
   );
 }
