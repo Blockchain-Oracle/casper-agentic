@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 
 import { ConnectDialog } from "@/components/connect/connect-dialog";
+import { RediscoverButton } from "@/components/servers/rediscover-button";
 import { CopyButton } from "@/components/primitives/copy-button";
 import { TokenIcon } from "@/components/primitives/token-icon";
 import { SiteNav } from "@/components/site/site-nav";
@@ -41,8 +42,11 @@ export default async function ServerDetailPage({ params }: { params: Promise<{ i
         </div>
 
         <section className="mt-8">
-          <div className="mb-3 font-mono text-[11px] uppercase tracking-widest text-ink-3">
-            {server.tools.length} paid tool{server.tools.length > 1 ? "s" : ""}
+          <div className="mb-3 flex items-center justify-between">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-ink-3">
+              {server.tools.length} paid tool{server.tools.length > 1 ? "s" : ""}
+            </div>
+            <RediscoverButton sourceId={server.source.id} />
           </div>
           <ServerTools
             endpointUrl={server.source.endpointUrl}

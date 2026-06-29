@@ -3,7 +3,8 @@ import { randomUUID } from "node:crypto";
 
 import { getDb } from "@/db/client";
 import { auditEvents, providerSources, providerTools, toolPrices } from "@/db/schema";
-import type { DiscoveredMcpTool } from "./mcp-client";
+import { discoverMcpTools, type DiscoveredMcpTool } from "./mcp-client";
+import { discoverOpenApiTools } from "./openapi-discovery";
 import {
   assertToolStatus,
   normalizeDiscoveredTool,
@@ -110,6 +111,43 @@ export async function persistDiscoveredMcpTools(sourceId: string, endpointUrl: s
     sourceId,
   });
   return inserted.map(toProviderToolView);
+}
+
+/** Re-run discovery for a source: refresh existing tools' schema/description (by name)
+ * and add any newly-exposed tools as drafts. Preserves prices + published status. */
+export async function rediscoverSource(sourceId: string) {
+  const source = await getProviderSourceRecord(sourceId);
+  if (!source) throw new Error("provider source not found");
+  const existing = await getDb().select().from(providerTools).where(eq(providerTools.sourceId, sourceId));
+  const byName = new Map(existing.map((t) => [t.name, t]));
+
+  const refresh = async (name: string, description: string | null, inputSchema: unknown) => {
+    const ex = byName.get(name);
+    if (!ex) return false;
+    await getDb()
+      .update(providerTools)
+      .set({ description, inputSchema: inputSchema && typeof inputSchema === "object" ? inputSchema : {}, updatedAt: new Date() })
+      .where(eq(providerTools.id, ex.id));
+    return true;
+  };
+
+  let inserted = 0;
+  let updated = 0;
+  if (source.sourceType === "openapi") {
+    const tools = await discoverOpenApiTools(source.endpointUrl);
+    const fresh = tools.filter((t) => !byName.has(t.name));
+    if (fresh.length) inserted = (await persistOpenApiTools(sourceId, fresh)).length;
+    for (const t of tools) if (await refresh(t.name, t.description ?? null, t.inputSchema)) updated += 1;
+  } else {
+    const discovered = await discoverMcpTools(source.endpointUrl);
+    const fresh = discovered.filter((t) => !byName.has(t.name));
+    if (fresh.length) inserted = (await persistDiscoveredMcpTools(sourceId, source.endpointUrl, fresh)).length;
+    for (const t of discovered) if (await refresh(t.name, t.description ?? null, t.inputSchema)) updated += 1;
+  }
+
+  await getDb().update(providerSources).set({ updatedAt: new Date() }).where(eq(providerSources.id, sourceId));
+  await logProviderAudit("info", "Provider source re-discovered", { inserted, sourceId, updated });
+  return { inserted, updated };
 }
 
 export async function listProviderTools(sourceId?: string) {

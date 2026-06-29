@@ -1,17 +1,63 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
+import { useState } from "react";
 
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+interface PropDef {
+  type?: string | string[];
+  description?: string;
+  enum?: string[];
+}
 interface JsonSchema {
   type?: string;
-  properties?: Record<string, { type?: string; description?: string; enum?: string[] }>;
+  properties?: Record<string, PropDef>;
   required?: string[];
 }
 
+function primaryType(t?: string | string[]) {
+  if (Array.isArray(t)) return t.find((x) => x !== "null") ?? t[0];
+  return t;
+}
+
+// A JSON field for array/object inputs: keeps the raw text locally (so partial JSON
+// is typeable) and only propagates a parsed value when it's valid.
+function JsonField({ initial, placeholder, onChange }: { initial: unknown; placeholder: string; onChange: (v: unknown) => void }) {
+  const [raw, setRaw] = useState(initial === undefined ? "" : typeof initial === "string" ? initial : JSON.stringify(initial));
+  const [err, setErr] = useState(false);
+  return (
+    <>
+      <Textarea
+        value={raw}
+        rows={3}
+        placeholder={placeholder}
+        className={`font-mono text-xs ${err ? "border-signal" : ""}`}
+        onChange={(e) => {
+          const v = e.target.value;
+          setRaw(v);
+          if (!v.trim()) {
+            setErr(false);
+            onChange(undefined);
+            return;
+          }
+          try {
+            onChange(JSON.parse(v));
+            setErr(false);
+          } catch {
+            setErr(true);
+          }
+        }}
+      />
+      {err ? <p className="mt-1 text-xs text-signal">Invalid JSON</p> : null}
+    </>
+  );
+}
+
 /**
- * Renders input fields from a tool's JSON Schema. Handles the flat object shapes
- * MCP tools use (string / number / integer / enum). For anything richer it shows a
- * raw JSON editor. (Swap in @rjsf if tools start shipping deeply nested schemas.)
+ * Renders input fields from a tool's JSON Schema: string/number/integer/enum inline,
+ * boolean as a checkbox, and array/object via a validated JSON field. A type badge
+ * sits next to each label. Gateway signs — there is no wallet step here.
  */
 export function SchemaForm({
   schema,
@@ -35,15 +81,31 @@ export function SchemaForm({
   return (
     <div className="space-y-3">
       {Object.entries(props).map(([key, def]) => {
-        const isNumber = def?.type === "number" || def?.type === "integer";
+        const type = primaryType(def?.type) ?? "string";
         const enumVals = Array.isArray(def?.enum) ? def.enum : undefined;
+        const isNumber = type === "number" || type === "integer";
+        const isBool = type === "boolean";
+        const isComplex = type === "array" || type === "object";
         return (
           <div key={key}>
-            <label className="mb-1 block font-mono text-[11px] uppercase tracking-wider text-ink-3">
-              {key}
-              {required.has(key) ? <span className="text-casper"> *</span> : null}
+            <label className="mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-ink-3">
+              <span>
+                {key}
+                {required.has(key) ? <span className="text-casper"> *</span> : null}
+              </span>
+              <span className="rounded-sm border border-hairline px-1 text-[9px] lowercase text-ink-3">{type}</span>
             </label>
-            {enumVals ? (
+            {isBool ? (
+              <label className="flex items-center gap-2 text-sm text-ink-2">
+                <input
+                  type="checkbox"
+                  checked={Boolean(values[key])}
+                  onChange={(e) => set(key, e.target.checked)}
+                  className="size-4 accent-[var(--color-casper)]"
+                />
+                {def?.description ?? "Enabled"}
+              </label>
+            ) : enumVals ? (
               <select
                 value={String(values[key] ?? "")}
                 onChange={(e) => set(key, e.target.value)}
@@ -58,6 +120,12 @@ export function SchemaForm({
                   </option>
                 ))}
               </select>
+            ) : isComplex ? (
+              <JsonField
+                initial={values[key]}
+                placeholder={type === "array" ? '["item1", "item2"]' : '{ "key": "value" }'}
+                onChange={(v) => set(key, v)}
+              />
             ) : (
               <Input
                 type={isNumber ? "number" : "text"}
