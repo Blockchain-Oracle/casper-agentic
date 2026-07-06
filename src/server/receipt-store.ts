@@ -2,7 +2,7 @@ import { desc, eq, inArray } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 
 import { getDb, hasDatabaseUrl } from "@/db/client";
-import { auditEvents, casperProofs, paidCallAttempts, policyDecisions, x402Records } from "@/db/schema";
+import { auditEvents, casperProofs, paidCallAttempts, x402Records } from "@/db/schema";
 import { receipts as fixtureReceipts } from "@/lib/fixtures";
 import { buildReceiptDetail } from "@/lib/receipt-detail";
 import { buildPersistedReceiptDetail } from "@/lib/persisted-receipt-detail";
@@ -124,10 +124,6 @@ export async function persistAttempt(input: PersistAttemptInput) {
     })
     .returning();
   return attempt;
-}
-
-export async function persistPolicyDecision(attemptId: string, allowed: boolean, reason: string, evaluatedPolicy = {}) {
-  await getDb().insert(policyDecisions).values({ allowed, attemptId, evaluatedPolicy, reason });
 }
 
 export async function updateAttemptStatus(

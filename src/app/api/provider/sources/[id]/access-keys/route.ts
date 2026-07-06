@@ -15,7 +15,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       label: typeof body.label === "string" ? body.label : "Default client access",
       scope: { sourceId: id, toolIds: body.toolIds },
       sourceId: id,
-      walletId: typeof body.walletId === "string" ? body.walletId : null,
     });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

@@ -47,10 +47,6 @@ export const toolPrices = pgTable("tool_prices", {
 export const endpointAccessKeys = pgTable("endpoint_access_keys", {
   id: uuid("id").primaryKey().defaultRandom(),
   sourceId: uuid("source_id").references(() => providerSources.id),
-  // Optional binding to a hosted agent wallet. When set, the token authorizes the
-  // server to sign x402 payments with that wallet under policy (autonomous agent
-  // path); when null, the caller must supply a signed payment (today's behavior).
-  walletId: uuid("wallet_id").references(() => agentWallets.id),
   tokenHash: text("token_hash").notNull(),
   label: text("label").notNull(),
   scope: jsonb("scope").default({}).notNull(),
@@ -80,46 +76,6 @@ export const keyCredits = pgTable(
   }),
 );
 
-export const agentWallets = pgTable("agent_wallets", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  label: text("label").notNull(),
-  accountHash: text("account_hash").notNull(),
-  publicKey: text("public_key"),
-  network: text("network").notNull(),
-  signingMode: text("signing_mode").notNull(),
-  ...timestamps,
-});
-
-// Hosted-custody agent-wallet keys, kept in a SEPARATE table from agent_wallets so
-// no wallet-profile view query can ever select key material. Testnet only; not a
-// production custody claim. Encryption handled by wallet-key-crypto (AES-256-GCM).
-export const walletKeys = pgTable("wallet_keys", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  walletId: uuid("wallet_id")
-    .references(() => agentWallets.id)
-    .notNull()
-    .unique(),
-  algorithm: text("algorithm").notNull(),
-  ciphertext: text("ciphertext").notNull(),
-  iv: text("iv").notNull(),
-  authTag: text("auth_tag").notNull(),
-  keyVersion: integer("key_version").default(1).notNull(),
-  ...timestamps,
-});
-
-export const spendPolicies = pgTable("spend_policies", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  walletId: uuid("wallet_id").references(() => agentWallets.id),
-  maxPerCall: numeric("max_per_call", { precision: 40, scale: 0 }).notNull(),
-  dailyLimit: numeric("daily_limit", { precision: 40, scale: 0 }),
-  sessionLimit: numeric("session_limit", { precision: 40, scale: 0 }),
-  allowedNetwork: text("allowed_network").notNull(),
-  allowedAsset: text("allowed_asset").notNull(),
-  allowedTools: jsonb("allowed_tools").default([]).notNull(),
-  disabled: boolean("disabled").default(false).notNull(),
-  ...timestamps,
-});
-
 export const paidCallAttempts = pgTable("paid_call_attempts", {
   id: uuid("id").primaryKey().defaultRandom(),
   toolName: text("tool_name").notNull(),
@@ -134,15 +90,6 @@ export const paidCallAttempts = pgTable("paid_call_attempts", {
   redactedOutput: jsonb("redacted_output"),
   errorReason: text("error_reason"),
   ...timestamps,
-});
-
-export const policyDecisions = pgTable("policy_decisions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  attemptId: uuid("attempt_id").references(() => paidCallAttempts.id),
-  allowed: boolean("allowed").notNull(),
-  reason: text("reason").notNull(),
-  evaluatedPolicy: jsonb("evaluated_policy").default({}).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const x402Records = pgTable("x402_records", {

@@ -27,7 +27,6 @@ describe("endpoint access model", () => {
       sourceId: "source-1",
       tokenHash: hashClientAccessToken("cgw_test_secret"),
       updatedAt: new Date(),
-      walletId: null,
     });
 
     expect(view).toEqual({
@@ -36,7 +35,6 @@ describe("endpoint access model", () => {
       revoked: false,
       scope: { sourceId: "source-1" },
       sourceId: "source-1",
-      walletId: null,
     });
     expect(view).not.toHaveProperty("tokenHash");
   });

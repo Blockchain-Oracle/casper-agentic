@@ -83,7 +83,6 @@ export async function createApiKey(input: {
       scope: { kind: "consumer", ...scope },
       sourceId: null,
       tokenHash: hashToken(token),
-      walletId: null,
     })
     .returning();
   return { key: toView(row), token };
