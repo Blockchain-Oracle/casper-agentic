@@ -1,3 +1,4 @@
+import { casperExplorerUrl } from "@/lib/casper-networks";
 import { buildExternalProofDetail } from "@/lib/external-proof-detail";
 import type { ExternalAccountHistoryResult, ExplorerSearchResult, ExplorerSearchSource, ReceiptDetail } from "@/lib/types";
 import { CsprCloudClient } from "./cspr-cloud";
@@ -84,7 +85,7 @@ async function lookupExternalDeploy(deployHash: string): Promise<ExplorerSearchR
     );
     const detail = buildExternalProofDetail({
       deploy,
-      explorerUrl: `https://testnet.cspr.live/deploy/${deploy.deploy_hash}`,
+      explorerUrl: casperExplorerUrl(deploy.deploy_hash, "deploy", config.casperNetwork),
       ftActions,
       network: config.casperNetwork,
       paymentAsset: config.paymentAsset,

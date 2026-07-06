@@ -36,7 +36,7 @@ export function buildPersistedReceiptDetail(receipt: Receipt, layers: PersistedR
     receipt,
     gateway: gatewayRows(receipt),
     x402: x402Rows(receipt, x402, verify, settle, { amount, asset, network, payTo }),
-    casper: casperRows(receipt, proof, { amount, asset, deployHash, payTo, payer }),
+    casper: casperRows(receipt, proof, { amount, asset, deployHash, network, payTo, payer }),
     x402Note: x402Note(receipt, x402, verify, settle),
     casperNote: casperNote(receipt, proof),
   };
@@ -90,13 +90,13 @@ function x402Rows(
 function casperRows(
   receipt: Receipt,
   proof: PersistedReceiptLayers["casperProof"],
-  values: { amount: string; asset: string; deployHash?: string | null; payTo: string; payer: string },
+  values: { amount: string; asset: string; deployHash?: string | null; network: string; payTo: string; payer: string },
 ): KeyValueRow[] {
   if (!proof || !values.deployHash) return [];
   const pending = receipt.status === "raw_proof_unavailable" || proof.proofStatus === "pending_indexing";
   return [
     { key: pending ? "settle transaction" : "deploy hash", value: values.deployHash, mono: true },
-    { key: "network", value: "casper:casper-test", mono: true },
+    { key: "network", value: values.network, mono: true },
     { key: "payer", value: values.payer, mono: true },
     { key: "payee", value: values.payTo, mono: true },
     { key: "amount", value: `${values.amount} ${values.asset}`, mono: true },

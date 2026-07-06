@@ -1,3 +1,4 @@
+import { casperExplorerUrl } from "@/lib/casper-networks";
 import { verifyApiKey, verifySelectedApiKey } from "./api-keys";
 import { CsprCloudClient } from "./cspr-cloud";
 import { normalizeCasperAccountHash } from "./casper-account";
@@ -79,6 +80,17 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
 
   const config = requireIntegrationConfig();
   const requirements = registeredTool?.price ? paymentRequirementsFromPrice(registeredTool.price) : buildPaymentRequirements(config);
+
+  // The gateway signs settlements with ONE funded wallet, for ONE network. A tool
+  // priced on a different network (e.g. Mainnet) can't be settled by this signer —
+  // refuse cleanly instead of mis-signing a cross-network payment.
+  if (requirements.network !== config.casperNetwork) {
+    throw new Error(
+      `This gateway settles on ${config.casperNetwork}; ${toolName} is priced on ${requirements.network}. ` +
+        `Fund and configure a ${requirements.network} signer to settle it here.`,
+    );
+  }
+
   const facilitator = new X402FacilitatorClient(config);
   const csprCloud = new CsprCloudClient(config);
   const supported = await facilitator.supported();
@@ -166,7 +178,7 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
     return { attemptId: attempt.id, settleResponse, status: "settle_failed" as const };
   }
 
-  const explorerUrl = `https://testnet.cspr.live/deploy/${settleResponse.transaction}`;
+  const explorerUrl = casperExplorerUrl(settleResponse.transaction, "deploy", requirements.network);
 
   // Payment settled on-chain — run the upstream tool NOW, independent of explorer
   // proof indexing, so the caller always gets the result they paid for.

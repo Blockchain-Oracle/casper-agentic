@@ -171,6 +171,7 @@ function fromAttemptRow(row: typeof paidCallAttempts.$inferSelect, hash: string 
     client: row.client,
     hash,
     id: row.id,
+    network: row.network,
     provider: row.providerName,
     reason: row.errorReason ?? undefined,
     status: row.status as ReceiptStatus,

@@ -96,6 +96,9 @@ export interface Receipt {
   hash: string | null;
   client: string;
   reason?: string;
+  /** CAIP-2 settlement network (casper:casper-test | casper:casper). Absent on design
+   *  fixtures — consumers normalize a missing value to Testnet. */
+  network?: string;
 }
 
 export interface AuditEvent {

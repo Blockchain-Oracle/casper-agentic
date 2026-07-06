@@ -2,9 +2,11 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
 import { CopyButton } from "@/components/primitives/copy-button";
+import { NetworkBadge } from "@/components/primitives/network-badge";
+import { NetworkFilter } from "@/components/primitives/network-filter";
 import { TokenIcon } from "@/components/primitives/token-icon";
 import { SiteNav } from "@/components/site/site-nav";
-import { casperExplorerUrl, truncateHash } from "@/lib/casper-explorer";
+import { casperExplorerUrl, getCasperNetwork, isCasperNetworkId, truncateHash } from "@/lib/casper-networks";
 import { formatAsset, formatTokenAmount } from "@/lib/format-amount";
 import { formatAge } from "@/lib/format-time";
 import { listReceiptDetails } from "@/server/receipt-store";
@@ -17,8 +19,13 @@ const STATUS_TONE: Record<string, string> = {
   raw_proof_unavailable: "bg-signal",
 };
 
-export default async function ExplorerPage() {
-  const receipts = await listReceiptDetails().catch(() => []);
+export default async function ExplorerPage({ searchParams }: { searchParams: Promise<{ network?: string }> }) {
+  const { network: networkParam } = await searchParams;
+  const selectedNetwork = isCasperNetworkId(networkParam) ? networkParam : null;
+  const all = await listReceiptDetails().catch(() => []);
+  const receipts = selectedNetwork
+    ? all.filter((r) => getCasperNetwork(r.receipt.network).id === selectedNetwork)
+    : all;
   const settled = receipts.filter((r) => r.receipt.status === "settled" || r.receipt.status === "raw_proof_unavailable");
   const volume = settled.reduce((sum, r) => sum + BigInt(r.receipt.amount || "0"), BigInt(0));
 
@@ -26,10 +33,15 @@ export default async function ExplorerPage() {
     <div className="min-h-dvh bg-surface text-ink">
       <SiteNav />
       <main className="mx-auto max-w-5xl px-5 py-12">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Explorer</h1>
-        <p className="mt-2 text-[15px] text-ink-2">
-          Every x402 payment settled through the gateway on Casper Testnet. Public — no sign-in.
-        </p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Explorer</h1>
+            <p className="mt-2 text-[15px] text-ink-2">
+              Every x402 payment settled through the gateway on Casper. Public — no sign-in.
+            </p>
+          </div>
+          <NetworkFilter />
+        </div>
 
         <div className="mt-6 grid grid-cols-3 gap-4">
           {[
@@ -53,7 +65,9 @@ export default async function ExplorerPage() {
             <span className="text-right max-sm:hidden">Age</span>
           </div>
           {receipts.length === 0 ? (
-            <div className="bg-panel px-4 py-10 text-center text-sm text-ink-3">No paid calls yet.</div>
+            <div className="bg-panel px-4 py-10 text-center text-sm text-ink-3">
+              {selectedNetwork ? `No paid calls on ${getCasperNetwork(selectedNetwork).label} yet.` : "No paid calls yet."}
+            </div>
           ) : (
             receipts.map((r, i) => (
               <div
@@ -61,9 +75,12 @@ export default async function ExplorerPage() {
                 className={`grid grid-cols-[16px_1.6fr_1fr_1fr_0.8fr] items-center gap-3 bg-panel px-4 py-3 hover:bg-well max-sm:grid-cols-[16px_1.4fr_1fr] ${i > 0 ? "border-t border-hairline" : ""}`}
               >
                 <span className={`size-1.5 rounded-full ${STATUS_TONE[r.receipt.status] ?? "bg-signal"}`} title={r.receipt.status} />
-                <Link href={`/receipt/${r.receipt.id}`} className="min-w-0 truncate text-sm hover:underline">
-                  <span className="font-mono text-ink">{r.receipt.tool}</span>
-                  <span className="text-ink-3"> · {r.receipt.provider}</span>
+                <Link href={`/receipt/${r.receipt.id}`} className="flex min-w-0 items-center gap-2 text-sm hover:underline">
+                  <span className="min-w-0 truncate">
+                    <span className="font-mono text-ink">{r.receipt.tool}</span>
+                    <span className="text-ink-3"> · {r.receipt.provider}</span>
+                  </span>
+                  <NetworkBadge network={r.receipt.network} className="max-sm:hidden" />
                 </Link>
                 <span className="flex items-center justify-end gap-1.5 font-mono text-xs text-ink tnum">
                   <TokenIcon size={14} />
@@ -73,7 +90,7 @@ export default async function ExplorerPage() {
                   {r.receipt.hash ? (
                     <>
                       <a
-                        href={casperExplorerUrl(r.receipt.hash, "deploy")}
+                        href={casperExplorerUrl(r.receipt.hash, "deploy", r.receipt.network)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-0.5 hover:text-casper"

@@ -85,7 +85,7 @@ export default async function ServerDetailPage({ params }: { params: Promise<{ i
                   <span className="flex flex-1 items-center gap-1.5 truncate font-mono text-xs text-ink-3">
                     {r.receipt.hash ? (
                       <>
-                        <a href={casperExplorerUrl(r.receipt.hash, "deploy")} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 hover:text-casper">
+                        <a href={casperExplorerUrl(r.receipt.hash, "deploy", r.receipt.network)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 hover:text-casper">
                           {truncateHash(r.receipt.hash)} <ArrowUpRight className="size-3 text-casper" />
                         </a>
                         <CopyButton value={r.receipt.hash} label="Deploy hash copied" />
