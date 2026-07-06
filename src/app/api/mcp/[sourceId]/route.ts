@@ -10,6 +10,7 @@ import {
 import { isPaidCallInputError, runGatewayPaidCall } from "@/server/live-paid-call";
 import {
   HostedEndpointRequestError,
+  type JsonRpcMessage,
   jsonRpcError,
   jsonRpcResult,
   parseJsonRpcRequest,
@@ -43,9 +44,13 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ so
 
 export async function POST(request: NextRequest, context: { params: Promise<{ sourceId: string }> }) {
   const { sourceId } = await context.params;
+  // Parse the JSON-RPC envelope first so the catch can always answer in-protocol
+  // (with the request id) — MCP clients need a JSON-RPC error, not a bare { error }.
+  let parsed: JsonRpcMessage | undefined;
   try {
+    parsed = await parseJsonRpcRequest(request);
+    const message = parsed;
     const endpoint = await getHostedEndpoint(sourceId);
-    const message = await parseJsonRpcRequest(request);
 
     if (message.method === "initialize") {
       return jsonRpcResult(message.id, {
@@ -136,17 +141,28 @@ export async function POST(request: NextRequest, context: { params: Promise<{ so
       402,
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "hosted_endpoint_failed";
+    const errorMessage = error instanceof Error ? error.message : "hosted_endpoint_failed";
     const status = isApiKeyError(error)
       ? error.status
       : isPaidCallInputError(error)
         ? error.status
         : error instanceof HostedEndpointRequestError
           ? error.status
-          : message.includes("Missing integration configuration")
+          : errorMessage.includes("Missing integration configuration")
             ? 503
             : 404;
-    return NextResponse.json({ error: message }, { status });
+    // JSON-RPC server-error codes (-32000..-32099) so MCP clients surface the reason
+    // instead of choking on a non-protocol body. id is null when the body never parsed.
+    const code = isApiKeyError(error)
+      ? -32003 // payment/authorization: insufficient balance, revoked, expired, over-cap, out-of-scope
+      : isPaidCallInputError(error)
+        ? -32602 // invalid params
+        : error instanceof HostedEndpointRequestError
+          ? -32600 // invalid request
+          : status === 503
+            ? -32011 // gateway not configured to settle
+            : -32004; // source/endpoint not found
+    return jsonRpcError(parsed ? parsed.id : null, code, errorMessage, { status: String(status) }, status);
   }
 }
 

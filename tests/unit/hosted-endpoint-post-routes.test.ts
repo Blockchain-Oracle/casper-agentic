@@ -153,4 +153,29 @@ describe("hosted MCP endpoint POST route", () => {
     expect(body.error.code).toBe(-32010);
     expect(body.error.data).toMatchObject({ attemptId: "attempt-2", status: "settle_failed" });
   });
+
+  it("surfaces a thrown ApiKeyError (e.g. insufficient balance) as a JSON-RPC error, not a bare body", async () => {
+    const { ApiKeyError } = await import("@/server/api-keys");
+    const { POST } = await import("@/app/api/mcp/[sourceId]/route");
+    mocks.getHostedEndpoint.mockResolvedValue(hostedEndpointPostView());
+    mocks.runGatewayPaidCall.mockRejectedValue(
+      new ApiKeyError("insufficient key balance — fund the key with WCSPR", 402),
+    );
+
+    const response = await POST(
+      hostedEndpointPostRequest({
+        apiKey: "casper_demo",
+        body: { id: "call-9", jsonrpc: "2.0", method: "tools/call", params: { arguments: {}, name: "get_quote" } },
+      }),
+      { params: Promise.resolve({ sourceId: "source-1" }) },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(402);
+    expect(body.jsonrpc).toBe("2.0");
+    expect(body.id).toBe("call-9");
+    expect(body.error.code).toBe(-32003);
+    expect(body.error.message).toMatch(/insufficient key balance/);
+    expect(body.error.data).toMatchObject({ status: "402" }); // structured JSON-RPC error, not a bare { error: string }
+  });
 });
