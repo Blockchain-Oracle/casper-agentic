@@ -39,19 +39,28 @@ export default async function Home() {
         {/* Hero */}
         <section className="grid items-center gap-10 py-16 md:grid-cols-[1.15fr_0.85fr] md:py-24">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-hairline bg-panel px-3 py-1 font-mono text-[11px] tracking-wider text-ink-3">
+            <div className="reveal mb-4 inline-flex items-center gap-2 rounded-full border border-hairline bg-panel px-3 py-1 font-mono text-[11px] tracking-wider text-ink-3">
               <span className="size-1.5 rounded-full bg-casper" /> AGENT PAYMENTS · CASPER NATIVE
             </div>
-            <h1 className="font-display text-4xl font-bold leading-[1.04] tracking-tight text-ink sm:text-5xl lg:text-6xl">
+            <h1
+              className="reveal font-display text-4xl font-bold leading-[1.04] tracking-tight text-ink sm:text-5xl lg:text-6xl"
+              style={{ "--reveal-order": 1 } as React.CSSProperties}
+            >
               Proof for every
               <br />
               agent payment.
             </h1>
-            <p className="mt-5 max-w-md text-[15px] leading-relaxed text-ink-2">
+            <p
+              className="reveal mt-5 max-w-md text-[15px] leading-relaxed text-ink-2"
+              style={{ "--reveal-order": 2 } as React.CSSProperties}
+            >
               Casper GW is an x402 payment gateway on Casper. Publish paid tools, let agents pay per
               call with an API key, and verify every settlement on-chain — no account required to look.
             </p>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
+            <div
+              className="reveal mt-7 flex flex-wrap items-center gap-3"
+              style={{ "--reveal-order": 3 } as React.CSSProperties}
+            >
               <Button asChild size="lg" className="gap-2">
                 <Link href="/servers">Browse servers <ArrowRight className="size-4" /></Link>
               </Button>
@@ -60,7 +69,10 @@ export default async function Home() {
               </Button>
             </div>
           </div>
-          <div className="flex justify-center md:justify-end">
+          <div
+            className="reveal flex justify-center md:justify-end"
+            style={{ "--reveal-order": 4 } as React.CSSProperties}
+          >
             <div className="relative grid place-items-center">
               <div className="absolute size-72 rounded-full blur-2xl" style={{ background: "radial-gradient(circle, var(--color-casper) 0%, transparent 68%)", opacity: 0.12 }} />
               <ProofStamp size={232} />

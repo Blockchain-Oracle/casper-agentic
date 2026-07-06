@@ -5,6 +5,16 @@ import { ArrowLeft, Check, Copy, KeyRound, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { DeveloperKeyRow } from "@/components/account/developer-key-row";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { parseTokenToMotes } from "@/lib/format-amount";
@@ -32,6 +42,7 @@ export function DeveloperKeysTab({ keys, onFundKey, onRefresh, tools }: Develope
   const [allowed, setAllowed] = useState<Set<string>>(new Set());
   const [maxSpend, setMaxSpend] = useState("");
   const [deletingKeyId, setDeletingKeyId] = useState("");
+  const [confirmKey, setConfirmKey] = useState<ApiKeyView | null>(null);
 
   async function create() {
     setBusy(true);
@@ -56,7 +67,7 @@ export function DeveloperKeysTab({ keys, onFundKey, onRefresh, tools }: Develope
   }
 
   async function deleteKey(key: ApiKeyView) {
-    if (!window.confirm(`Delete ${key.name}? This revokes the key for future paid calls.`)) return;
+    setConfirmKey(null);
     setDeletingKeyId(key.id);
     try {
       await revokeApiKeyReq(key.id, readApiKeyToken(key.id));
@@ -161,19 +172,50 @@ export function DeveloperKeysTab({ keys, onFundKey, onRefresh, tools }: Develope
       </div>
       <div className="max-h-[46dvh] space-y-2 overflow-y-auto pr-1">
         {keys.filter((key) => !key.revoked).length === 0 ? (
-          <p className="rounded-md border border-dashed border-hairline bg-panel p-4 text-center text-sm text-ink-3">No keys yet.</p>
+          <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-hairline bg-panel px-4 py-8 text-center">
+            <span className="grid size-10 place-items-center rounded-md bg-well text-ink-3">
+              <KeyRound className="size-5" />
+            </span>
+            <p className="max-w-xs text-sm text-ink-3">
+              No keys yet. Create a casper_ key, fund it, and agents can pay per call with it.
+            </p>
+            <Button size="sm" onClick={() => setView("create")} className="gap-1.5">
+              <Plus className="size-3.5" /> Create your first key
+            </Button>
+          </div>
         ) : (
           keys.filter((key) => !key.revoked).map((key) => (
             <DeveloperKeyRow
               key={key.id}
               apiKey={key}
               deleting={deletingKeyId === key.id}
-              onDeleteKey={deleteKey}
+              onDeleteKey={setConfirmKey}
               onFundKey={onFundKey}
             />
           ))
         )}
       </div>
+
+      <AlertDialog open={confirmKey !== null} onOpenChange={(open) => { if (!open) setConfirmKey(null); }}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display">Delete {confirmKey?.name ?? "this key"}?</AlertDialogTitle>
+            <AlertDialogDescription className="text-ink-3">
+              This revokes the key for future paid calls. Agents using it will start getting payment
+              errors immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep key</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-casper text-white hover:bg-casper/90"
+              onClick={() => { if (confirmKey) void deleteKey(confirmKey); }}
+            >
+              Delete key
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
