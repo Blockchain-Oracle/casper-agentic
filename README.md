@@ -2,8 +2,8 @@
 
 An **x402 payment gateway on Casper** for AI agents. A provider points the gateway at an MCP server
 or API and prices its tools in WCSPR. An agent mints a scoped `casper_` API key and **pays per tool
-call**; the gateway settles each call on Casper Testnet and produces a real deploy hash anyone can
-verify. Built for the Casper Agentic Buildathon 2026.
+call**; the gateway settles each call on Casper (Testnet today, Mainnet-ready) and produces a real
+deploy hash anyone can verify. Built for the Casper Agentic Buildathon 2026.
 
 It is MCPay-on-Casper: the public catalogue + register flow shape of [MCPay](https://mcpay.tech),
 the x402 micropayments + MCP servers from Casper's AI Toolkit, settled natively on Casper.
@@ -20,13 +20,14 @@ proof per call, and never touches a primary key. The gateway is the trust layer;
 2. **Browse** (`/servers` → `/servers/[id]`) — anyone can browse published servers and run a tool inline (the gateway settles the payment).
 3. **Get a key** (API keys, in the nav) — mint a `casper_` key, scoped to specific tools + a spend cap. Use it from any client/agent/CLI.
 4. **Pay per call** — `POST /api/paid-calls/run` with `x-api-key: casper_…`. The gateway verifies the key's scope, signs an x402 `TransferWithAuthorization` (WCSPR) with its own funded Testnet wallet, and the CSPR.cloud facilitator verifies + settles on Casper.
-5. **Verify** (`/explorer`, `/receipt/[id]`) — every settlement is public: tool · amount · deploy hash → cspr.live. The receipt is a 3-layer proof (gateway context → x402 verify/settle → Casper proof).
+5. **Verify** (`/explorer`, `/receipt/[id]`) — every settlement is public: tool · amount · network · deploy hash → cspr.live. The explorer and servers browse carry a **Testnet / Mainnet** filter, each row/receipt shows a network badge, and links resolve to the right cspr.live per network. The receipt is a 3-layer proof (gateway context → x402 verify/settle → Casper proof).
 
 ## Architecture
 
 - **Next.js (App Router) + Tailwind v4 + shadcn/ui** — fully public, no auth wall; the API key is the spend boundary.
 - **x402 on Casper** — `@make-software/casper-x402` (`exact` scheme) + `@x402/fetch`, settled through the hosted **CSPR.cloud x402 facilitator** (verify/settle). No Casper node or indexer to run.
-- **Gateway-signer model** — the gateway signs every payment from one funded Testnet wallet (env PEM). Managed, Testnet-only — **not production custody**, and labelled as such.
+- **Gateway-signer model** — the gateway signs every payment from one funded wallet (env PEM). Managed — **not production custody**, and labelled as such. Testnet settles today; Mainnet lights up when a funded Mainnet signer is configured.
+- **Networks** — network is a first-class dimension (`src/lib/casper-networks.ts`): Testnet (`casper:casper-test`) and Mainnet (`casper:casper`) as siblings, each with its cspr.live base. `tool_prices` stores CAIP-2 network per tool; the settle path refuses a cross-network price rather than mis-signing, so Mainnet is a config/funding change, not a rewrite.
 - **Postgres (Drizzle)** — provider sources/tools/prices, API keys, paid-call attempts, x402 records, Casper proofs.
 - **Asset** — WCSPR (wrapped CSPR, 1:1). It is the only settle-able Casper x402 asset today; `tool_prices` stores asset/network/payee per tool so multi-asset is a config change later.
 
@@ -36,7 +37,7 @@ Real settlements through the gateway-signer path (reproduce with `pnpm smoke:liv
 
 | Path | Deploy hash |
 | --- | --- |
-| Gateway-signer settle | [`96da2620…29290741`](https://testnet.cspr.live/deploy/96da262075cc6634188ee8544d5ad043b33b9ec39f7aa55eb297023829290741) |
+| Gateway-signer settle | [`37a85c9a…885ff83d`](https://testnet.cspr.live/deploy/37a85c9a61ecd8402da58154498b512e95a3f1c3b36b694ae64ea199885ff83d) |
 | Agent API-key settle | [`4ab57794…d5cedc83`](https://testnet.cspr.live/deploy/4ab57794dc8e2f36cba9144b088a20e67815a750b2289cb1210804b1d5cedc83) |
 
 A receipt is only `settled` when a real Casper deploy hash backs it.
