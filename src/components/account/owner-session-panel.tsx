@@ -15,7 +15,9 @@ function shortHash(value: string) {
 
 // Establishes the wallet-signed owner session that gates managing your own sources
 // and keys. Identity only — this signature never authorizes an x402 payment.
-export function OwnerSessionPanel() {
+// useOwnerSession state is per-component: onSessionChange lets siblings with their
+// own hook instance reload after a sign-in/out that happened here.
+export function OwnerSessionPanel({ onSessionChange }: { onSessionChange?: () => void }) {
   const { connect, publicKey, signOwnerMessage } = useCsprClick();
   const { enabled, identity, loading, setIdentity, signOut } = useOwnerSession();
   const [signingIn, setSigningIn] = useState(false);
@@ -28,6 +30,7 @@ export function OwnerSessionPanel() {
       const result = await signInOwner(signOwnerMessage);
       if (result.status === "ok") {
         setIdentity(result.identity);
+        onSessionChange?.();
         toast.success("Owner verified — you can now manage your servers and keys");
       } else if (result.status === "needs_connection") {
         connect();
@@ -60,7 +63,12 @@ export function OwnerSessionPanel() {
           <p className="text-xs leading-relaxed text-ink-3">
             You can manage the servers and keys you own from this wallet.
           </p>
-          <Button size="sm" variant="ghost" className="gap-1.5 text-ink-3" onClick={() => void signOut()}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="gap-1.5 text-ink-3"
+            onClick={() => void signOut().then(() => onSessionChange?.())}
+          >
             <LogOut className="size-3.5" /> Sign out
           </Button>
         </div>

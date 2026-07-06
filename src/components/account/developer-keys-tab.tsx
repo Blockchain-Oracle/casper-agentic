@@ -5,6 +5,7 @@ import { ArrowLeft, Check, Copy, KeyRound, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { DeveloperKeyRow } from "@/components/account/developer-key-row";
+import { OwnerSessionPanel } from "@/components/account/owner-session-panel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { parseTokenToMotes } from "@/lib/format-amount";
 import { createApiKeyReq, revokeApiKeyReq, type ApiKeyView } from "@/lib/gateway-api";
 import { forgetApiKeyToken, readApiKeyToken, rememberApiKeyToken } from "@/lib/browser-api-key-tokens";
+import { useOwnerSession } from "@/lib/owner-session";
 
 type View = "list" | "create" | "created";
 type DeveloperKeysTabProps = {
@@ -43,6 +45,10 @@ export function DeveloperKeysTab({ keys, onFundKey, onRefresh, tools }: Develope
   const [maxSpend, setMaxSpend] = useState("");
   const [deletingKeyId, setDeletingKeyId] = useState("");
   const [confirmKey, setConfirmKey] = useState<ApiKeyView | null>(null);
+  const session = useOwnerSession();
+  // Keys are listed per owner: creating one while signed out would make it vanish
+  // from the list, so gate creation behind the wallet sign-in.
+  const needsSignIn = session.enabled && !session.identity;
 
   async function create() {
     setBusy(true);
@@ -88,6 +94,23 @@ export function DeveloperKeysTab({ keys, onFundKey, onRefresh, tools }: Develope
       else next.add(tool);
       return next;
     });
+  }
+
+  if (!session.loading && needsSignIn) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-ink-2">
+          API keys pay per call and belong to your wallet. Sign in once to create, fund, and
+          manage yours — no payment, no gas.
+        </p>
+        <OwnerSessionPanel
+          onSessionChange={() => {
+            void session.reload();
+            void onRefresh();
+          }}
+        />
+      </div>
+    );
   }
 
   if (view === "create") {
