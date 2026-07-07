@@ -54,3 +54,13 @@ next-env.d.ts
 .playwright-mcp/
 .thoughts/screenshots/
 /p[0-9]-*.png
+
+# AI-agent working files (kept local, out of the public repo)
+.thoughts/
+.agents/
+.claude/
+.codex/
+AGENTS.md
+CLAUDE.md
+HANDOVER-*.md
+instructions.md
