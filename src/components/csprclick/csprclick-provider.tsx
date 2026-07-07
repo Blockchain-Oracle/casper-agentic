@@ -84,9 +84,12 @@ function readPublicKey(event?: CSPRClickAccountEvent) {
 export function CsprClickProvider({ children }: { children: React.ReactNode }) {
   const [publicKey, setPublicKey] = useState<string | undefined>();
   const [ready, setReady] = useState(false);
+  // If the SDK never signals ready (e.g. the app id 401s / crashes on init), stop
+  // hanging on "Loading…" — mark it unavailable so the button degrades cleanly.
+  const [failed, setFailed] = useState(false);
   const clientRef = useRef<CSPRClickClient | null>(null);
   const config = useMemo<CSPRClickPublicConfig>(() => getCSPRClickPublicConfig(), []);
-  const disabled = config.status !== "configured";
+  const disabled = config.status !== "configured" || failed;
 
   // Re-read the active account directly from the SDK (the authoritative read).
   const refreshActiveAccount = useCallback(async (client: CSPRClickClient) => {
@@ -102,9 +105,14 @@ export function CsprClickProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (disabled || typeof window === "undefined") return;
+    if (config.status !== "configured" || typeof window === "undefined") return;
     let mounted = true;
     const win = window as unknown as CSPRClickBrowserWindow & Window;
+    // Give the SDK a window to signal ready; if it never does (bad/unauthorized app
+    // id crashes init), flip to failed so the button degrades instead of hanging.
+    const failTimer = window.setTimeout(() => {
+      if (mounted && !clientRef.current) setFailed(true);
+    }, 9000);
 
     // Account-event handler (fires after the modal latches a session).
     const onAccount = (event?: CSPRClickAccountEvent) => {
@@ -141,6 +149,8 @@ export function CsprClickProvider({ children }: { children: React.ReactNode }) {
       const client = win.csprclick;
       if (!client || !mounted) return;
       clientRef.current = client;
+      window.clearTimeout(failTimer);
+      setFailed(false);
       setReady(true);
       if (client.appSettings) client.appSettings.badge_left = null;
       suppressInjectedChrome();
@@ -170,6 +180,7 @@ export function CsprClickProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
+      window.clearTimeout(failTimer);
       win.removeEventListener?.("csprclick:loaded", onLoaded);
       const client = clientRef.current;
       chromeObserver?.disconnect();
@@ -177,7 +188,7 @@ export function CsprClickProvider({ children }: { children: React.ReactNode }) {
       CLEAR_EVENTS.forEach((name) => client?.off?.(name, onCleared));
       client?.off?.("csprclick:unsolicited_account_change", onUnsolicitedAccountChange);
     };
-  }, [config, disabled, refreshActiveAccount]);
+  }, [config, refreshActiveAccount]);
 
   const connect = useCallback(() => {
     clientRef.current?.signIn?.();

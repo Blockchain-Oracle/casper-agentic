@@ -102,7 +102,12 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-#csprclick-ui .csprclick-top-bar {
+/* Kill CSPR.click's injected top-bar chrome (an off-brand navy strip). The navy
+   background sits on the SettingsContainer parent, so hide that too — statically,
+   so it's gone even if the SDK crashes before our JS suppressor runs. We use our
+   own nav; CSPR.click's connect modal (dialog/overlay) is unaffected. */
+#csprclick-ui .csprclick-top-bar,
+#csprclick-ui [class*="SettingsContainer"] {
   display: none !important;
 }
 
