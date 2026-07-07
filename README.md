@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/banner.png" alt="Casper GW — proof for every agent payment" width="960" />
+  <img src="https://raw.githubusercontent.com/Blockchain-Oracle/casper-agentic/main/assets/banner.png" alt="Casper GW — proof for every agent payment" width="960" />
 </p>
 
 **Casper GW is MCPay, on Casper.** A provider points the gateway at an MCP server or HTTP API and prices its tools in WCSPR. An AI agent calls a tool with a scoped `casper_` API key; the gateway verifies the key, signs an x402 payment with its own funded Casper wallet, settles it through the CSPR.cloud facilitator, runs the tool, and returns the result plus a **real Casper deploy hash** anyone can verify. The whole loop — connect, register, price, pay, prove — is public with no account required to look.
@@ -39,17 +39,17 @@
 
 Casper GW is a Next.js app on Vercel with Postgres (Neon). It holds no custody model beyond one funded gateway signer per deployment; the agent's spend boundary is the API key.
 
-<p align="center"><img src="assets/diagrams/architecture.png" alt="Casper GW system architecture" width="1000" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Blockchain-Oracle/casper-agentic/main/assets/diagrams/architecture.png" alt="Casper GW system architecture" width="1000" /></p>
 
 ### A paid call, end to end
 
 The gateway signs every payment with its own wallet — no wallet pop-ups, no per-user custody. A rejected key never settles.
 
-<p align="center"><img src="assets/diagrams/settle-sequence.png" alt="Paid-call settlement sequence" width="900" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Blockchain-Oracle/casper-agentic/main/assets/diagrams/settle-sequence.png" alt="Paid-call settlement sequence" width="900" /></p>
 
 ### One codebase, one network per domain
 
-<p align="center"><img src="assets/diagrams/domain-network.png" alt="Domain equals network deployment separation" width="720" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Blockchain-Oracle/casper-agentic/main/assets/diagrams/domain-network.png" alt="Domain equals network deployment separation" width="720" /></p>
 
 ## Casper contracts & accounts
 
