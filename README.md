@@ -6,6 +6,7 @@
   <a href="https://cspr-gw.xyz">Testnet app</a> ·
   <a href="https://mainnet.cspr-gw.xyz">Mainnet app</a> ·
   <a href="https://cspr-gw.xyz/explorer">Explorer</a> ·
+  <a href="https://www.canva.com/design/DAHOv1B8K_4/d2msxRqQqhGepb0Lw82w0A/view">Pitch deck</a> ·
   <a href="https://github.com/Blockchain-Oracle/casper-agentic">Source</a>
 </p>
 
