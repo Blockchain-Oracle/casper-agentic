@@ -42,6 +42,21 @@ describe("CSPR.click browser adapter boundary", () => {
     expect(JSON.stringify(config)).not.toContain("do-not-include");
   });
 
+  it("selects the app id that matches the deployment chain (Approach A)", () => {
+    const env = {
+      NEXT_PUBLIC_CSPR_CLICK_APP_ID_TESTNET: "app-testnet",
+      NEXT_PUBLIC_CSPR_CLICK_APP_ID_MAINNET: "app-mainnet",
+    };
+
+    expect(getCSPRClickPublicConfig({ ...env, NEXT_PUBLIC_CASPER_CHAIN_NAME: "casper-test" }))
+      .toMatchObject({ appId: "app-testnet", chainName: "casper-test" });
+    expect(getCSPRClickPublicConfig({ ...env, NEXT_PUBLIC_CASPER_CHAIN_NAME: "casper" }))
+      .toMatchObject({ appId: "app-mainnet", chainName: "casper" });
+    // Falls back to the single legacy app id, then the template, when no per-network id.
+    expect(getCSPRClickPublicConfig({ NEXT_PUBLIC_CSPR_CLICK_APP_ID: "legacy-id" }))
+      .toMatchObject({ appId: "legacy-id" });
+  });
+
   it("installs CSPR.click runtime options and appends the CDN script once", () => {
     const win = browserWindowDouble();
     const config = getCSPRClickPublicConfig({ NEXT_PUBLIC_CSPR_CLICK_APP_ID: "casper-gw-test" });

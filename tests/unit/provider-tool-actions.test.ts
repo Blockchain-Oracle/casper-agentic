@@ -51,7 +51,7 @@ describe("provider tool action routes", () => {
     expect(await response.json()).toEqual({ tool: { id: "tool-1", status: "selected" } });
   });
 
-  it("rejects client-supplied Casper payment fields", async () => {
+  it("rejects client-supplied asset/network (still server-side), but not payTo", async () => {
     const { POST } = await import("@/app/api/provider/tools/[id]/price/route");
 
     const response = await POST(
@@ -60,7 +60,6 @@ describe("provider tool action routes", () => {
           amount: "7500000000",
           asset: "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e",
           network: "casper:casper-test",
-          payTo: "009accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d",
         },
         token: "operator-token",
       }),
@@ -70,7 +69,46 @@ describe("provider tool action routes", () => {
 
     expect(response.status).toBe(400);
     expect(body.error).toContain("payment fields are server-side only");
+    expect(body.error).toMatch(/asset|network/);
     expect(mocks.saveToolPrice).not.toHaveBeenCalled();
+  });
+
+  it("uses the signed-in owner's wallet as the payout (payTo), not the global env", async () => {
+    const { requireToolOwner } = await import("@/server/owner-guard");
+    const { POST } = await import("@/app/api/provider/tools/[id]/price/route");
+    process.env.CASPER_PAYEE_ACCOUNT_HASH = "009accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d";
+    const ownerHash = "1111111111111111111111111111111111111111111111111111111111111111";
+    vi.mocked(requireToolOwner).mockResolvedValueOnce({ accountHash: ownerHash, publicKey: "01abc" });
+    mocks.saveToolPrice.mockResolvedValue({ amount: "7500000000", toolId: "tool-1" });
+
+    const response = await POST(
+      request("https://gw.test/api/provider/tools/tool-1/price", {
+        body: { amount: "7500000000" },
+        token: "operator-token",
+      }),
+      { params: Promise.resolve({ id: "tool-1" }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.saveToolPrice).toHaveBeenCalledWith(expect.objectContaining({ payTo: `00${ownerHash}` }));
+  });
+
+  it("accepts and normalizes a provider payout override (payTo)", async () => {
+    const { POST } = await import("@/app/api/provider/tools/[id]/price/route");
+    process.env.CASPER_PAYEE_ACCOUNT_HASH = "009accddf69417e3a70e0250e99833dbc7236be6299da01034133d0d2bca01481d";
+    const override = "2222222222222222222222222222222222222222222222222222222222222222";
+    mocks.saveToolPrice.mockResolvedValue({ amount: "7500000000", toolId: "tool-1" });
+
+    const response = await POST(
+      request("https://gw.test/api/provider/tools/tool-1/price", {
+        body: { amount: "7500000000", payTo: `account-hash-${override}` },
+        token: "operator-token",
+      }),
+      { params: Promise.resolve({ id: "tool-1" }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.saveToolPrice).toHaveBeenCalledWith(expect.objectContaining({ payTo: `00${override}` }));
   });
 
   it("uses server-side Casper payment defaults when UI pricing omits public payment fields", async () => {

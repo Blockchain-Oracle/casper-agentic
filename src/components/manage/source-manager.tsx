@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatTokenAmount, parseTokenToMotes } from "@/lib/format-amount";
 import { deleteSource, listTools, priceTool, publishFreeTool, publishTool, unpublishTool } from "@/lib/gateway-api";
+import { useOwnerSession } from "@/lib/owner-session";
 
 export function SourceManager({ initialTools, source }: { initialTools: ManageTool[]; source: ManagedSource }) {
   const [tools, setTools] = useState(initialTools);
@@ -21,6 +22,11 @@ export function SourceManager({ initialTools, source }: { initialTools: ManageTo
   const [query, setQuery] = useState("");
   const [bulkPrice, setBulkPrice] = useState("7.5");
   const [busy, setBusy] = useState("");
+  const { identity } = useOwnerSession();
+  // Payout wallet = where paid calls settle WCSPR. Defaults to the connected/signed-in
+  // wallet; editable to pay out elsewhere. Empty → server uses the owner session wallet.
+  const [payout, setPayout] = useState("");
+  const payoutArg = payout.trim() || undefined;
   const router = useRouter();
 
   async function deleteSourceNow() {
@@ -84,7 +90,7 @@ export function SourceManager({ initialTools, source }: { initialTools: ManageTo
     setBusy(tool.id);
     try {
       if (mode === "paid") {
-        await priceTool(tool.id, parseTokenToMotes(prices[tool.id] || "7.5"));
+        await priceTool(tool.id, parseTokenToMotes(prices[tool.id] || "7.5"), payoutArg);
         await publishTool(tool.id);
       } else {
         await publishFreeTool(tool.id);
@@ -120,7 +126,7 @@ export function SourceManager({ initialTools, source }: { initialTools: ManageTo
         // Default to "paid" exactly like the row display (modes[id] ?? "paid"), so a
         // tool shown as Paid can never be silently published Free on an unset mode.
         if ((modes[tool.id] ?? "paid") === "paid") {
-          await priceTool(tool.id, parseTokenToMotes(prices[tool.id] || bulkPrice || "7.5"));
+          await priceTool(tool.id, parseTokenToMotes(prices[tool.id] || bulkPrice || "7.5"), payoutArg);
           await publishTool(tool.id);
         } else {
           await publishFreeTool(tool.id);
@@ -191,6 +197,28 @@ export function SourceManager({ initialTools, source }: { initialTools: ManageTo
               Re-index
             </Button>
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-hairline bg-panel p-4">
+        <div className="font-mono text-[11px] uppercase tracking-widest text-ink-3">Payout wallet</div>
+        <p className="mt-1 text-sm leading-relaxed text-ink-2">
+          Paid calls to these tools settle WCSPR to this Casper account. Defaults to your connected wallet — edit to pay out elsewhere.
+        </p>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input
+            value={payout}
+            onChange={(event) => setPayout(event.target.value)}
+            placeholder={identity?.accountHash ?? "Connect your wallet in Account → Wallet"}
+            className="flex-1 font-mono text-xs"
+            aria-label="Payout wallet account hash"
+            spellCheck={false}
+          />
+          {identity?.accountHash && payout.trim() && payout.trim() !== identity.accountHash ? (
+            <Button variant="ghost" size="sm" className="shrink-0 text-ink-3" onClick={() => setPayout("")}>
+              Use connected wallet
+            </Button>
+          ) : null}
         </div>
       </section>
 

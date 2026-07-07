@@ -57,8 +57,9 @@ export function discoverSource(sourceId: string) {
   return post<{ tools: DiscoveredTool[] }>(`/api/provider/sources/${sourceId}/discover`);
 }
 
-export function priceTool(toolId: string, amountMotes: string) {
-  return post<{ price: unknown }>(`/api/provider/tools/${toolId}/price`, { amount: amountMotes });
+export function priceTool(toolId: string, amountMotes: string, payTo?: string) {
+  // payTo omitted → server defaults to the signed-in owner's wallet.
+  return post<{ price: unknown }>(`/api/provider/tools/${toolId}/price`, payTo ? { amount: amountMotes, payTo } : { amount: amountMotes });
 }
 
 export function publishTool(toolId: string) {

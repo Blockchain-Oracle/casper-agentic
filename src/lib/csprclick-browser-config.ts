@@ -108,6 +108,8 @@ export type CSPRClickBrowserWindow = {
 function publicClickEnv(): Record<string, string | undefined> {
   return {
     NEXT_PUBLIC_CSPR_CLICK_APP_ID: process.env.NEXT_PUBLIC_CSPR_CLICK_APP_ID,
+    NEXT_PUBLIC_CSPR_CLICK_APP_ID_TESTNET: process.env.NEXT_PUBLIC_CSPR_CLICK_APP_ID_TESTNET,
+    NEXT_PUBLIC_CSPR_CLICK_APP_ID_MAINNET: process.env.NEXT_PUBLIC_CSPR_CLICK_APP_ID_MAINNET,
     NEXT_PUBLIC_CSPR_CLICK_APP_NAME: process.env.NEXT_PUBLIC_CSPR_CLICK_APP_NAME,
     NEXT_PUBLIC_CASPER_CHAIN_NAME: process.env.NEXT_PUBLIC_CASPER_CHAIN_NAME,
     NEXT_PUBLIC_CSPR_CLICK_CONTENT_MODE: process.env.NEXT_PUBLIC_CSPR_CLICK_CONTENT_MODE,
@@ -117,19 +119,31 @@ function publicClickEnv(): Record<string, string | undefined> {
   };
 }
 
+// CSPR.click binds one app id to one network. Pick the app id that matches the
+// deployment's chain so wallet-connect is always on the same network the gateway
+// settles on (Approach A). Per-network ids win; then a single legacy app id; then
+// the localhost demo template.
+function appIdForChain(env: Record<string, string | undefined>, chainName: string): string {
+  const perNetwork = chainName === "casper"
+    ? clean(env.NEXT_PUBLIC_CSPR_CLICK_APP_ID_MAINNET)
+    : clean(env.NEXT_PUBLIC_CSPR_CLICK_APP_ID_TESTNET);
+  return perNetwork || clean(env.NEXT_PUBLIC_CSPR_CLICK_APP_ID) || "csprclick-template";
+}
+
 export function getCSPRClickPublicConfig(
   env: Record<string, string | undefined> = publicClickEnv(),
 ): CSPRClickPublicConfig {
-  // Default to the public localhost demo app id (per CSPR.click docs) so browser
-  // wallet connect works out-of-the-box; override with NEXT_PUBLIC_CSPR_CLICK_APP_ID.
-  const appId = clean(env.NEXT_PUBLIC_CSPR_CLICK_APP_ID) || "csprclick-template";
+  // The app id follows the deployment's chain (per-network id → single id → demo template),
+  // so wallet-connect stays on the same network the gateway settles on.
+  const chainName = clean(env.NEXT_PUBLIC_CASPER_CHAIN_NAME) || "casper-test";
+  const appId = appIdForChain(env, chainName);
   const sdk = { scriptId: CSPRCLICK_SCRIPT_ID, scriptSrc: CSPRCLICK_SCRIPT_SRC };
   if (!appId) return { reason: "missing_app_id", sdk, status: "not_enabled" };
 
   return {
     appId,
     appName: clean(env.NEXT_PUBLIC_CSPR_CLICK_APP_NAME) || "Casper GW",
-    chainName: clean(env.NEXT_PUBLIC_CASPER_CHAIN_NAME) || "casper-test",
+    chainName,
     contentMode: contentMode(env.NEXT_PUBLIC_CSPR_CLICK_CONTENT_MODE),
     providers: providers(env.NEXT_PUBLIC_CSPR_CLICK_PROVIDERS),
     sdk,
