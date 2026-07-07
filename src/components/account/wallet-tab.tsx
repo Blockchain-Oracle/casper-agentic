@@ -60,7 +60,7 @@ export function WalletTab({
         </div>
         <p className="mt-2 text-xs leading-relaxed text-ink-3">
           This is your CSPR.click wallet. Paid MCP calls use casper_ API keys; the gateway submits
-          the on-chain x402 settlement on Casper Testnet.
+          the on-chain x402 settlement on Casper.
         </p>
       </div>
 

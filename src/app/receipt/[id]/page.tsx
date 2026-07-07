@@ -4,6 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 
 import { ReceiptProofTimeline, RECEIPT_PROOF_NOTE, StatusBadge } from "@/components/receipt/receipt-detail-view";
 import { SiteNav } from "@/components/site/site-nav";
+import { casperExplorerUrl, getCasperNetwork } from "@/lib/casper-networks";
 import { getReceiptDetail } from "@/server/receipt-store";
 
 export const dynamic = "force-dynamic";
@@ -31,11 +32,11 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           {deployHash ? (
             <a
               className="inline-flex items-center gap-1 font-mono text-xs text-casper hover:underline"
-              href={`https://testnet.cspr.live/deploy/${deployHash}`}
+              href={casperExplorerUrl(deployHash, "deploy", detail.receipt.network)}
               target="_blank"
               rel="noopener noreferrer"
             >
-              Open raw proof on testnet.cspr.live <ArrowUpRight className="size-3.5" />
+              Open raw proof on {getCasperNetwork(detail.receipt.network).explorerBaseUrl.replace("https://", "")} <ArrowUpRight className="size-3.5" />
             </a>
           ) : null}
         </div>

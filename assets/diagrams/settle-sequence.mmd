@@ -1,0 +1,21 @@
+sequenceDiagram
+  autonumber
+  participant A as AI agent
+  participant G as Casper GW
+  participant F as CSPR.cloud facilitator
+  participant C as Casper chain
+  participant U as Upstream MCP/API
+
+  A->>G: tools/call + casper_ API key
+  G->>G: verify key scope + funded balance
+  Note over G: rejected key never settles (401/402/403)
+  G->>F: verify(x402 payment, signed by gateway signer)
+  F-->>G: valid
+  G->>F: settle
+  F->>C: WCSPR transfer — gateway signer → provider payTo
+  C-->>F: real deploy hash
+  F-->>G: settled
+  G->>U: execute the tool (paid)
+  U-->>G: result
+  G-->>A: result + x402 payment-response + receipt id
+  Note over G,C: Receipt = gateway context · x402 verify/settle · Casper proof

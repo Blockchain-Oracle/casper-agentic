@@ -1,0 +1,34 @@
+flowchart LR
+  subgraph Clients["AI agents & clients"]
+    mcp["MCP client<br/>Claude · Cursor · Codex"]
+    http["Any HTTP agent<br/>casper_ API key"]
+  end
+
+  subgraph Gateway["Casper GW  ·  Next.js on Vercel"]
+    hosted["Hosted MCP endpoint<br/>/api/mcp/[sourceId]"]
+    keys["API keys<br/>funded WCSPR tab + scope"]
+    settle["runGatewayPaidCall<br/>verify → settle → proof"]
+    signer["Gateway signer<br/>env PEM wallet"]
+    db[("Postgres / Neon<br/>sources · prices · receipts")]
+    explorer["Explorer + receipt<br/>public proof"]
+  end
+
+  subgraph Casper["Casper + CSPR.cloud"]
+    facil["CSPR.cloud x402<br/>facilitator · verify/settle"]
+    chain[("Casper Testnet / Mainnet<br/>WCSPR CEP-18 transfer")]
+  end
+
+  provider["Provider<br/>registers MCP server,<br/>prices tools, earns to<br/>their wallet"]
+
+  mcp -->|"tools/call + key"| hosted
+  http -->|"POST /api/paid-calls/run"| settle
+  hosted --> settle
+  settle --> keys
+  settle --> signer
+  signer -->|"x402 exact (WCSPR)"| facil
+  facil -->|"verify + settle"| chain
+  chain -->|"deploy hash"| facil
+  settle --> db
+  db --> explorer
+  provider -->|"register + price"| db
+  chain -.->|"WCSPR paid to"| provider

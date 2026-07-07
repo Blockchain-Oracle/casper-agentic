@@ -1,0 +1,23 @@
+flowchart TB
+  repo["One codebase<br/>Blockchain-Oracle/casper-agentic<br/>network is per-deployment env"]
+
+  subgraph Testnet["cspr-gw.xyz  ·  TESTNET"]
+    t_proj["Vercel: casper-gw"]
+    t_cfg["CASPER_NETWORK=casper:casper-test<br/>app id a820089c…<br/>WCSPR 3d80df21…"]
+    t_db[("Neon DB — testnet")]
+    t_wallet["Gateway wallet<br/>funded (test WCSPR)"]
+  end
+
+  subgraph Mainnet["mainnet.cspr-gw.xyz  ·  MAINNET"]
+    m_proj["Vercel: casper-gw-mainnet"]
+    m_cfg["CASPER_NETWORK=casper:casper<br/>app id 8ed4db87…<br/>WCSPR 8df5d267…"]
+    m_db[("Neon DB — mainnet")]
+    m_wallet["Gateway wallet<br/>funds when you send real CSPR"]
+  end
+
+  repo --> t_proj
+  repo --> m_proj
+  t_proj --> t_cfg --> t_db
+  t_cfg --> t_wallet
+  m_proj --> m_cfg --> m_db
+  m_cfg --> m_wallet

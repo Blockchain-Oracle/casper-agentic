@@ -6,6 +6,7 @@ import { ClientLogos } from "@/components/site/client-logos";
 import { ProofStamp } from "@/components/site/proof-stamp";
 import { SiteNav } from "@/components/site/site-nav";
 import { Button } from "@/components/ui/button";
+import { networkFromChainName } from "@/lib/casper-networks";
 import { formatTokenAmount } from "@/lib/format-amount";
 import { listServerCatalog } from "@/server/provider-store";
 import { listReceiptDetails } from "@/server/receipt-store";
@@ -19,6 +20,7 @@ const STEPS = [
 ] as const;
 
 export default async function Home() {
+  const network = networkFromChainName(process.env.NEXT_PUBLIC_CASPER_CHAIN_NAME);
   const [servers, receipts] = await Promise.all([
     listServerCatalog().catch(() => []),
     listReceiptDetails().catch(() => []),
@@ -138,10 +140,13 @@ export default async function Home() {
 
       <footer className="border-t border-hairline">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-7 text-sm text-ink-3 sm:flex-row">
-          <span className="font-mono text-xs tracking-wider">CASPER GW · x402 ON CASPER TESTNET</span>
+          <span className="font-mono text-xs tracking-wider">
+            CASPER GW · x402 ON CASPER {network.label.toUpperCase()}
+          </span>
           <div className="flex gap-4">
             <Link href="/servers" className="hover:text-ink">Servers</Link>
             <Link href="/explorer" className="hover:text-ink">Explorer</Link>
+            <a href="https://github.com/Blockchain-Oracle/casper-agentic" target="_blank" rel="noopener noreferrer" className="hover:text-ink">GitHub</a>
           </div>
         </div>
       </footer>
