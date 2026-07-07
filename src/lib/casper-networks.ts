@@ -34,9 +34,6 @@ export const CASPER_NETWORKS: Record<CasperNetworkId, CasperNetwork> = {
 
 export const DEFAULT_NETWORK_ID: CasperNetworkId = "casper:casper-test";
 
-/** Ordered for UI (testnet first — it's the default settling network today). */
-export const NETWORK_ORDER: CasperNetworkId[] = ["casper:casper-test", "casper:casper"];
-
 export function isCasperNetworkId(value: unknown): value is CasperNetworkId {
   return value === "casper:casper-test" || value === "casper:casper";
 }
@@ -50,8 +47,10 @@ export function getCasperNetwork(value: unknown): CasperNetwork {
   return CASPER_NETWORKS[normalizeNetworkId(value)];
 }
 
-export function isTestnetNetwork(value: unknown): boolean {
-  return getCasperNetwork(value).isTestnet;
+/** Resolve the deployment's network from its Casper chain name (casper | casper-test).
+ *  Network is per-deployment now — this is the single source for the active network. */
+export function networkFromChainName(chainName: string | null | undefined): CasperNetwork {
+  return chainName === "casper" ? CASPER_NETWORKS["casper:casper"] : CASPER_NETWORKS["casper:casper-test"];
 }
 
 /** Build a cspr.live link on the RIGHT network. Accounts use /account/, deploys /deploy/. */

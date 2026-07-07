@@ -220,17 +220,11 @@ export async function listServerCatalog() {
   const sources = await getDb().select().from(providerSources).orderBy(desc(providerSources.createdAt));
   if (!sources.length) return [];
   const published = await getDb().select().from(providerTools).where(eq(providerTools.status, "published"));
-  const publishedIds = published.map((tool) => tool.id);
-  const prices = publishedIds.length
-    ? await getDb().select().from(toolPrices).where(inArray(toolPrices.toolId, publishedIds))
-    : [];
   return sources
-    .map((source) => {
-      const toolIds = new Set(published.filter((tool) => tool.sourceId === source.id).map((tool) => tool.id));
-      // Distinct settlement networks this server prices tools on (for the browse badge + filter).
-      const networks = [...new Set(prices.filter((price) => price.toolId && toolIds.has(price.toolId)).map((price) => price.network))];
-      return { ...toProviderSourceView(source), networks, toolCount: toolIds.size };
-    })
+    .map((source) => ({
+      ...toProviderSourceView(source),
+      toolCount: published.filter((tool) => tool.sourceId === source.id).length,
+    }))
     .filter((server) => server.toolCount > 0);
 }
 

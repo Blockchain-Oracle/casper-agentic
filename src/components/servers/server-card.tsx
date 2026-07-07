@@ -5,7 +5,6 @@ import { useState } from "react";
 import { ArrowUpRight, Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
-import { NetworkBadge } from "@/components/primitives/network-badge";
 import { ServerLogo } from "@/components/servers/server-logo";
 import { Button } from "@/components/ui/button";
 
@@ -14,7 +13,7 @@ import { Button } from "@/components/ui/button";
 export function ServerCard({
   server,
 }: {
-  server: { id: string; name: string; endpointUrl: string; toolCount: number; networks?: string[] };
+  server: { id: string; name: string; endpointUrl: string; toolCount: number };
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -43,9 +42,8 @@ export function ServerCard({
         <ArrowUpRight className="size-4 text-ink-3 transition-transform group-hover:-translate-y-0.5 group-hover:text-casper" />
       </div>
       <div className="mt-4 flex items-center justify-between gap-2">
-        <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-ink-3">
+        <span className="font-mono text-[11px] uppercase tracking-wider text-ink-3">
           {server.toolCount} paid tool{server.toolCount > 1 ? "s" : ""}
-          {server.networks?.map((network) => <NetworkBadge key={network} network={network} />)}
         </span>
         <Button
           size="sm"

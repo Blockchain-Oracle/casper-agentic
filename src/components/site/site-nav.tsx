@@ -9,6 +9,7 @@ import { AccountDialog } from "@/components/account/account-dialog";
 import { ConnectWalletButton } from "@/components/csprclick/connect-wallet-button";
 import { BrandMark } from "@/components/site/proof-stamp";
 import { Button } from "@/components/ui/button";
+import { networkFromChainName } from "@/lib/casper-networks";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +27,9 @@ const LINKS = [
 /** Public top nav — every Casper GW route is public; sign-in/keys are modals. */
 export function SiteNav() {
   const pathname = usePathname();
+  // Network is per-deployment (this domain's chain). Direct process.env read so
+  // Next inlines it into the client bundle. Mainnet gets the brand accent.
+  const network = networkFromChainName(process.env.NEXT_PUBLIC_CASPER_CHAIN_NAME);
 
   return (
     <header className="sticky top-0 z-40 border-b border-hairline bg-surface/85 backdrop-blur">
@@ -33,8 +37,13 @@ export function SiteNav() {
         <Link href="/" className="flex shrink-0 items-center gap-2 font-display text-[15px] font-bold text-ink">
           <BrandMark size={22} />
           Casper GW
-          <span className="rounded-sm border border-hairline px-1.5 py-0.5 font-mono text-[9px] font-medium tracking-widest text-ink-3 max-sm:hidden">
-            TESTNET
+          <span
+            className={cn(
+              "rounded-sm border px-1.5 py-0.5 font-mono text-[9px] font-medium tracking-widest max-sm:hidden",
+              network.isTestnet ? "border-hairline text-ink-3" : "border-casper/50 text-casper",
+            )}
+          >
+            {network.label.toUpperCase()}
           </span>
         </Link>
 

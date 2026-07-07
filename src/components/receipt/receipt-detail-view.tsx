@@ -1,6 +1,5 @@
 import { Fragment } from "react";
 
-import { NetworkBadge } from "@/components/primitives/network-badge";
 import { ProofStamp } from "@/components/site/proof-stamp";
 import type { KeyValueRow, ReceiptDetail, ReceiptStatus } from "@/lib/types";
 
@@ -61,10 +60,7 @@ export function ReceiptProofTimeline({ detail }: { detail: ReceiptDetail }) {
           </div>
           <div className={`flex-1 rounded-lg border bg-panel p-4 ${layer.num === 3 ? "border-casper/40" : "border-hairline"}`}>
             <div className="mb-2 flex items-center justify-between">
-              <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-ink-3">
-                {layer.title}
-                {layer.num === 3 ? <NetworkBadge network={detail.receipt.network} /> : null}
-              </span>
+              <span className="font-mono text-[11px] uppercase tracking-widest text-ink-3">{layer.title}</span>
               {layer.num === 3 && settled ? <ProofStamp size={48} hash={detail.receipt.hash ?? undefined} /> : null}
             </div>
             {layer.rows.length ? (
