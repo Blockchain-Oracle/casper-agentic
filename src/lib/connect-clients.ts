@@ -73,13 +73,16 @@ export const CONNECT_CLIENTS: ConnectClient[] = [
     name: "Codex",
   },
   {
-    build: ({ mcpUrl }) => ({
+    // ChatGPT connectors only do No-auth or OAuth — they can't set an x-api-key header.
+    // So the key rides in the URL (?key=); the gateway reads it there.
+    build: ({ apiKey, mcpUrl }) => ({
       kind: "steps",
       steps: [
         "Open ChatGPT → Settings → Connectors (enable Developer Mode if needed)",
-        "Add a custom connector and paste the server URL below",
+        'Add a custom connector, choose "No authentication", and paste the URL below',
+        "The key is already in the URL — ChatGPT can't set headers, so it travels there",
       ],
-      url: mcpUrl,
+      url: `${mcpUrl}${mcpUrl.includes("?") ? "&" : "?"}key=${encodeURIComponent(apiKey)}`,
     }),
     id: "chatgpt",
     name: "ChatGPT",
