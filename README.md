@@ -3,6 +3,7 @@
 <p align="center"><b>An x402 payment gateway on Casper — publish paid MCP/API tools, let AI agents pay per call with an API key, and verify every settlement on-chain.</b></p>
 
 <p align="center">
+  <a href="https://youtu.be/KS09QVKWuD4">▶ Demo video</a> ·
   <a href="https://cspr-gw.xyz">Testnet app</a> ·
   <a href="https://mainnet.cspr-gw.xyz">Mainnet app</a> ·
   <a href="https://cspr-gw.xyz/explorer">Explorer</a> ·
@@ -12,6 +13,14 @@
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Blockchain-Oracle/casper-agentic/main/assets/banner.png" alt="Casper GW — proof for every agent payment" width="960" />
+</p>
+
+<p align="center">
+  <a href="https://youtu.be/KS09QVKWuD4" title="Watch the Casper GW demo">
+    <img src="https://img.youtube.com/vi/KS09QVKWuD4/maxresdefault.jpg" alt="Watch the Casper GW demo" width="720" />
+  </a>
+  <br/>
+  <a href="https://youtu.be/KS09QVKWuD4"><b>▶ Watch the demo</b></a>
 </p>
 
 **Casper GW is MCPay, on Casper.** A provider points the gateway at an MCP server or HTTP API and prices its tools in WCSPR. An AI agent calls a tool with a scoped `casper_` API key; the gateway verifies the key, signs an x402 payment with its own funded Casper wallet, settles it through the CSPR.cloud facilitator, runs the tool, and returns the result plus a **real Casper deploy hash** anyone can verify. The whole loop — connect, register, price, pay, prove — is public with no account required to look.
