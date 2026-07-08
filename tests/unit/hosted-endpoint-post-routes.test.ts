@@ -154,6 +154,28 @@ describe("hosted MCP endpoint POST route", () => {
     expect(body.error.data).toMatchObject({ attemptId: "attempt-2", status: "settle_failed" });
   });
 
+  it("accepts the casper_ key from ?key= in the URL (for header-less clients like ChatGPT)", async () => {
+    const { POST } = await import("@/app/api/mcp/[sourceId]/route");
+    mocks.getHostedEndpoint.mockResolvedValue(hostedEndpointPostView());
+    mocks.runGatewayPaidCall.mockResolvedValue({
+      attemptId: "attempt-3",
+      explorerUrl: `https://testnet.cspr.live/deploy/${DEPLOY}`,
+      result: { content: [{ text: "quote", type: "text" }] },
+      status: "settled",
+    });
+
+    const response = await POST(
+      hostedEndpointPostRequest({
+        keyInUrl: "casper_fromurl",
+        body: { id: "call-1", jsonrpc: "2.0", method: "tools/call", params: { arguments: {}, name: "get_quote" } },
+      }),
+      { params: Promise.resolve({ sourceId: "source-1" }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.runGatewayPaidCall).toHaveBeenCalledWith(expect.objectContaining({ apiKey: "casper_fromurl" }));
+  });
+
   it("surfaces a thrown ApiKeyError (e.g. insufficient balance) as a JSON-RPC error, not a bare body", async () => {
     const { ApiKeyError } = await import("@/server/api-keys");
     const { POST } = await import("@/app/api/mcp/[sourceId]/route");

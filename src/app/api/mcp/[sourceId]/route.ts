@@ -73,14 +73,20 @@ export async function POST(request: NextRequest, context: { params: Promise<{ so
     if (!tool) return jsonRpcError(message.id, -32004, "tool not found", { status: "not_found" }, 404);
     const paymentRequirements = tool.paymentRequirements;
 
-    // Paid action — require a casper_ key (header or bearer); the gateway settles.
-    // Free published tools have no payment requirements and can run without a key.
-    const apiKey = request.headers.get("x-api-key")?.trim() || bearerToken(request.headers.get("authorization"));
+    // Paid action — require a casper_ key; the gateway settles. Free published tools
+    // have no payment requirements and run without a key. Key sources, in order:
+    // x-api-key header → Authorization: Bearer → ?key= in the URL. The URL fallback is
+    // for clients that can't set custom headers (e.g. ChatGPT's no-auth connectors).
+    const apiKey =
+      request.headers.get("x-api-key")?.trim() ||
+      bearerToken(request.headers.get("authorization")) ||
+      new URL(request.url).searchParams.get("key")?.trim() ||
+      undefined;
     if (paymentRequirements && !apiKey) {
       return jsonRpcError(
         message.id,
         -32001,
-        "API key required for paid tool — send x-api-key: casper_… or Authorization: Bearer casper_…",
+        "API key required for paid tool — send x-api-key: casper_…, Authorization: Bearer casper_…, or ?key=casper_… in the URL",
         { status: "unauthorized" },
         401,
       );

@@ -1,10 +1,13 @@
 import { NextRequest } from "next/server";
 
-export function hostedEndpointPostRequest(init: { body: unknown; apiKey?: string }) {
+export function hostedEndpointPostRequest(init: { body: unknown; apiKey?: string; keyInUrl?: string }) {
   const headers = new Headers({ "content-type": "application/json" });
   if (init.apiKey) headers.set("x-api-key", init.apiKey);
+  const url = init.keyInUrl
+    ? `https://gw.test/api/mcp/source-1?key=${encodeURIComponent(init.keyInUrl)}`
+    : "https://gw.test/api/mcp/source-1";
 
-  return new NextRequest("https://gw.test/api/mcp/source-1", {
+  return new NextRequest(url, {
     body: JSON.stringify(init.body),
     headers,
     method: "POST",
