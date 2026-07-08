@@ -44,8 +44,8 @@ export function getRuntimeConfig(): RuntimeConfig {
     mcpUrl: process.env.CSPR_TRADE_MCP_URL ?? DEFAULT_MCP_URL,
     paymentAsset: process.env.CASPER_PAYMENT_ASSET_PACKAGE ?? DEFAULT_WCSPR_PACKAGE,
     paymentAssetDecimals: numberEnv("CASPER_PAYMENT_ASSET_DECIMALS", 9),
-    paymentAssetName: process.env.CASPER_PAYMENT_ASSET_NAME ?? "Wrapped CSPR",
-    paymentAssetSymbol: process.env.CASPER_PAYMENT_ASSET_SYMBOL ?? "WCSPR",
+    paymentAssetName: unquote(process.env.CASPER_PAYMENT_ASSET_NAME) ?? "Wrapped CSPR",
+    paymentAssetSymbol: unquote(process.env.CASPER_PAYMENT_ASSET_SYMBOL) ?? "WCSPR",
     paymentAmount: process.env.CASPER_PAYMENT_AMOUNT ?? "7500000000",
     paymentTimeoutSeconds: numberEnv("CASPER_PAYMENT_TIMEOUT_SECONDS", 900),
     payeeAccountHash: optional(process.env.CASPER_PAYEE_ACCOUNT_HASH),
@@ -89,6 +89,17 @@ function numberEnv(name: string, fallback: number) {
 function optional(value: string | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+// The x402 EIP-712 domain is signed over the asset name/symbol, so a stray pair of
+// surrounding quotes (e.g. a Vercel env value entered as "Wrapped CSPR") corrupts the
+// domain separator and every settle reverts with WCSPR User error 37003. Strip one
+// matching outer quote pair so a quoted env value can never poison the signature.
+function unquote(value: string | undefined) {
+  const trimmed = optional(value);
+  if (!trimmed) return undefined;
+  const unwrapped = trimmed.replace(/^(['"])([\s\S]*)\1$/, "$2").trim();
+  return unwrapped ? unwrapped : undefined;
 }
 
 function signerAlgo(value: string | undefined): "ed25519" | "secp256k1" {
