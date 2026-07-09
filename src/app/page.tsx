@@ -7,7 +7,7 @@ import { ProofStamp } from "@/components/site/proof-stamp";
 import { SiteNav } from "@/components/site/site-nav";
 import { Button } from "@/components/ui/button";
 import { networkFromChainName } from "@/lib/casper-networks";
-import { formatTokenAmount } from "@/lib/format-amount";
+import { amountToMotes, formatTokenAmount } from "@/lib/format-amount";
 import { listServerCatalog } from "@/server/provider-store";
 import { listReceiptDetails } from "@/server/receipt-store";
 
@@ -26,7 +26,7 @@ export default async function Home() {
     listReceiptDetails().catch(() => []),
   ]);
   const settled = receipts.filter((r) => r.receipt.status === "settled" || r.receipt.status === "raw_proof_unavailable");
-  const volume = settled.reduce((sum, r) => sum + BigInt(r.receipt.amount || "0"), BigInt(0));
+  const volume = settled.reduce((sum, r) => sum + amountToMotes(r.receipt.amount), BigInt(0));
   const stats = [
     { label: "SERVERS", value: String(servers.length) },
     { label: "SETTLED CALLS", value: String(settled.length) },

@@ -30,6 +30,15 @@ export function parseTokenToMotes(value: string): string {
   return motes.toString();
 }
 
+/** Convert receipt amounts to raw motes for aggregate totals. */
+export function amountToMotes(value: string | null | undefined): bigint {
+  if (!value) return BigInt(0);
+  const trimmed = value.trim();
+  if (/^\d+$/.test(trimmed)) return BigInt(trimmed);
+  if (/^\d+\.\d{1,9}$/.test(trimmed)) return BigInt(parseTokenToMotes(trimmed));
+  return BigInt(0);
+}
+
 /**
  * Display symbol for the payment asset. WCSPR is the gateway's only payment
  * asset; Postgres records it as the token contract hash, so a hash-like asset

@@ -5,7 +5,7 @@ import { CopyButton } from "@/components/primitives/copy-button";
 import { TokenIcon } from "@/components/primitives/token-icon";
 import { SiteNav } from "@/components/site/site-nav";
 import { casperExplorerUrl, truncateHash } from "@/lib/casper-networks";
-import { formatAsset, formatTokenAmount } from "@/lib/format-amount";
+import { amountToMotes, formatAsset, formatTokenAmount } from "@/lib/format-amount";
 import { formatAge } from "@/lib/format-time";
 import { listReceiptDetails } from "@/server/receipt-store";
 
@@ -20,7 +20,7 @@ const STATUS_TONE: Record<string, string> = {
 export default async function ExplorerPage() {
   const receipts = await listReceiptDetails().catch(() => []);
   const settled = receipts.filter((r) => r.receipt.status === "settled" || r.receipt.status === "raw_proof_unavailable");
-  const volume = settled.reduce((sum, r) => sum + BigInt(r.receipt.amount || "0"), BigInt(0));
+  const volume = settled.reduce((sum, r) => sum + amountToMotes(r.receipt.amount), BigInt(0));
 
   return (
     <div className="min-h-dvh bg-surface text-ink">
