@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Servers — Casper GW" };
 
 export default async function ServersPage() {
-  const servers = await listServerCatalog();
+  const servers = await listServerCatalog().catch(() => []);
 
   return (
     <div className="min-h-dvh bg-surface text-ink">
