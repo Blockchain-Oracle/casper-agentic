@@ -23,6 +23,7 @@
     "db:studio": "drizzle-kit studio",
     "maintenance:prune-feed": "tsx scripts/prune-external-feed-state.ts",
     "smoke:live": "tsx scripts/live-smoke.ts",
+    "ensure:wcspr": "tsx scripts/ensure-wcspr-liquidity.ts",
     "wrap:wcspr": "tsx scripts/wrap-wcspr.ts"
   },
   "dependencies": {

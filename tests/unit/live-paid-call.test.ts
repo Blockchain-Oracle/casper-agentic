@@ -15,12 +15,18 @@ const m = vi.hoisted(() => ({
   persistX402Record: vi.fn(),
   resolveCasperProof: vi.fn(),
   settle: vi.fn(),
+  settleWithGatewaySigner: vi.fn(),
   supported: vi.fn(),
   updateAttemptStatus: vi.fn(),
   verify: vi.fn(),
 }));
 
 vi.mock("@/server/x402-facilitator", () => ({
+  settleWithGatewaySigner: m.settleWithGatewaySigner,
+  shouldSettleWithGatewaySigner: (response: { errorMessage?: string; errorReason?: string; success?: boolean }) => {
+    const details = `${response.errorReason ?? ""} ${response.errorMessage ?? ""}`.toLowerCase();
+    return response.success === false && details.includes("account_put_transaction") && details.includes("insufficient balance");
+  },
   X402FacilitatorClient: class {
     settle = m.settle;
     supported = m.supported;
@@ -94,6 +100,7 @@ function setDefaults() {
   });
   m.verify.mockResolvedValue({ isValid: true });
   m.settle.mockResolvedValue({ success: true, transaction: "deploy-1" });
+  m.settleWithGatewaySigner.mockResolvedValue({ success: true, transaction: "deploy-local" });
   m.resolveCasperProof.mockResolvedValue({ deploy: { deploy_hash: "deploy-1", status: "processed" }, ftAction: { a: 1 } });
   m.callMcpTool.mockResolvedValue({ isError: false, text: "quote" });
   m.persistAttempt.mockResolvedValue({ id: "attempt-1" });
@@ -128,5 +135,20 @@ describe("runGatewayPaidCall (gateway-signer settle)", () => {
     const result = await runGatewayPaidCall(input);
     expect(result.status).toBe("verify_failed");
     expect(m.settle).not.toHaveBeenCalled();
+  });
+
+  it("falls back to gateway-signer settle when the remote facilitator submitter is out of gas", async () => {
+    m.settle.mockResolvedValue({
+      errorMessage: 'PutTransaction RPC failed: account_put_transaction "the transaction was invalid: insufficient balance"',
+      errorReason: "invalid_exact_casper_put_deploy_failed",
+      success: false,
+    });
+    const result = await runGatewayPaidCall(input);
+    expect(result.status).toBe("settled");
+    if (result.status !== "settled") throw new Error(`expected settled, got ${result.status}`);
+    expect(result.explorerUrl).toContain("deploy-local");
+    expect(m.settleWithGatewaySigner).toHaveBeenCalledOnce();
+    expect(m.persistX402Record).toHaveBeenCalledWith(expect.objectContaining({ facilitatorUrl: "https://facilitator" }));
+    expect(m.persistX402Record).toHaveBeenCalledWith(expect.objectContaining({ facilitatorUrl: "local:gateway-signer" }));
   });
 });

@@ -18,7 +18,7 @@ import {
   persistX402Record,
   updateAttemptStatus,
 } from "./receipt-store";
-import { X402FacilitatorClient } from "./x402-facilitator";
+import { settleWithGatewaySigner, shouldSettleWithGatewaySigner, X402FacilitatorClient } from "./x402-facilitator";
 import {
   buildPaymentRequirements,
   createCasperPaymentPayload,
@@ -160,10 +160,11 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
     return { attemptId: attempt.id, status: "verify_failed" as const, verifyResponse };
   }
 
-  const settleResponse = await facilitator.settle({
+  const settleRequest = {
     paymentPayload: payment.paymentPayload,
     paymentRequirements: payment.paymentRequirements,
-  });
+  };
+  let settleResponse = await facilitator.settle(settleRequest);
   await persistX402Record({
     attemptId: attempt.id,
     facilitatorUrl: config.facilitatorUrl,
@@ -172,6 +173,17 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
     settleResponse,
     verifyResponse,
   });
+  if (shouldSettleWithGatewaySigner(settleResponse)) {
+    settleResponse = await settleWithGatewaySigner(config, settleRequest);
+    await persistX402Record({
+      attemptId: attempt.id,
+      facilitatorUrl: "local:gateway-signer",
+      paymentPayload: payment.paymentPayload,
+      paymentRequirements: payment.paymentRequirements,
+      settleResponse,
+      verifyResponse,
+    });
+  }
   if (!settleResponse.success || !settleResponse.transaction) {
     const reason = settleResponse.errorReason ?? "settle_failed";
     await updateAttemptStatus(attempt.id, "settle_failed", reason);

@@ -5,8 +5,10 @@ import type {
   SupportedResponse,
   VerifyResponse,
 } from "@x402/core/types";
+import { KeyAlgorithm, PrivateKey } from "casper-js-sdk";
 
-import type { RuntimeConfig } from "./env";
+import type { IntegrationRuntimeConfig, RuntimeConfig } from "./env";
+import { readSignerPem } from "./x402-payment";
 
 export interface FacilitatorRequestBody {
   paymentPayload: PaymentPayload;
@@ -54,4 +56,27 @@ export class X402FacilitatorClient {
     }
     return body;
   }
+}
+
+export function shouldSettleWithGatewaySigner(response: SettleResponse) {
+  if (response.success) return false;
+  const details = `${response.errorReason ?? ""} ${errorMessage(response)}`.toLowerCase();
+  return details.includes("account_put_transaction") && details.includes("insufficient balance");
+}
+
+export async function settleWithGatewaySigner(config: IntegrationRuntimeConfig, body: FacilitatorRequestBody) {
+  const [{ ExactCasperScheme }, { toFacilitatorCasperSigner }] = await Promise.all([
+    import("@make-software/casper-x402/exact/facilitator"),
+    import("@make-software/casper-x402"),
+  ]);
+  const algorithm = config.signerKeyAlgo === "ed25519" ? KeyAlgorithm.ED25519 : KeyAlgorithm.SECP256K1;
+  const privateKey = PrivateKey.fromPem(readSignerPem(config), algorithm);
+  const signer = await toFacilitatorCasperSigner(privateKey, config.casperNodeRpcUrl);
+  const scheme = new ExactCasperScheme(signer);
+  return scheme.settle(body.paymentPayload, body.paymentRequirements);
+}
+
+function errorMessage(response: SettleResponse) {
+  const record = response as SettleResponse & { errorMessage?: string };
+  return record.errorMessage ?? "";
 }
