@@ -149,6 +149,6 @@ describe("runGatewayPaidCall (gateway-signer settle)", () => {
     expect(result.explorerUrl).toContain("deploy-local");
     expect(m.settleWithGatewaySigner).toHaveBeenCalledOnce();
     expect(m.persistX402Record).toHaveBeenCalledWith(expect.objectContaining({ facilitatorUrl: "https://facilitator" }));
-    expect(m.persistX402Record).toHaveBeenCalledWith(expect.objectContaining({ facilitatorUrl: "local:gateway-signer" }));
+    expect(m.persistX402Record).toHaveBeenCalledWith(expect.objectContaining({ facilitatorUrl: "gateway-signer" }));
   });
 });

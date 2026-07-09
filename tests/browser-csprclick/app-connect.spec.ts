@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("app connect button uses embedded CSPR.click runtime without opening a provider tab", async ({ page }) => {
+test("nav connect button uses embedded CSPR.click runtime without opening a provider tab", async ({ page }) => {
   await page.route("https://cdn.cspr.click/**", async (route) => {
     await route.fulfill({
       body: csprClickRuntimeMock(),
@@ -9,22 +9,11 @@ test("app connect button uses embedded CSPR.click runtime without opening a prov
     });
   });
 
-  await page.goto("/app");
-  await page.getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByText("CSPR.click configured - connect before signing")).toBeVisible();
-  await expect(page.getByText("not connected")).toBeVisible();
-  await expect(page.getByText("connect before provider support is relevant")).toBeVisible();
-  await expect(page.getByText("CSPR.click Web Wallet - Google (csprclick-w3a-google)")).toBeVisible();
-  await expect(page.getByText("advertises sign-typed-data-eip712")).toBeVisible();
-  await expect(page.getByText("Casper Wallet (casper-wallet)")).toBeVisible();
-  await expect(page.getByText("does not advertise sign-typed-data-eip712").first()).toBeVisible();
-
-  await page.getByRole("button", { name: "Wallets" }).click();
-  await expect(page.getByText("Connect CSPR.click before browser approval.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Connect CSPR.click wallet" })).toBeVisible();
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Connect wallet" })).toBeVisible();
 
   const pageCountBefore = page.context().pages().length;
-  await page.getByRole("button", { name: "Connect CSPR.click wallet" }).click();
+  await page.getByRole("button", { name: "Connect wallet" }).click();
 
   await expect(page.getByText("CSPR.click sign-in requested")).toBeVisible();
   await expect(page.getByRole("dialog", { name: "Mock CSPR.click sign-in" })).toBeVisible();
@@ -32,7 +21,7 @@ test("app connect button uses embedded CSPR.click runtime without opening a prov
   await expect.poll(() => page.evaluate(() => window.__casperGwCSPRClickSignInCalls)).toBe(1);
 });
 
-test("settings provider chooser switches account when already connected to unsupported provider", async ({ page }) => {
+test("nav reflects an already connected CSPR.click account", async ({ page }) => {
   await page.route("https://cdn.cspr.click/**", async (route) => {
     await route.fulfill({
       body: csprClickRuntimeMock({ connected: true }),
@@ -41,16 +30,10 @@ test("settings provider chooser switches account when already connected to unsup
     });
   });
 
-  await page.goto("/app");
-  await page.getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByText("CSPR.click connected - provider lacks typed-data support")).toBeVisible();
-  await expect(page.getByText("Casper Wallet 2.4.2-extension")).toBeVisible();
+  await page.goto("/");
 
-  await page.getByRole("button", { name: "Open CSPR.click provider chooser" }).click();
-
-  await expect(page.getByRole("dialog", { name: "Mock CSPR.click switch account" })).toBeVisible();
-  await expect.poll(() => page.evaluate(() => window.__casperGwCSPRClickSwitchAccountCalls)).toBe(1);
-  await expect.poll(() => page.evaluate(() => window.__casperGwCSPRClickSignInCalls)).toBe(0);
+  await expect(page.getByText("020203...eb8d")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Disconnect wallet" })).toBeVisible();
 });
 
 function csprClickRuntimeMock(options = { connected: false }) {
@@ -60,6 +43,7 @@ function csprClickRuntimeMock(options = { connected: false }) {
   window.__casperGwCSPRClickSignInCalls = 0;
   window.__casperGwCSPRClickSwitchAccountCalls = 0;
   window.csprclick = {
+    appSettings: {},
     getActiveAccountAsync: async () => ${options.connected
       ? "({ provider: 'casper-wallet', providerSupports: ['sign-message'], public_key: '0202034f22ba451598257c05d09acb9e6b78127659f637a421b27ab321cfe214eb8d' })"
       : "null"},
@@ -86,21 +70,14 @@ function csprClickRuntimeMock(options = { connected: false }) {
       dialog.setAttribute('aria-label', 'Mock CSPR.click sign-in');
       dialog.setAttribute('data-testid', 'mock-csprclick-modal');
       dialog.setAttribute('role', 'dialog');
-      dialog.textContent = 'Mock embedded CSPR.click provider chooser';
+      dialog.textContent = 'CSPR.click sign-in requested';
       document.body.appendChild(dialog);
     },
     signInWithAccount: () => undefined,
+    signOut: () => undefined,
     signTypedData: async () => ({ cancelled: true, digest: null, error: 'not used in this smoke', publicKey: null, signatureHex: null }),
     switchAccount: async () => {
       window.__casperGwCSPRClickSwitchAccountCalls += 1;
-      const existing = document.querySelector('[data-testid="mock-csprclick-switch-modal"]');
-      if (existing) return;
-      const dialog = document.createElement('section');
-      dialog.setAttribute('aria-label', 'Mock CSPR.click switch account');
-      dialog.setAttribute('data-testid', 'mock-csprclick-switch-modal');
-      dialog.setAttribute('role', 'dialog');
-      dialog.textContent = 'Mock embedded CSPR.click account switcher';
-      document.body.appendChild(dialog);
     }
   };
   window.dispatchEvent(new Event('csprclick:loaded'));

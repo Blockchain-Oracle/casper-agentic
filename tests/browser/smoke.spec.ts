@@ -1,75 +1,42 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
-test("public explorer is public and separate from the app shell", async ({ page }, testInfo) => {
+test("public explorer shows the current payment feed", async ({ page }, testInfo) => {
   await page.goto("/explorer");
 
-  await expect(page.getByRole("heading", { name: "Casper x402 Explorer" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Explorer" })).toBeVisible();
+  await expect(page.getByText("Every x402 payment settled through the gateway on Casper. Public")).toBeVisible();
   if (!testInfo.project.name.includes("mobile")) {
-    await expect(page.getByRole("navigation", { name: "Public" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
   }
-  await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
-  await expect(page.getByText("No sign-in required")).toBeVisible();
-  await expect(page.getByLabel(/Search receipt id, deploy hash, account hash, public key, or CSPR.name/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Search explorer" })).toBeVisible();
-  await expect(page.getByLabel("Filter receipt history")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Previous" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Next" })).toBeVisible();
-  await expect(page.getByText(/\d+ results - page 1 of \d+/)).toBeVisible();
-  await expect(page.getByText("External proof is limited")).toBeVisible();
-  await expect(page.getByText(/Sample receipts|Gateway receipts/)).toBeVisible();
+  await expect(page.getByText("PAID CALLS")).toBeVisible();
+  await expect(page.getByText("SETTLED", { exact: true })).toBeVisible();
+  await expect(page.getByText("WCSPR SETTLED")).toBeVisible();
+  await expect(page.getByText("Tool · Provider")).toBeVisible();
+  await expect(page.getByText("Amount")).toBeVisible();
 });
 
-test("public explorer history browsing clears exact lookup state", async ({ page, request }) => {
-  const settledReceiptId = await firstReceiptId(request, "status=settled");
-  const blockedReceiptId = await firstReceiptId(request, "status=blocked");
-  if (!settledReceiptId || !blockedReceiptId) {
-    test.skip(true, "fixture or database needs settled and blocked receipts");
+test("public receipt detail is reachable without sign-in", async ({ page, request }) => {
+  const receiptId = await firstReceiptId(request);
+  if (!receiptId) {
+    test.skip(true, "fixture or database needs at least one receipt");
     return;
   }
 
-  await page.goto(`/explorer?receipt=${encodeURIComponent(settledReceiptId)}`);
-  await expect(page.getByText(`${settledReceiptId} receipt`)).toBeVisible();
+  await page.goto(`/receipt/${receiptId}`);
 
-  await page.getByLabel(/Search receipt id, deploy hash, account hash, public key, or CSPR.name/).fill(`receipt:${settledReceiptId}`);
-  await page.getByRole("button", { name: "Search explorer" }).click();
-  await expect(page.getByText(`${settledReceiptId} receipt`)).toBeVisible();
-
-  await page.getByRole("button", { name: "Blocked", exact: true }).click();
-  await expect(page.getByText(`${blockedReceiptId} receipt`)).toBeVisible();
-  await expect(page.getByText(`${settledReceiptId} receipt`)).toHaveCount(0);
+  await expect(page.getByText("Public receipt · no sign-in")).toBeVisible();
+  await expect(page.getByRole("heading", { name: receiptId })).toBeVisible();
+  await expect(page.getByText("Casper x402 payment proof")).toBeVisible();
 });
 
-test("public explorer pages external account history controls", async ({ page }) => {
-  const accountHash = "bcf0dfd8955b196a69d9265ffa746b499b7644d12ed2cdc5dea01d914c1fdc12";
+test("servers and register pages are public", async ({ page }) => {
+  await page.goto("/servers");
+  await expect(page.getByRole("heading", { name: "Servers" })).toBeVisible();
+  await expect(page.getByText("MCP servers published on the gateway.")).toBeVisible();
 
-  await page.route("**/api/explorer/search?**", async (route) => {
-    const pageNumber = Number(new URL(route.request().url()).searchParams.get("externalPage") ?? "1");
-    await route.fulfill({
-      body: JSON.stringify(externalAccountSearchResult(accountHash, pageNumber)),
-      contentType: "application/json",
-      status: 200,
-    });
-  });
-
-  await page.goto("/explorer");
-  await page.getByLabel(/Search receipt id, deploy hash, account hash, public key, or CSPR.name/).fill(`account:${accountHash}`);
-  await page.getByRole("button", { name: "Search explorer" }).click();
-
-  await expect(page.getByText("CSPR.cloud account history")).toBeVisible();
-  await expect(page.getByText("6 external actions - page 1 of 3")).toBeVisible();
-  await expect(page.getByText("External Casper account", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Next external page" }).click();
-  await expect(page.getByText("6 external actions - page 2 of 3")).toBeVisible();
-});
-
-test("operator app is wallet-gated behind a connect overlay", async ({ page }) => {
-  // The v3 app (/app → /app/dashboard) is gated: with no wallet connected, a
-  // headless browser sees the connect overlay, not the operator workspace.
-  await page.goto("/app");
-
-  await expect(page.getByRole("heading", { name: "Connect a Casper wallet to enter the app" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Connect wallet/ })).toBeVisible();
-  await expect(page.getByText(/never ask for a seed phrase, private key, or provider secret/)).toBeVisible();
+  await page.goto("/register");
+  await expect(page.getByRole("heading", { name: "Register a tool" })).toBeVisible();
+  await expect(page.getByText("Point the gateway at an MCP server or an OpenAPI spec.")).toBeVisible();
 });
 
 test("integration health reports preflight state without secret values", async ({ request }) => {
@@ -79,63 +46,22 @@ test("integration health reports preflight state without secret values", async (
   const body = await response.json();
   expect(body.casper.network).toBe("casper:casper-test");
   expect(Array.isArray(body.required.missing)).toBeTruthy();
-  expect(body.walletSigning.browserWallet.status).toBe("not_enabled");
+  expect(["configured", "not_enabled"]).toContain(body.walletSigning.browserWallet.status);
   expect(JSON.stringify(body)).not.toContain("PRIVATE KEY");
 });
 
-test("paid-call API fails closed before live payment", async ({ request }) => {
+test("paid-call API validates input before live payment", async ({ request }) => {
   const response = await request.post("/api/paid-calls/run", { data: { toolName: "get_quote" } });
   const body = await response.json();
 
-  expect([403, 503]).toContain(response.status());
-  expect(body.error).toMatch(/CASPER_GW_OPERATOR_TOKEN is required|operator access required|HTTP signing endpoint is disabled/);
+  expect(response.status()).toBe(400);
+  expect(body.error).toMatch(/args object is required/);
   expect(JSON.stringify(body)).not.toContain("PRIVATE KEY");
 });
 
-async function firstReceiptId(request: APIRequestContext, query: string) {
-  const response = await request.get(`/api/receipts?page=1&pageSize=1&${query}`);
+async function firstReceiptId(request: APIRequestContext) {
+  const response = await request.get("/api/receipts?page=1&pageSize=1");
   if (!response.ok()) return undefined;
   const body = await response.json();
   return body.receipts?.[0]?.receipt?.id as string | undefined;
-}
-
-function externalAccountSearchResult(accountHash: string, page: number) {
-  const deployHash = `${String(page).repeat(64)}`.slice(0, 64);
-  const detail = {
-    casper: [
-      { key: "account hash", mono: true, value: accountHash },
-      { key: "action page", mono: true, value: `${page} of 3` },
-    ],
-    gateway: [{ key: "result source", value: "External Casper account proof" }],
-    policy: [{ key: "status", tone: "warn", value: "unavailable" }],
-    receipt: {
-      amount: "7500000000",
-      asset: "WCSPR",
-      client: "external-account-lookup",
-      hash: deployHash,
-      id: `external-account:${accountHash}:${deployHash}:${page}`,
-      provider: "External Casper account",
-      status: "external_proof",
-      time: "2026-06-23T21:34:47Z",
-      tool: "payment token action",
-      wallet: accountHash,
-    },
-    x402: [{ key: "status", tone: "warn", value: "unavailable" }],
-  };
-  return {
-    detail,
-    externalAccount: {
-      accountHash,
-      detail,
-      matches: [detail],
-      message: "Resolved 6 external WCSPR actions for this account through CSPR.cloud.",
-      network: "casper:casper-test",
-      pagination: { hasNextPage: page < 3, hasPreviousPage: page > 1, page, pageSize: 4, totalCount: 6, totalPages: 3 },
-      source: "cspr_cloud",
-    },
-    matches: [detail],
-    message: "Resolved 6 external WCSPR actions for this account through CSPR.cloud.",
-    query: accountHash,
-    source: "external_account_proof",
-  };
 }

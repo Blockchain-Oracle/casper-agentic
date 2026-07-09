@@ -177,7 +177,7 @@ export async function runGatewayPaidCall(input: PaidCallInput) {
     settleResponse = await settleWithGatewaySigner(config, settleRequest);
     await persistX402Record({
       attemptId: attempt.id,
-      facilitatorUrl: "local:gateway-signer",
+      facilitatorUrl: "gateway-signer",
       paymentPayload: payment.paymentPayload,
       paymentRequirements: payment.paymentRequirements,
       settleResponse,

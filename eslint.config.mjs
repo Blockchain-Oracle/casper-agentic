@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     ".thoughts/**",
     "node_modules/**",
     "**/node_modules/**",
+    "playwright-report/**",
+    "test-results/**",
+    "test-results-csprclick/**",
     // Claude/Codex agent worktrees + caches carry their own node_modules; never lint them.
     ".claude/**",
   ]),

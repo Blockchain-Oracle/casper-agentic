@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const port = Number(process.env.PLAYWRIGHT_PORT ?? 3000);
+const baseURL = `http://127.0.0.1:${port}`;
 const publicEnv =
   "NEXT_PUBLIC_CSPR_CLICK_APP_ID=csprclick-template " +
   "NEXT_PUBLIC_CSPR_CLICK_APP_NAME='Casper GW' " +
@@ -14,13 +16,13 @@ export default defineConfig({
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   testDir: "tests/browser-csprclick",
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL,
     trace: "on-first-retry",
   },
   webServer: {
-    command: `env ${publicEnv} pnpm build && env ${publicEnv} pnpm start`,
+    command: `env ${publicEnv} pnpm build && env PORT=${port} ${publicEnv} pnpm start`,
     reuseExistingServer: false,
     timeout: 120_000,
-    url: "http://127.0.0.1:3000",
+    url: baseURL,
   },
 });
